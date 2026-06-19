@@ -129,10 +129,9 @@
        header/HUD/strip/controls reserved above & below), kept square via aspect-ratio. */
     .board-zone {
       flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;
-      background-size: cover; background-position: center; background-repeat: no-repeat;
       display: flex; align-items: center; justify-content: center; padding: 8px;
     }
-    .board-zone::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.32); }
+    .board-zone::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.1); }
     .game-grid-wrapper {
       position: relative; z-index: 1;
       width: min(94vw, calc(100vh - 290px));
@@ -142,7 +141,7 @@
     .game-grid {
       width: 100%; height: 100%;
       display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-      gap: 7px; padding: 7px;
+      gap: 2px; padding: 4px;
       background-size: cover; background-position: center; background-repeat: no-repeat;
       border-radius: 12px;
       box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.06);
@@ -169,13 +168,27 @@
     }
     .shake { animation: shake 0.8s ease-in-out; }
 
-    /* Slower, more satisfying per-tile reveal */
-    @keyframes dissolve {
-      0% { opacity: 1; transform: scale(1) rotate(0deg); }
-      40% { opacity: 0.85; transform: scale(1.04) rotate(-2deg); }
-      100% { opacity: 0; transform: scale(0.4) rotate(6deg); }
+    /* Dramatic 3D-flip tile reveal for cascade/win */
+    @keyframes tile-flip {
+      0%   { transform: perspective(500px) rotateY(0deg) scale(1); filter: brightness(1); opacity: 1; }
+      7%   { filter: brightness(3) saturate(2); transform: perspective(500px) rotateY(-8deg) scale(1.05); }
+      28%  { transform: perspective(500px) rotateY(42deg); filter: brightness(1.3); opacity: 0.9; }
+      68%  { transform: perspective(500px) rotateY(82deg); opacity: 0.3; filter: brightness(0.3); }
+      100% { transform: perspective(500px) rotateY(90deg) scaleX(0.01); opacity: 0; }
     }
-    .dissolving { animation: dissolve 0.6s cubic-bezier(.4,0,.2,1) forwards; }
+    .dissolving { animation: tile-flip 0.42s cubic-bezier(.4,0,.2,1) forwards; }
+    /* Miss guess: screen-shake + dramatic flip */
+    @keyframes tile-flip-miss {
+      0%   { transform: perspective(500px) rotateY(0deg) translateX(0) scale(1); filter: brightness(1); opacity: 1; }
+      5%   { filter: brightness(2.8) saturate(2); transform: perspective(500px) translateX(-7px) scale(1.04); }
+      10%  { transform: perspective(500px) translateX(7px); filter: brightness(2); }
+      16%  { transform: perspective(500px) translateX(-5px); }
+      22%  { transform: perspective(500px) translateX(4px); }
+      28%  { transform: perspective(500px) translateX(0) rotateY(0deg); filter: brightness(1.1); }
+      55%  { transform: perspective(500px) rotateY(58deg); opacity: 0.6; filter: brightness(0.6); }
+      100% { transform: perspective(500px) rotateY(90deg) scaleX(0.01); opacity: 0; }
+    }
+    .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
     /* Nation strip */
     .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #ccc; display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(0,0,0,0.4); }
@@ -515,6 +528,9 @@
   function route() {
     clearPolls();
     stopConfetti();
+    document.body.style.backgroundImage = '';
+    document.body.style.backgroundSize = '';
+    document.body.style.backgroundPosition = '';
     const hash = location.hash || '#lobby';
     if (hash === '#lobby' || hash === '#') renderLobby();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
@@ -680,9 +696,10 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderGame(id) {
     const app = document.getElementById('app');
-    app.innerHTML = `<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;">
+    app.innerHTML = `<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);pointer-events:none;z-index:1;"></div>
       ${renderHeader()}
-      <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
       </div>
     </div>`;
@@ -718,6 +735,11 @@
     const game = state.game;
     const theme = state.gameTheme;
     const accentRgba = hexToRgba(theme.accent_colour, 0.55);
+
+    // Full-window flag background — opponent nation fills the entire viewport
+    document.body.style.backgroundImage = boardBackdrop(theme.slug, theme.accent_colour);
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
     const myTeam = state.themes.find(t => t.slug === (state.session ? state.session.my_team_slug : ''));
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
     const isMyGame = game.active_player_id === (state.session ? state.session.user_id : null);
@@ -770,7 +792,7 @@
     document.getElementById('game-body').innerHTML = `
       ${hud}
       ${nationStrip}
-      <div class="board-zone" id="board-zone" style="background-image:${boardBackdrop(theme.slug,theme.accent_colour)};">
+      <div class="board-zone" id="board-zone">
         <div class="game-grid-wrapper">
           <div class="game-grid" id="game-grid" style="background-image:${bgWithFallback(portraitUrl,theme.accent_colour)};">
             ${cells}
@@ -863,10 +885,10 @@
       if (d.hit) {
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss — dissolve tile
+        // Miss — shake + flip tile
         if (cell) {
-          cell.classList.add('dissolving');
-          setTimeout(() => { cell.classList.add('revealed'); cell.style.background = ''; cell.style.pointerEvents = 'none'; }, 600);
+          cell.classList.add('flip-miss');
+          setTimeout(() => { cell.classList.add('revealed'); cell.classList.remove('flip-miss'); cell.style.background = ''; cell.style.pointerEvents = 'none'; }, 680);
         }
         // Update hint bar
         const hint = document.getElementById('hint-bar');
@@ -925,7 +947,7 @@
       const delay = Math.random() * 1300;
       setTimeout(() => {
         c.classList.add('dissolving');
-        setTimeout(() => { c.classList.add('revealed'); c.style.background = ''; }, 600);
+        setTimeout(() => { c.classList.add('revealed'); c.style.background = ''; }, 460);
       }, delay);
     });
 
