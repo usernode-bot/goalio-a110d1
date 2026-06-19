@@ -538,10 +538,23 @@
   }
 
   async function loadLobby() {
+    const body = document.getElementById('lobby-body');
+    function showLobbyError(msg) {
+      console.error('Lobby error:', msg);
+      if (body) body.innerHTML = `<p style="text-align:center;color:#f87171;padding:40px;font-family:'DM Sans',sans-serif;">Error loading lobby: ${msg}</p>`;
+    }
     try {
       const sessionRes = await api('GET', '/api/session');
-      if (!sessionRes.ok) { document.getElementById('lobby-body').innerHTML = '<p style="text-align:center;color:#f87171;padding:40px">Error loading lobby</p>'; return; }
-      const { session, captain_pot_balance, wallet_balance } = await sessionRes.json();
+      if (!sessionRes.ok) {
+        let detail = 'HTTP ' + sessionRes.status;
+        try { const e = await sessionRes.json(); if (e && e.error) detail += ' — ' + e.error; } catch(_) {}
+        showLobbyError(detail);
+        return;
+      }
+      const data = await sessionRes.json();
+      const session = data.session;
+      const captain_pot_balance = data.captain_pot_balance;
+      const wallet_balance = data.wallet_balance;
       state.session = session;
       state.walletBalance = wallet_balance || 1000;
       state.potBalance = captain_pot_balance || 100;
@@ -550,7 +563,7 @@
       renderLobbyBody(session);
       setupLobbyPolls();
     } catch(e) {
-      console.error('Lobby load error', e);
+      showLobbyError(e && e.message ? e.message : String(e));
     }
   }
 
