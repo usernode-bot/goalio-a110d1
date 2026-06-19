@@ -142,7 +142,7 @@
     .game-grid {
       width: 100%; height: 100%;
       display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-      gap: 5px; padding: 5px;
+      gap: 7px; padding: 7px;
       background-size: cover; background-position: center; background-repeat: no-repeat;
       border-radius: 12px;
       box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.06);
@@ -287,6 +287,7 @@
     squaresRevealed: 0, prizePot: 149,
     themes: [], polls: [],
     prevPotBalance: 100,
+    pendingResult: null,
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -345,11 +346,11 @@
   const Sound = {
     ctx: null,
     muted: (function(){ try { return localStorage.getItem('goal_muted') === '1'; } catch(_) { return false; } })(),
-    ensure() {
+    async ensure() {
       if (this.muted) return null;
       try {
         if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-        if (this.ctx.state === 'suspended') this.ctx.resume();
+        if (this.ctx.state === 'suspended') await this.ctx.resume();
         return this.ctx;
       } catch(_) { return null; }
     },
@@ -364,14 +365,14 @@
       osc.connect(g); g.connect(ctx.destination);
       osc.start(start); osc.stop(start + dur + 0.02);
     },
-    blip() {
-      const ctx = this.ensure(); if (!ctx) return;
+    async blip() {
+      const ctx = await this.ensure(); if (!ctx) return;
       const t = ctx.currentTime;
       this.tone(660, t, 0.08, 'square', 0.16);
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
     },
-    victory() {
-      const ctx = this.ensure(); if (!ctx) return;
+    async victory() {
+      const ctx = await this.ensure(); if (!ctx) return;
       const t = ctx.currentTime;
       const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51]; // C5 E5 G5 C6 E6
       notes.forEach((f, i) => this.tone(f, t + i * 0.12, 0.16, 'square', 0.18));
@@ -530,7 +531,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
-      <div id="lobby-body" style="flex:1;max-width:900px;margin:0 auto;padding:20px 16px;width:100%;">
+      <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:20px 16px;width:100%;">
         <div style="text-align:center;padding:40px 0;color:#555;">Loading...</div>
       </div>
     </div>`;
@@ -964,7 +965,9 @@
     else if (isFinal) resultTitle = 'Champions of the World!';
     else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
 
+    state.pendingResult = result;
     const resultCard = document.createElement('div');
+    resultCard.className = 'result-overlay';
     resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
     resultCard.innerHTML = `
       <div class="result-card">
@@ -974,7 +977,7 @@
         <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
         ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
         ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
-        <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial('${result.interstitial}', ${JSON.stringify(result).replace(/"/g,'&quot;')})">Continue →</button>
+        <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
       </div>`;
     document.body.appendChild(resultCard);
 
@@ -984,8 +987,10 @@
     }
   }
 
-  window.handleInterstitial = function(type, result) {
-    document.querySelectorAll('[style*="z-index:300"]').forEach(e => e.remove());
+  window.handleInterstitial = function() {
+    const result = state.pendingResult || {};
+    const type = result.interstitial || '';
+    document.querySelectorAll('.result-overlay').forEach(e => e.remove());
     stopConfetti();
 
     if (type === 'final_win') {
@@ -993,11 +998,12 @@
     } else if (type === 'through_to_knockouts') {
       // Show interstitial then lobby
       const el = document.createElement('div');
+      el.className = 'result-overlay';
       el.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);';
       el.innerHTML = `<div class="result-card"><div style="font-size:2rem;">🎉</div>
         <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">Through to the Knockouts!</div>
         <div style="color:#aaa;font-size:0.85rem;margin-bottom:16px;">All group matches won</div>
-        <button class="bundle-btn btn-gold" style="width:100%;" onclick="this.closest('[style*=z-index]').remove();navigate('#lobby');">Continue →</button>
+        <button class="bundle-btn btn-gold" style="width:100%;" onclick="document.querySelectorAll('.result-overlay').forEach(e=>e.remove());navigate('#lobby');">Continue →</button>
       </div>`;
       document.body.appendChild(el);
     } else {
@@ -1180,7 +1186,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
-      <div style="max-width:700px;margin:0 auto;padding:20px 16px;width:100%;" id="league-body">
+      <div style="max-width:480px;margin:0 auto;padding:20px 16px;width:100%;" id="league-body">
         <div style="text-align:center;color:#555;padding:40px;">Loading...</div>
       </div>
     </div>`;
@@ -1277,7 +1283,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
-      <div style="max-width:700px;margin:0 auto;padding:24px 16px;width:100%;">
+      <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">FAQ & Rules</h1>
 
         <div class="faq-section">
