@@ -277,7 +277,7 @@
     ...(TOKEN ? { 'x-usernode-token': TOKEN } : {})
   });
 
-  const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 32','Round of 16','Quarter-Final','Semi-Final','Final'];
+  const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 16','Quarter-Final','Semi-Final','Final'];
   const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
 
   let state = {
@@ -582,7 +582,7 @@
         <div style="display:flex;align-items:center;gap:14px;padding:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-top:22px;">
           <div style="width:48px;height:32px;border-radius:4px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>
           <div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/8</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
             <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:#fbbf24;margin-top:2px;">${stageName(session.stage_idx)}</div>
           </div>
@@ -709,7 +709,7 @@
     const isMyGame = game.active_player_id === (state.session ? state.session.user_id : null);
 
     // Build portrait URL
-    const portraitUrl = stageIdx >= 7
+    const portraitUrl = stageIdx >= 6
       ? '/images/trophy-reveal.jpg'
       : `/images/footballers/${theme.slug}.png`;
 
@@ -871,7 +871,7 @@
   async function runWinSequence(hitCell, idx, result) {
     clearPolls();
     playVictoryJingle();
-    const isFinal = (state.session && state.session.stage_idx >= 7) || result.interstitial === 'final_win';
+    const isFinal = (state.session && state.session.stage_idx >= 6) || result.interstitial === 'final_win';
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
 
@@ -1269,14 +1269,14 @@
 
         <div class="faq-section">
           <h2>How the Game Works</h2>
-          <p>GOAL! World Cup Edition is an 8-stage tournament. Pick your nation, then face 13 opponents across Group Matches, Knockout rounds, and the Final.</p>
-          <p>Each match is played on an 8×8 grid of 64 glass gem tiles hiding a secret object — a football for stages 1–7, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
+          <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across Group Matches, Knockout rounds, and the Final.</p>
+          <p>Each match is played on an 8×8 grid of 64 glass gem tiles hiding a secret object — a football for stages 1–6, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
           <ul>
             <li><strong>Single shot:</strong> 5 tokens — charged immediately on click</li>
             <li><strong>Bundle (8 shots):</strong> 36 tokens upfront — 4.5 t/shot</li>
             <li><strong>Bundle (16 shots):</strong> 64 tokens upfront — 4 t/shot</li>
           </ul>
-          <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more tiles are revealed — find it early for a bigger reward. Winning all 8 stages earns a 50-token House Bonus.</p>
+          <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more tiles are revealed — find it early for a bigger reward. Winning all 7 stages earns a 50-token House Bonus.</p>
           <p>The game features 14 nations: France, Brazil, England, Spain, Argentina, Morocco, USA, Turkey, Belgium, Egypt, Portugal, Netherlands, Norway, Germany.</p>
         </div>
 
@@ -1296,7 +1296,7 @@
           <h2>How the League Works</h2>
           <p>The League tracks total tokens won across all tournaments, forever. Every prize, jackpot, and house bonus you earn adds to your League score.</p>
           <p>The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong>2% of all tokens ever collected by the game</strong>. The live prize amount is shown at the top of the League page and updates in real time as players spend tokens.</p>
-          <p>You set your League display name from the Victory Stadium screen after winning all 8 stages. The League page shows the Top 20 and your own rank, updated every few seconds.</p>
+          <p>You set your League display name from the Victory Stadium screen after winning all 7 stages. The League page shows the Top 20 and your own rank, updated every few seconds.</p>
         </div>
 
         <div class="faq-section">

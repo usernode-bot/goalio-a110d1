@@ -589,7 +589,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       if (tour) {
         const newPlayed = [...(tour.played_slugs || []), game.theme_slug];
         const updatedStage = tour.stage_idx + 1;
-        const sessionComplete = updatedStage >= 8;
+        const sessionComplete = updatedStage >= 7;
 
         newStageIdx = updatedStage;
         stageCompleted = true;
