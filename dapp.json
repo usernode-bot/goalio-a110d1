@@ -11,7 +11,7 @@
     { "name": "Game board shows nation strip", "path": "/#game/2", "expectSelector": ".nation-strip" },
     { "name": "Game board shows hint bar", "path": "/#game/2", "expectSelector": "#hint-bar" },
     { "name": "Game board shows bundle buttons", "path": "/#game/2", "expectText": "36 tokens" },
-    { "name": "Game board shows Mute control", "path": "/#game/2", "expectText": "Mute" },
+    { "name": "Game board shows Mute control", "path": "/#game/2", "expectSelector": ".mute-btn" },
     { "name": "League page renders", "path": "/#league", "expectSelector": ".league-table" },
     { "name": "League page shows prize deadline", "path": "/#league", "expectText": "19 July 2026" },
     { "name": "FAQ page renders", "path": "/#faq", "expectText": "Captain's Pot" },

@@ -257,13 +257,23 @@
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
     .header-logo { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1.3rem; color: #fbbf24; text-decoration: none; letter-spacing: -0.5px; }
+    .header-brand { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fbbf24; letter-spacing: -0.5px; padding: 0 8px 0 4px; }
     .header-btns { display: flex; align-items: center; gap: 2px; }
     .header-btn {
-      font-family: 'DM Sans', sans-serif; font-size: 0.78rem; padding: 6px 10px;
+      font-family: 'DM Sans', sans-serif; font-size: 1rem; padding: 6px 10px;
       background: none; border: none; color: #aaa; cursor: pointer; border-radius: 6px; transition: color 0.15s, background 0.15s;
     }
     .header-btn:hover { color: white; background: rgba(255,255,255,0.08); }
     .header-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 2px; }
+
+    /* FAQ hackathon section */
+    .faq-hackathon { background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.25); border-radius: 12px; padding: 20px; margin-top: 16px; }
+    .faq-hackathon-badge { display: inline-block; background: rgba(251,191,36,0.15); border: 1px solid rgba(251,191,36,0.4); border-radius: 6px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; color: #fbbf24; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 16px; }
+    .faq-hackathon h2 { font-size: 1.1rem; font-weight: 700; color: #fbbf24; margin-bottom: 4px; }
+    .faq-hackathon h3 { font-size: 0.95rem; font-weight: 700; color: #93c5fd; margin: 16px 0 8px; }
+    .faq-hackathon p, .faq-hackathon li { color: #bbb; line-height: 1.7; font-size: 0.9rem; }
+    .faq-hackathon ul { padding-left: 20px; margin: 8px 0; }
+    .faq-hackathon pre { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; font-family: 'Space Mono', monospace; font-size: 0.78rem; color: #aaa; overflow-x: auto; }
 
     /* Toast */
     #toast-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
@@ -451,7 +461,7 @@
   function muteIcon() { return Sound.muted ? '🔇' : '🔊'; }
   function updateMuteButtons() {
     document.querySelectorAll('.mute-btn').forEach(b => {
-      b.innerHTML = 'Mute ' + muteIcon();
+      b.innerHTML = muteIcon();
       b.style.opacity = Sound.muted ? '0.55' : '1';
     });
   }
@@ -546,15 +556,12 @@
   // ═══════════════════════════════════════════════════════════════
   function renderHeader() {
     return `<header>
-      <a href="#lobby" class="header-logo" onclick="navigate('#lobby')">⚽ GOAL!</a>
+      <a href="#lobby" class="header-logo" onclick="navigate('#lobby')">⚽</a>
       <div class="header-btns font-dm">
-        <button class="header-btn" onclick="navigate('#league')">League 🏆</button>
-        <div class="header-divider"></div>
-        <button class="header-btn mute-btn" style="opacity:${Sound.muted ? '0.55' : '1'};" onclick="toggleMute()" title="Toggle sound">Mute ${muteIcon()}</button>
-        <div class="header-divider"></div>
-        <button class="header-btn" onclick="navigate('#faq')">FAQ ?</button>
-        <div class="header-divider"></div>
-        <button class="header-btn" onclick="navigate('#faq')">Rules</button>
+        <span class="header-brand">GOAL!</span>
+        <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
+        <button class="header-btn mute-btn" style="opacity:${Sound.muted ? '0.55' : '1'};" onclick="toggleMute()" title="Toggle sound">${muteIcon()}</button>
+        <button class="header-btn" onclick="navigate('#faq')" title="FAQ">?</button>
       </div>
     </header>`;
   }
@@ -684,11 +691,7 @@
     body.innerHTML = `
       ${statsRow}
       ${mainSection}
-      <div style="margin-top:24px;text-align:center;">
-        <button onclick="navigate('#league')" style="font-family:'DM Sans',sans-serif;background:none;border:none;color:#888;cursor:pointer;font-size:0.85rem;text-decoration:underline;">View League 🏆</button>
-        &nbsp;·&nbsp;
-        <button onclick="navigate('#faq')" style="font-family:'DM Sans',sans-serif;background:none;border:none;color:#888;cursor:pointer;font-size:0.85rem;text-decoration:underline;">FAQ / Rules</button>
-      </div>`;
+      `;
   }
 
   function setupLobbyPolls() {
@@ -1356,10 +1359,10 @@
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
-        <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">FAQ & Rules</h1>
+        <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
 
         <div class="faq-section">
-          <h2>How the Game Works</h2>
+          <h2>The Game</h2>
           <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across Group Matches, Knockout rounds, and the Final.</p>
           <p>Each match is played on an 8×8 grid of 64 glass gem tiles hiding a secret object — a football for stages 1–6, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
           <ul>
@@ -1368,11 +1371,11 @@
             <li><strong>Bundle (16 shots):</strong> 64 tokens upfront — 4 t/shot</li>
           </ul>
           <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more tiles are revealed — find it early for a bigger reward. Winning all 7 stages earns a 50-token House Bonus.</p>
-          <p>The game features 14 nations: France, Brazil, England, Spain, Argentina, Morocco, USA, Turkey, Belgium, Egypt, Portugal, Netherlands, Norway, Germany.</p>
+          <p>The game features 15 nations: France, Brazil, England, Spain, Argentina, Morocco, USA, Turkey, Belgium, Egypt, Portugal, Netherlands, Norway, Germany, Mexico.</p>
         </div>
 
         <div class="faq-section">
-          <h2>How the Captain's Pot Works</h2>
+          <h2>The Captain's Pot</h2>
           <p>The Captain's Pot is a global jackpot shared across all boards and all players. Every token spent anywhere — single shot or bundle credit — contributes <strong>20%</strong> to the pot instantly.</p>
           <p><strong>The only way to win it:</strong></p>
           <ul>
@@ -1384,14 +1387,17 @@
         </div>
 
         <div class="faq-section">
-          <h2>How the League Works</h2>
+          <h2>The League</h2>
           <p>The League tracks total tokens won across all tournaments, forever. Every prize, jackpot, and house bonus you earn adds to your League score.</p>
           <p>The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong>2% of all tokens ever collected by the game</strong>. The live prize amount is shown at the top of the League page and updates in real time as players spend tokens.</p>
           <p>You set your League display name from the Victory Stadium screen after winning all 7 stages. The League page shows the Top 20 and your own rank, updated every few seconds.</p>
         </div>
 
-        <div class="faq-section">
-          <h2>Tech & Profitability</h2>
+        <div class="faq-hackathon">
+          <div class="faq-hackathon-badge">🔬 Dev / Hackathon Info — not shown in production</div>
+          <h2>Tech &amp; Profitability</h2>
+
+          <h3>Prize Curve</h3>
           <p>The prize for finding the hidden object is calculated by this formula:</p>
           <pre>prize(n) = max(8, floor(150 / (1 + e^(0.12 × (n − 40)))))</pre>
           <p>where <em>n</em> is the number of tiles already revealed before the winning guess.</p>
@@ -1400,7 +1406,9 @@
             <tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:4px 8px;color:#888;">Tiles revealed</th><th style="text-align:right;padding:4px 8px;color:#888;">Prize (tokens)</th></tr>
             ${[[0,149],[10,147],[20,143],[25,136],[30,123],[32,108],[35,101],[40,79],[45,57],[50,38],[55,24],[60,14],[63,8]].map(([n,p]) => `<tr><td style="padding:4px 8px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 8px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td></tr>`).join('')}
           </table>
-          <p><strong>House-edge verification (single guesses, conservative):</strong></p>
+
+          <h3>House-Edge Maths</h3>
+          <p><strong>Single guesses (conservative baseline):</strong></p>
           <ul>
             <li>Expected discovery: uniform across 64 squares → mean at guess 32.5</li>
             <li>Revenue at median: 32.5 × 5 = <strong>162.5 tokens</strong></li>
@@ -1420,6 +1428,16 @@
             <li>House re-seeds 100 tokens per jackpot win; amortised cost ≈ 1.56 tokens/board</li>
             <li>Adjusted house margin: (22 − 1.56) / 162.5 ≈ <strong>12.6% net</strong> — within 10–15% target ✓</li>
           </ul>
+
+          <h3>🔐 ZK Enhancement (Future)</h3>
+          <p>Currently players must trust that the hidden object is placed before the game starts and never moved. A Zero-Knowledge proof layer could make this <strong>verifiably fair</strong> without revealing the answer:</p>
+          <ul>
+            <li>At game creation, the server commits to the ball position using a hash: <code>commit = hash(position, salt)</code>. The commitment is stored publicly (on-chain or in the game record).</li>
+            <li>At game end, the server reveals position + salt. Anyone can verify <code>hash(position, salt) == commit</code>, proving the position was fixed from the start.</li>
+            <li>A ZK proof goes further: the server can prove it knows a valid pre-image for the commitment <em>without</em> revealing the position mid-game — so the proof is verifiable in real time, not just after the fact.</li>
+            <li><strong>Noir</strong> (by Aztec) is a Rust-like language for writing ZK circuits that compile to both native provers and browser-runnable WASM. It would be the natural fit here: write the "ball is at position P under commitment C" circuit in Noir, generate a proof server-side per game, verify client-side in the browser before the player makes their first guess.</li>
+          </ul>
+          <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
         </div>
       </div>
     </div>`;
