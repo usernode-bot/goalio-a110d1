@@ -83,6 +83,8 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+const IS_STAGING = process.env.USERNODE_ENV === 'staging';
+
 async function start() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS presses (
@@ -92,6 +94,19 @@ async function start() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  if (IS_STAGING) {
+    await pool.query(`
+      INSERT INTO presses (id, user_id, username) VALUES
+        (900001, 9001, 'staging-demo-alice'),
+        (900002, 9001, 'staging-demo-alice'),
+        (900003, 9001, 'staging-demo-alice'),
+        (900004, 9002, 'staging-demo-bob'),
+        (900005, 9003, 'staging-demo-carol')
+      ON CONFLICT (id) DO NOTHING
+    `);
+  }
+
   app.listen(port, () => console.log(`Listening on :${port}`));
 }
 
