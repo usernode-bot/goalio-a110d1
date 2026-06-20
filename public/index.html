@@ -142,21 +142,29 @@
       100% { transform: scale(2.5); opacity: 0; }
     }
 
-    /* Game board — sized so all 64 tiles are always on screen, no scroll. */
+    /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
       flex: 1 1 auto; min-height: 0; position: relative;
-      display: flex; align-items: center; justify-content: center; padding: 8px;
+      display: flex; align-items: center; justify-content: center; padding: 4px;
     }
 
-    /* Three-layer board stack */
+    /* Three-layer board stack — mobile-first: near-full width */
     .board-wrap {
       position: relative;
-      border-radius: 20px;
+      border-radius: 14px;
       overflow: hidden;
       aspect-ratio: 1/1;
-      box-shadow: 0 30px 60px -20px #000c, 0 0 0 1px var(--glass-line);
-      width: min(94vw, calc(100vh - 290px));
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.08),
+        0 0 0 3px rgba(0,0,0,0.6),
+        0 20px 60px -10px rgba(0,0,0,0.95),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      width: min(96vw, calc(100vh - 200px));
       max-height: 100%;
+    }
+    @media (min-width: 481px) {
+      .board-wrap { width: min(400px, calc(100vh - 200px)); }
+      #game-body { max-width: 440px; margin: 0 auto; }
     }
     .portrait {
       position: absolute; inset: 0; z-index: 0;
@@ -164,7 +172,7 @@
     }
     .board {
       position: absolute; inset: 0; z-index: 2;
-      display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 2px;
     }
     .reveal {
       position: absolute; inset: 0; z-index: 6;
@@ -235,13 +243,28 @@
     }
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
-    /* Nation strip */
-    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #ccc; display: flex; align-items: center; gap: 8px; padding: 6px 12px; background: rgba(0,0,0,0.4); }
-    .flag-mini { width: 24px; height: 16px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+    /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
+    .game-hud { display: flex; gap: 4px; padding: 4px 8px; background: rgba(0,0,0,0.7); border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; }
+    .game-hud .hud-chip { padding: 3px 5px !important; border-radius: 6px !important; font-size: 8px !important; line-height: 1.1; }
+    .game-hud .hud-chip .val { font-size: 13px !important; }
+    .game-hud .pot-chip { box-shadow: 0 0 8px rgba(251,191,36,0.18) !important; }
+    .game-hud .pot-chip .val { font-size: 13px !important; color: #fbbf24 !important; }
+
+    /* Nation strip — single tight row */
+    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 3px 8px; background: rgba(0,0,0,0.55); border-bottom: 1px solid rgba(255,255,255,0.04); flex-shrink: 0; min-height: 26px; }
+    .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+
+    /* Game footer — compact controls + hint */
+    .game-footer { flex-shrink: 0; padding: 5px 8px 6px; background: rgba(0,0,0,0.8); border-top: 1px solid rgba(255,255,255,0.05); }
+    .game-footer .bundle-btn { padding: 0 8px !important; font-size: 0.78rem !important; height: 36px; line-height: 36px; border-radius: 7px !important; }
+    .game-footer .credits-chip { padding: 4px 10px !important; font-size: 0.82rem !important; }
+
+    /* Mobile: squeeze header to save height */
+    @media (max-width: 480px) { header { padding: 6px 12px !important; } }
 
     /* Controls */
     .bundle-btn {
-      font-family: 'DM Sans', sans-serif; font-weight: 600; border: none; border-radius: 8px;
+      font-family: 'DM Sans', sans-serif; font-weight: 700; border: none; border-radius: 8px;
       padding: 12px 20px; cursor: pointer; font-size: 0.95rem; transition: transform 0.1s, opacity 0.1s;
     }
     .bundle-btn:hover { transform: scale(1.03); }
@@ -808,20 +831,20 @@
       ? '/images/trophy-reveal.jpg'
       : `/images/footballers/${theme.slug}.png`;
 
-    const hud = `<div style="display:flex;gap:6px;padding:8px 12px;background:rgba(0,0,0,0.5);">
-      <div class="hud-chip"><span style="font-size:0.68rem;color:#888;">Wallet</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
-      <div class="hud-chip"><span style="font-size:0.68rem;color:#888;">Prize Pot</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
+    const hud = `<div class="game-hud">
+      <div class="hud-chip"><span style="display:block;">Wallet</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
+      <div class="hud-chip"><span style="display:block;">Prize Pot</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="font-size:0.68rem;color:#888;">Shots</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip"><span style="display:block;">Shots</span><span class="val shots-val">${state.squaresRevealed}</span></div>
     </div>`;
 
     const myFlag = myTeam ? `<div class="flag-mini" style="background:${flagBg(myTeam.slug, myTeam.accent_colour)};background-size:cover;"></div>` : '';
     const oppFlag = `<div class="flag-mini" style="background:${flagBg(theme.slug, theme.accent_colour)};background-size:cover;"></div>`;
     const nationStrip = `<div class="nation-strip">
-      ${myFlag}<span>${myTeam ? myTeam.country_name : 'You'}</span>
-      <span style="color:#555;">vs</span>
-      ${oppFlag}<span>${theme.country_name}</span>
-      <span style="margin-left:auto;color:#666;font-size:0.8rem;">${stageName(stageIdx)}</span>
+      ${myFlag}<span style="font-weight:600;color:#e0e0e8;">${myTeam ? myTeam.country_name : 'You'}</span>
+      <span style="color:#333;margin:0 1px;">vs</span>
+      ${oppFlag}<span style="font-weight:600;color:#e0e0e8;">${theme.country_name}</span>
+      <span style="margin-left:auto;color:#555;font-size:0.65rem;font-family:'Space Mono',monospace;white-space:nowrap;">${stageName(stageIdx)}</span>
     </div>`;
 
     // Build 64 tiles; open tiles show portrait beneath
@@ -837,12 +860,12 @@
     if (credRemaining > 0) {
       controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      controls = `<div style="display:flex;gap:10px;">
+      controls = `<div style="display:flex;gap:6px;">
         <button class="bundle-btn btn-gold" style="flex:1;" onclick="buyBundle(8)">8 Shots — 36 tokens</button>
         <button class="bundle-btn btn-green" style="flex:1;" onclick="buyBundle(16)">16 Shots — 64 tokens</button>
       </div>
-      <div style="text-align:center;margin-top:6px;">
-        <span class="font-dm" style="font-size:0.82rem;color:#888;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
+      <div style="text-align:center;margin-top:3px;">
+        <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
       </div>`;
     }
 
@@ -854,17 +877,17 @@
       <div class="board-zone" id="board-zone">
         <div class="board-wrap">
           <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
-          <div class="board" id="game-grid">
+          <div class="board game-grid" id="game-grid">
             ${tiles}
           </div>
           <div class="reveal" id="board-reveal"></div>
         </div>
       </div>
-      <div style="padding:10px 12px;background:rgba(0,0,0,0.6);">
-        <div id="controls-row" style="margin-bottom:8px;">${controls}</div>
-        <div id="hint-bar" class="font-dm" style="text-align:center;font-size:0.8rem;color:#888;padding:4px 0;">${initialHint}</div>
-        <div style="text-align:center;margin-top:6px;">
-          <span class="font-dm" style="font-size:0.75rem;color:#555;cursor:pointer;text-decoration:underline;" onclick="leaveMap(${game.id})">Leave Map</span>
+      <div class="game-footer">
+        <div id="controls-row" style="margin-bottom:3px;">${controls}</div>
+        <div id="hint-bar" class="font-dm" style="text-align:center;font-size:10px;color:#666;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${initialHint}</div>
+        <div style="text-align:center;margin-top:2px;">
+          <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
   }
@@ -882,12 +905,12 @@
     if (credRemaining > 0) {
       row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      row.innerHTML = `<div style="display:flex;gap:10px;">
+      row.innerHTML = `<div style="display:flex;gap:6px;">
         <button class="bundle-btn btn-gold" style="flex:1;" onclick="buyBundle(8)">8 Shots — 36 tokens</button>
         <button class="bundle-btn btn-green" style="flex:1;" onclick="buyBundle(16)">16 Shots — 64 tokens</button>
       </div>
-      <div style="text-align:center;margin-top:6px;">
-        <span class="font-dm" style="font-size:0.82rem;color:#888;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
+      <div style="text-align:center;margin-top:3px;">
+        <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
       </div>`;
     }
   }
