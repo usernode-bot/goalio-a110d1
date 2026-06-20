@@ -279,8 +279,9 @@
       padding: 10px 16px; background: rgba(10,10,15,0.95); backdrop-filter: blur(8px);
       border-bottom: 1px solid rgba(255,255,255,0.08);
     }
-    .header-logo { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1.3rem; color: #fbbf24; text-decoration: none; letter-spacing: -0.5px; }
-    .header-brand { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1.1rem; color: #fbbf24; letter-spacing: -0.5px; padding: 0 8px 0 4px; }
+    .header-logo-block { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
+    .header-logo-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fbbf24; letter-spacing: -0.5px; }
+    .header-logo-sub { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.55rem; color: #fbbf24; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-top: 1px; }
     .header-btns { display: flex; align-items: center; gap: 2px; }
     .header-btn {
       font-family: 'DM Sans', sans-serif; font-size: 1rem; padding: 6px 10px;
@@ -582,9 +583,11 @@
   // ═══════════════════════════════════════════════════════════════
   function renderHeader() {
     return `<header>
-      <a href="#lobby" class="header-logo" onclick="navigate('#lobby')">⚽</a>
+      <a href="#lobby" class="header-logo-block" onclick="navigate('#lobby')">
+        <span class="header-logo-title">GOAL!</span>
+        <span class="header-logo-sub">World Cup Edition</span>
+      </a>
       <div class="header-btns font-dm">
-        <span class="header-brand">GOAL!</span>
         <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
         <button class="header-btn mute-btn" style="opacity:${Sound.muted ? '0.55' : '1'};" onclick="toggleMute()" title="Toggle sound">${muteIcon()}</button>
         <button class="header-btn" onclick="navigate('#faq')" title="FAQ">?</button>
@@ -674,12 +677,6 @@
       return;
     }
 
-    const heroBlock = `
-      <div style="text-align:center;margin-bottom:14px;">
-        <h1 class="hero-title"><span class="hero-go">GO</span><span class="hero-al">AL!</span></h1>
-        <span class="hero-edition">World Cup Edition</span>
-      </div>`;
-
     const statsRow = `
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;">
         ${potChipHtml(state.potBalance)}
@@ -719,7 +716,6 @@
     }
 
     body.innerHTML = `
-      ${heroBlock}
       ${statsRow}
       ${mainSection}
       `;
