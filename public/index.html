@@ -339,8 +339,11 @@
   // ═══════════════════════════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════════════════════════
-  const params = new URLSearchParams(location.search);
-  const TOKEN = params.get('token') || '';
+  // Read token from URL param; persist to localStorage so mobile reloads/navigations
+  // that lose the ?token= query param can still authenticate.
+  const _urlToken = new URLSearchParams(location.search).get('token') || '';
+  if (_urlToken) { try { localStorage.setItem('usernode_token', _urlToken); } catch(_) {} }
+  const TOKEN = _urlToken || (function() { try { return localStorage.getItem('usernode_token') || ''; } catch(_) { return ''; } })();
   const HEADERS = () => ({
     'Content-Type': 'application/json',
     ...(TOKEN ? { 'x-usernode-token': TOKEN } : {})
