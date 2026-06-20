@@ -1008,17 +1008,17 @@
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
 
-    // Step 1: shake hit tile
+    // Step 1: shake hit tile (800ms)
     if (hitCell) hitCell.classList.add('shake');
     await sleep(800);
 
-    // Step 2: dim and blur board
+    // Step 2: dim board and float football/trophy to centre — total 2s from start
     const boardZone = document.getElementById('board-zone');
     const dim = document.createElement('div');
     dim.className = 'board-dim';
+    dim.style.transition = 'opacity 0.45s';
     boardZone && boardZone.appendChild(dim);
 
-    // Step 3: float object icon to centre
     const icon = isFinal ? '🏆' : '⚽';
     const objEl = document.createElement('div');
     objEl.style.cssText = `position:fixed;font-size:80px;z-index:200;pointer-events:none;transition:all 0.6s cubic-bezier(.22,1,.36,1);`;
@@ -1036,32 +1036,27 @@
     objEl.style.top = '40%';
     objEl.style.transform = 'translate(-50%, -50%) scale(1.5)';
     objEl.style.filter = 'drop-shadow(0 0 20px gold)';
-    await sleep(700);
+    await sleep(1150); // 800 + 50 + 1150 = 2000ms total football animation
 
-    // Step 4: cascade dissolve remaining tiles
-    const unrevealed = document.querySelectorAll('.tile:not(.open)');
-    unrevealed.forEach((c, i) => {
-      const delay = Math.random() * 1300;
+    // Fade out icon and dim together, then cascade tiles to reveal portrait
+    objEl.style.transition = 'opacity 0.45s';
+    objEl.style.opacity = '0';
+    dim.style.opacity = '0';
+    setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
+
+    // Step 3: cascade dissolve ALL tiles (1200ms max spread + 460ms transition)
+    document.querySelectorAll('.tile').forEach(c => {
+      const delay = Math.random() * 1200;
       setTimeout(() => {
         c.classList.add('dissolving');
         setTimeout(() => { c.classList.add('open'); c.classList.remove('dissolving'); }, 460);
       }, delay);
     });
 
-    // Step 5: start confetti, hold for 5s
-    await sleep(500);
-    startConfetti();
-    const holdStart = Date.now();
+    // Wait for all tiles to finish dissolving
+    await sleep(1800);
 
-    // Step 6: name tag at ~2s into hold
-    await sleep(2000);
-    const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:16px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
-    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
-    nameTag.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:0.9rem;background:rgba(0,0,0,0.8);padding:6px 14px;border-radius:20px;color:white;">${footballerText}</span>`;
-    boardZone && boardZone.appendChild(nameTag);
-
-    // Reveal banner
+    // Step 4: portrait fully revealed — show banner, name tag, confetti, hold 5s
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
     else if (isFinal) banner = 'WORLD CHAMPIONS!';
@@ -1071,14 +1066,18 @@
     bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
     boardZone && boardZone.appendChild(bannerEl);
 
-    // Wait out the hold (total 5s from cascade start ≈ 3s left)
-    const elapsed = Date.now() - holdStart;
-    await sleep(Math.max(0, 5000 - elapsed + 500));
+    const nameTag = document.createElement('div');
+    nameTag.style.cssText = `position:absolute;bottom:16px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
+    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
+    nameTag.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:0.9rem;background:rgba(0,0,0,0.8);padding:6px 14px;border-radius:20px;color:white;">${footballerText}</span>`;
+    boardZone && boardZone.appendChild(nameTag);
 
-    // Remove floating icon
-    objEl.remove();
+    startConfetti();
 
-    // Step 7: result card
+    // Hold portrait for 5 full seconds
+    await sleep(5000);
+
+    // Step 5: result card
     let resultTitle = 'You found the net!';
     if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
     else if (isFinal) resultTitle = 'Champions of the World!';
