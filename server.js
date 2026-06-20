@@ -10,8 +10,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league']);
-const PUBLIC_PREFIXES = ['/explorer-api/'];
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot']);
+const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
 
@@ -112,6 +112,11 @@ app.get('/api/session', async (req, res) => {
   const client = await pool.connect();
   try {
     await runTimeoutCheck(client);
+    if (!req.user) {
+      const { rows: potRows } = await client.query('SELECT balance FROM captain_pot WHERE id = 1');
+      const potBalance = potRows.length ? parseFloat(potRows[0].balance) : 100;
+      return res.json({ session: null, captain_pot_balance: potBalance, wallet_balance: 1000 });
+    }
     await ensureWallet(client, req.user.id, req.user.username);
 
     const { rows } = await client.query(
@@ -316,22 +321,26 @@ app.get('/api/games/:id', async (req, res) => {
     if (!gameRows.length) return res.status(404).json({ error: 'Game not found' });
     const game = gameRows[0];
 
-    const { rows: credRows } = await client.query(`
-      SELECT id, credits_total, credits_used, tokens_per_credit,
-             (credits_total - credits_used) as credits_remaining
-      FROM game_sessions
-      WHERE game_id = $1 AND user_id = $2 AND refunded = false
-        AND credits_used < credits_total
-      ORDER BY created_at DESC LIMIT 1
-    `, [game.id, req.user.id]);
+    let credRows = [];
+    let walletBalance = 1000;
+    if (req.user) {
+      const { rows } = await client.query(`
+        SELECT id, credits_total, credits_used, tokens_per_credit,
+               (credits_total - credits_used) as credits_remaining
+        FROM game_sessions
+        WHERE game_id = $1 AND user_id = $2 AND refunded = false
+          AND credits_used < credits_total
+        ORDER BY created_at DESC LIMIT 1
+      `, [game.id, req.user.id]);
+      credRows = rows;
+      await ensureWallet(client, req.user.id, req.user.username);
+      walletBalance = await getWalletBalance(client, req.user.id);
+    }
 
     const { rows: potRows } = await client.query(
       'SELECT balance, last_won_at, last_winner_username FROM captain_pot WHERE id = 1'
     );
     const potData = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
-
-    await ensureWallet(client, req.user.id, req.user.username);
-    const walletBalance = await getWalletBalance(client, req.user.id);
 
     const squaresRevealed = (game.revealed || []).filter(Boolean).length;
     const prizePot = prizeDecay(squaresRevealed);
