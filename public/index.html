@@ -73,8 +73,26 @@
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1/dist/confetti.browser.min.js"></script>
 
   <style>
+    :root {
+      --glass-line: rgba(150,160,255,.24);
+      --accent: #6d7bff;
+      --accent-soft: rgba(109,123,255,0.33);
+      --gold: #ffce4a;
+    }
     * { box-sizing: border-box; }
     body { font-family: 'Space Grotesk', sans-serif; background: #0a0a0f; color: #f0f0f5; margin: 0; min-height: 100vh; }
+
+    /* Full-screen flag background (game board only — set via JS) */
+    .bg {
+      position: fixed; inset: 0; z-index: -2;
+      background-size: cover; background-position: center; background-repeat: no-repeat;
+    }
+    .bg::after {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 50% 30%, rgba(7,7,16,0.25) 0%, rgba(7,7,16,0.82) 100%),
+        linear-gradient(180deg, rgba(7,7,16,0.55) 0%, rgba(7,7,16,0.15) 50%, rgba(7,7,16,0.75) 100%);
+    }
     .font-dm { font-family: 'DM Sans', sans-serif; }
     .font-mono-stat { font-family: 'Space Mono', monospace; }
     .font-8bit { font-family: 'Press Start 2P', monospace; }
@@ -124,38 +142,65 @@
       100% { transform: scale(2.5); opacity: 0; }
     }
 
-    /* Game board — sized so all 64 tiles are always on screen, no scroll.
-       Width is the smaller of available width and available height (minus the
-       header/HUD/strip/controls reserved above & below), kept square via aspect-ratio. */
+    /* Game board — sized so all 64 tiles are always on screen, no scroll. */
     .board-zone {
-      flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden;
+      flex: 1 1 auto; min-height: 0; position: relative;
       display: flex; align-items: center; justify-content: center; padding: 8px;
     }
-    .board-zone::before { content: ''; position: absolute; inset: 0; background: rgba(0,0,0,0.1); }
-    .game-grid-wrapper {
-      position: relative; z-index: 1;
+
+    /* Three-layer board stack */
+    .board-wrap {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      aspect-ratio: 1/1;
+      box-shadow: 0 30px 60px -20px #000c, 0 0 0 1px var(--glass-line);
       width: min(94vw, calc(100vh - 290px));
-      aspect-ratio: 1;
       max-height: 100%;
     }
-    .game-grid {
-      width: 100%; height: 100%;
-      display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
-      gap: 2px; padding: 4px;
-      background-size: cover; background-position: center; background-repeat: no-repeat;
-      border-radius: 12px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.06);
+    .portrait {
+      position: absolute; inset: 0; z-index: 0;
+      background-size: cover; background-position: center top;
     }
-    .cell {
-      cursor: pointer; border-radius: 7px; position: relative;
-      transition: transform 0.12s ease, opacity 0.12s ease;
-      border: 1.5px solid rgba(255,255,255,0.45);
-      box-shadow: inset 0 2px 5px rgba(255,255,255,0.45), inset 0 -3px 7px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.35);
-      backdrop-filter: blur(2px);
-      background-image: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 45%);
+    .board {
+      position: absolute; inset: 0; z-index: 2;
+      display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
     }
-    .cell:hover:not(.revealed) { transform: scale(0.9); filter: brightness(1.15); }
-    .cell.revealed { background: transparent !important; background-image: none !important; box-shadow: none !important; border: none !important; cursor: default; pointer-events: none; backdrop-filter: none !important; }
+    .reveal {
+      position: absolute; inset: 0; z-index: 6;
+      display: none; pointer-events: none;
+    }
+
+    /* Gem tiles */
+    .tile {
+      position: relative;
+      cursor: pointer;
+      background: linear-gradient(150deg, #2b3068, #13152f);
+      box-shadow:
+        inset 0 0 0 1px rgba(150,160,255,.18),
+        inset 0 1px 0 rgba(255,255,255,.10);
+      transition: filter .15s, transform .1s;
+      overflow: hidden;
+    }
+    .tile::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,.16) 50%, transparent 60%);
+      pointer-events: none;
+    }
+    .tile::after {
+      content: "";
+      position: absolute; inset: 0;
+      box-shadow: inset 0 0 0 2px var(--accent-soft), inset 0 0 20px -2px var(--accent-soft);
+      opacity: 0;
+      transition: .16s;
+      pointer-events: none;
+    }
+    .tile:not(.open):hover { filter: brightness(1.3) saturate(1.4); z-index: 3; }
+    .tile:not(.open):hover::after { opacity: 1; }
+    .tile:not(.open):active { transform: scale(.94); }
+    .tile.open { cursor: default; background: transparent; box-shadow: none; pointer-events: none; }
+    .tile.open::before { opacity: 0; }
 
     @keyframes shake {
       0%,100% { transform: translateX(0); }
@@ -276,6 +321,7 @@
   </style>
 </head>
 <body>
+  <div class="bg" id="flag-bg"></div>
   <div id="app"></div>
   <div id="toast-container"></div>
 
@@ -528,9 +574,10 @@
   function route() {
     clearPolls();
     stopConfetti();
-    document.body.style.backgroundImage = '';
-    document.body.style.backgroundSize = '';
-    document.body.style.backgroundPosition = '';
+    const flagBgEl = document.getElementById('flag-bg');
+    if (flagBgEl) flagBgEl.style.backgroundImage = '';
+    document.documentElement.style.removeProperty('--accent');
+    document.documentElement.style.removeProperty('--accent-soft');
     const hash = location.hash || '#lobby';
     if (hash === '#lobby' || hash === '#') renderLobby();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
@@ -697,7 +744,6 @@
   async function renderGame(id) {
     const app = document.getElementById('app');
     app.innerHTML = `<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
-      <div style="position:absolute;inset:0;background:rgba(0,0,0,0.55);pointer-events:none;z-index:1;"></div>
       ${renderHeader()}
       <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
@@ -734,17 +780,19 @@
   function renderGameBody() {
     const game = state.game;
     const theme = state.gameTheme;
-    const accentRgba = hexToRgba(theme.accent_colour, 0.55);
 
-    // Full-window flag background — opponent nation fills the entire viewport
-    document.body.style.backgroundImage = boardBackdrop(theme.slug, theme.accent_colour);
-    document.body.style.backgroundSize = 'cover';
-    document.body.style.backgroundPosition = 'center';
+    // Set full-window flag background (opponent theme image) + CSS accent vars
+    const flagBgEl = document.getElementById('flag-bg');
+    if (flagBgEl) {
+      flagBgEl.style.backgroundImage = `url('/images/themes/${theme.slug}.png'), ${flagGradient(theme.accent_colour)}`;
+    }
+    document.documentElement.style.setProperty('--accent', theme.accent_colour);
+    document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
+
     const myTeam = state.themes.find(t => t.slug === (state.session ? state.session.my_team_slug : ''));
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
-    const isMyGame = game.active_player_id === (state.session ? state.session.user_id : null);
 
-    // Build portrait URL
+    // Portrait behind tiles — footballer image or trophy for final
     const portraitUrl = stageIdx >= 6
       ? '/images/trophy-reveal.jpg'
       : `/images/footballers/${theme.slug}.png`;
@@ -765,12 +813,12 @@
       <span style="margin-left:auto;color:#666;font-size:0.8rem;">${stageName(stageIdx)}</span>
     </div>`;
 
-    // Build 64 cells
+    // Build 64 tiles; open tiles show portrait beneath
     const revealed = game.revealed || new Array(64).fill(false);
-    let cells = '';
+    let tiles = '';
     for (let i = 0; i < 64; i++) {
-      const isRevealed = revealed[i];
-      cells += `<div class="cell${isRevealed ? ' revealed' : ''}" data-idx="${i}" style="${isRevealed ? '' : `background-color:${accentRgba};border-color:${hexToRgba(theme.accent_colour,0.85)};`}" onclick="onCellClick(${i})"></div>`;
+      const isOpen = revealed[i];
+      tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
 
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
@@ -793,10 +841,12 @@
       ${hud}
       ${nationStrip}
       <div class="board-zone" id="board-zone">
-        <div class="game-grid-wrapper">
-          <div class="game-grid" id="game-grid" style="background-image:${bgWithFallback(portraitUrl,theme.accent_colour)};">
-            ${cells}
+        <div class="board-wrap">
+          <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
+          <div class="board" id="game-grid">
+            ${tiles}
           </div>
+          <div class="reveal" id="board-reveal"></div>
         </div>
       </div>
       <div style="padding:10px 12px;background:rgba(0,0,0,0.6);">
@@ -855,14 +905,14 @@
     if (sessId) body.session_id = sessId;
 
     // Disable board during request
-    document.querySelectorAll('.cell:not(.revealed)').forEach(c => c.style.pointerEvents = 'none');
+    document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
 
     try {
       const r = await api('POST', `/api/games/${game.id}/guess`, body);
       if (!r.ok) {
         const e = await r.json().catch(()=>({}));
         showToast(e.error || 'Guess failed');
-        document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = '');
+        document.querySelectorAll('.tile').forEach(c => c.style.pointerEvents = '');
         return;
       }
       const d = await r.json();
@@ -881,23 +931,23 @@
       updateHud();
       updateCreditsDisplay();
 
-      const cell = document.querySelector(`.cell[data-idx="${idx}"]`);
+      const cell = document.querySelector(`.tile[data-idx="${idx}"]`);
       if (d.hit) {
         await runWinSequence(cell, idx, d);
       } else {
         // Miss — shake + flip tile
         if (cell) {
           cell.classList.add('flip-miss');
-          setTimeout(() => { cell.classList.add('revealed'); cell.classList.remove('flip-miss'); cell.style.background = ''; cell.style.pointerEvents = 'none'; }, 680);
+          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('flip-miss'); cell.style.pointerEvents = 'none'; }, 680);
         }
         // Update hint bar
         const hint = document.getElementById('hint-bar');
         if (hint) hint.textContent = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-        document.querySelectorAll('.cell:not(.revealed)').forEach(c => c.style.pointerEvents = '');
+        document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       }
     } catch(e) {
       console.error('Guess error', e);
-      document.querySelectorAll('.cell').forEach(c => c.style.pointerEvents = '');
+      document.querySelectorAll('.tile').forEach(c => c.style.pointerEvents = '');
     }
   };
 
@@ -942,12 +992,12 @@
     await sleep(700);
 
     // Step 4: cascade dissolve remaining tiles
-    const unrevealed = document.querySelectorAll('.cell:not(.revealed)');
+    const unrevealed = document.querySelectorAll('.tile:not(.open)');
     unrevealed.forEach((c, i) => {
       const delay = Math.random() * 1300;
       setTimeout(() => {
         c.classList.add('dissolving');
-        setTimeout(() => { c.classList.add('revealed'); c.style.background = ''; }, 460);
+        setTimeout(() => { c.classList.add('open'); c.classList.remove('dissolving'); }, 460);
       }, delay);
     });
 
