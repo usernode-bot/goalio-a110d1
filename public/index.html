@@ -128,9 +128,8 @@
     .pot-chip {
       border-color: rgba(251,191,36,0.5) !important;
       box-shadow: 0 0 8px rgba(251,191,36,0.2);
-      font-size: 0.85rem !important;
     }
-    .pot-chip .val { font-size: 1.1rem !important; color: #fbbf24 !important; }
+    .pot-chip .val { font-size: 1rem !important; color: #fbbf24 !important; }
 
     @keyframes pot-heartbeat {
       0%, 100% { box-shadow: 0 0 8px rgba(251,191,36,0.2); }
@@ -602,7 +601,7 @@
 
   function potChipHtml(balance) {
     const heartbeat = balance > 500 ? ' pot-heartbeat' : '';
-    return `<div class="hud-chip pot-chip${heartbeat}" style="flex:1.2;">
+    return `<div class="hud-chip pot-chip${heartbeat}" style="flex:1;">
       <span style="font-size:0.7rem;color:#888;">Captain's Pot</span>
       <span class="val pot-chip-value">${Math.round(balance).toLocaleString()} t</span>
     </div>`;
@@ -685,7 +684,7 @@
     const statsRow = `
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;">
         ${potChipHtml(state.potBalance)}
-        <div class="hud-chip" style="flex:0 0 auto;min-width:90px;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
+        <div class="hud-chip" style="flex:1;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
