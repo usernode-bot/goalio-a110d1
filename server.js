@@ -152,6 +152,7 @@ app.get('/api/session', async (req, res) => {
 
 // POST /api/session
 app.post('/api/session', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Sign in via Usernode to play' });
   const { my_team_slug } = req.body;
   if (!my_team_slug) return res.status(400).json({ error: 'my_team_slug required' });
 

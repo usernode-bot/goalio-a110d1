@@ -658,7 +658,7 @@
 
   window.pickNation = async function(slug) {
     const r = await api('POST', '/api/session', { my_team_slug: slug });
-    if (!r.ok) { showToast('Error creating session'); return; }
+    if (!r.ok) { const e = await r.json().catch(()=>({})); showToast(e.error || 'Error creating session'); return; }
     const { session } = await r.json();
     state.session = session;
     // Start first map automatically
