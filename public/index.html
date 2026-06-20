@@ -115,7 +115,7 @@
     .nation-card:active { transform: translateY(-2px) scale(0.99); }
     .nation-card .flag-area { position: absolute; inset: 0; background-size: cover; background-position: center; }
     .nation-card .flag-area::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.78) 100%); }
-    .nation-card .name-area { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px; text-align: center; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: clamp(9px, 2.5vw, 11px); line-height: 1.2; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; overflow: hidden; }
+    .nation-card .name-area { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px; text-align: center; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: clamp(8px, 2.2vw, 10px) !important; line-height: 1.2; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* HUD chips */
     .hud-chip {
@@ -323,7 +323,7 @@
     .modal-box { background: #1a1a2e; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
     /* Lobby sections */
-    .section-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1.1rem; color: #f0f0f5; margin-bottom: 14px; }
+    .section-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 1rem !important; color: #f0f0f5; margin-bottom: 14px; }
     .or-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; color: #555; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; }
     .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
 
