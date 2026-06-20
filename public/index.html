@@ -91,8 +91,8 @@
     .bg::after {
       content: ''; position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse at 50% 30%, rgba(7,7,16,0.25) 0%, rgba(7,7,16,0.82) 100%),
-        linear-gradient(180deg, rgba(7,7,16,0.55) 0%, rgba(7,7,16,0.15) 50%, rgba(7,7,16,0.75) 100%);
+        radial-gradient(ellipse at 50% 30%, rgba(8,9,20,0.0) 0%, rgba(8,9,20,0.35) 100%),
+        linear-gradient(180deg, rgba(7,7,16,0.22) 0%, rgba(7,7,16,0.05) 50%, rgba(7,7,16,0.28) 100%);
     }
     .font-dm { font-family: 'DM Sans', sans-serif; }
     .font-mono-stat { font-family: 'Space Mono', monospace; }
@@ -356,6 +356,19 @@
     .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
 
     .credits-chip { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.35); border-radius: 10px; padding: 7px 14px; font-family: 'DM Sans', sans-serif; color: #fbbf24; font-weight: 600; text-align: center; font-size: 0.85rem; }
+
+    /* Bundle purchase shot buttons — flat, no gradient */
+    .shot-btn {
+      font-family: 'DM Sans', sans-serif; font-weight: 700; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1.5px solid rgba(109,123,255,0.45);
+      cursor: pointer; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 1px; padding: 5px 8px; flex: 1; min-width: 0;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .shot-btn:hover { background: rgba(109,123,255,0.15); border-color: rgba(109,123,255,0.8); }
+    .shot-btn:active { background: rgba(109,123,255,0.28); transform: scale(0.97); }
+    .shot-btn .shot-count { font-size: 0.8rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
+    .shot-btn .shot-cost { font-size: 0.62rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
   </style>
 </head>
 <body>
@@ -861,8 +874,8 @@
       controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
       controls = `<div style="display:flex;gap:6px;">
-        <button class="bundle-btn btn-gold" style="flex:1;" onclick="buyBundle(8)">8 Shots — 36 tokens</button>
-        <button class="bundle-btn btn-green" style="flex:1;" onclick="buyBundle(16)">16 Shots — 64 tokens</button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
       </div>
       <div style="text-align:center;margin-top:3px;">
         <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
@@ -906,8 +919,8 @@
       row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
       row.innerHTML = `<div style="display:flex;gap:6px;">
-        <button class="bundle-btn btn-gold" style="flex:1;" onclick="buyBundle(8)">8 Shots — 36 tokens</button>
-        <button class="bundle-btn btn-green" style="flex:1;" onclick="buyBundle(16)">16 Shots — 64 tokens</button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
       </div>
       <div style="text-align:center;margin-top:3px;">
         <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
