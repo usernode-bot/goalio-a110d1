@@ -98,11 +98,11 @@
     .font-8bit { font-family: 'Press Start 2P', monospace; }
 
     /* Lobby hero */
-    .hero-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: clamp(2.2rem, 8vw, 3.4rem); letter-spacing: -1.5px; line-height: 1; }
+    .hero-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: clamp(2.4rem, 10vw, 3.6rem); letter-spacing: -1.5px; line-height: 1; margin: 0; }
     .hero-go { color: #f0f0f5; }
     .hero-al { color: #e23b4e; }
-    .hero-edition { font-family: 'Space Mono', monospace; font-weight: 700; font-size: clamp(0.6rem, 2vw, 0.8rem); letter-spacing: 0.28em; color: #fbbf24; text-transform: uppercase; vertical-align: super; margin-left: 6px; }
-    .hero-sub { font-family: 'Space Grotesk', sans-serif; color: #9ca3af; font-size: 0.95rem; margin-top: 6px; }
+    .hero-edition { display: block; font-family: 'Space Mono', monospace; font-weight: 700; font-size: clamp(0.7rem, 3vw, 1rem); letter-spacing: 0.22em; color: #fbbf24; text-transform: uppercase; margin-top: 5px; }
+    .hero-sub { font-family: 'Space Grotesk', sans-serif; color: #9ca3af; font-size: 0.9rem; margin-top: 4px; }
 
     /* Nation flag card */
     .nation-card {
@@ -115,7 +115,7 @@
     .nation-card:active { transform: translateY(-2px) scale(0.99); }
     .nation-card .flag-area { position: absolute; inset: 0; background-size: cover; background-position: center; }
     .nation-card .flag-area::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.78) 100%); }
-    .nation-card .name-area { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 6px; text-align: center; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.9rem; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; }
+    .nation-card .name-area { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px; text-align: center; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: clamp(9px, 2.5vw, 11px); line-height: 1.2; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; overflow: hidden; }
 
     /* HUD chips */
     .hud-chip {
@@ -604,7 +604,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
-      <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:20px 16px;width:100%;">
+      <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:12px 16px 20px;width:100%;">
         <div style="text-align:center;padding:40px 0;color:#555;">Loading...</div>
       </div>
     </div>`;
@@ -651,8 +651,14 @@
       return;
     }
 
+    const heroBlock = `
+      <div style="text-align:center;margin-bottom:14px;">
+        <h1 class="hero-title"><span class="hero-go">GO</span><span class="hero-al">AL!</span></h1>
+        <span class="hero-edition">World Cup Edition</span>
+      </div>`;
+
     const statsRow = `
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:18px;">
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;">
         ${potChipHtml(state.potBalance)}
         <div class="hud-chip" style="flex:0 0 auto;min-width:90px;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
       </div>`;
@@ -664,9 +670,8 @@
       // Tournament underway, no active match — auto-match resume state
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
       mainSection = `
-        <h1 class="hero-title"><span class="hero-go">GO</span><span class="hero-al">AL!</span><span class="hero-edition">World Cup Edition</span></h1>
-        <p class="hero-sub">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;align-items:center;gap:14px;padding:18px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;margin-top:22px;">
+        <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
+        <div style="display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
           <div style="width:48px;height:32px;border-radius:4px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>
           <div>
             <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
@@ -678,10 +683,9 @@
     } else {
       // No tournament (or just completed) — flag-forward nation picker
       mainSection = `
-        <h1 class="hero-title"><span class="hero-go">GO</span><span class="hero-al">AL!</span><span class="hero-edition">World Cup Edition</span></h1>
-        <h2 class="section-title" style="font-size:1.5rem;margin-top:18px;margin-bottom:4px;">Choose your nation</h2>
-        <p class="hero-sub" style="margin-bottom:18px;">${session && session.session_complete ? '🏆 Champions! Pick a nation to start a fresh tournament.' : 'Win seven matches — three group games, then the knockouts — to lift the cup.'}</p>
-        <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+        <h2 class="section-title" style="margin-bottom:4px;">Choose your nation</h2>
+        <p class="hero-sub" style="margin-bottom:14px;">${session && session.session_complete ? '🏆 Champions! Pick a nation to start a fresh tournament.' : 'Win seven matches — three group games, then the knockouts — to lift the cup.'}</p>
+        <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           ${state.themes.map(t => `
             <div class="nation-card" onclick="pickNation('${t.slug}')">
               <div class="flag-area" style="background:${flagBg(t.slug, t.accent_colour)};"></div>
@@ -692,6 +696,7 @@
     }
 
     body.innerHTML = `
+      ${heroBlock}
       ${statsRow}
       ${mainSection}
       `;
