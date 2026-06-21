@@ -145,7 +145,7 @@
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
       flex: 1 1 auto; min-height: 0; position: relative;
-      display: flex; align-items: center; justify-content: center; padding: 4px;
+      display: flex; align-items: center; justify-content: center; padding: 2px;
     }
 
     /* Three-layer board stack — mobile-first: near-full width */
@@ -245,18 +245,18 @@
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
-    .game-hud { display: flex; gap: 4px; padding: 4px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .game-hud { display: flex; gap: 4px; padding: 3px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 3px 5px !important; border-radius: 6px !important; font-size: 8px !important; line-height: 1.1; }
     .game-hud .hud-chip .val { font-size: 13px !important; }
     .game-hud .pot-chip { box-shadow: 0 0 8px rgba(251,191,36,0.18) !important; }
     .game-hud .pot-chip .val { font-size: 13px !important; color: #fbbf24 !important; }
 
     /* Nation strip — single tight row */
-    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 3px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 26px; }
+    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 24px; }
     .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
 
     /* Game footer — compact controls + hint */
-    .game-footer { flex-shrink: 0; padding: 5px 8px 6px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
+    .game-footer { flex-shrink: 0; padding: 3px 8px 4px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
     .game-footer .bundle-btn { padding: 0 10px !important; font-size: 0.78rem !important; height: 34px; line-height: 34px; border-radius: 10px !important; }
     .game-footer .credits-chip { padding: 5px 10px !important; font-size: 0.8rem !important; border-radius: 10px !important; }
 
@@ -932,9 +932,10 @@
     if (credRemaining > 0) {
       controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      controls = `<div style="display:flex;gap:6px;">
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
+      controls = `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
+      <div style="display:flex;gap:6px;">
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · 36 tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">🔥 Go All In</span><span class="shot-cost">16 shots · 64 tokens</span></button>
       </div>`;
     }
 
@@ -953,10 +954,10 @@
         </div>
       </div>
       <div class="game-footer">
-        <div id="controls-row" style="margin-bottom:3px;">${controls}</div>
-        <div id="hint-bar" class="font-dm" style="text-align:center;font-size:10px;color:#666;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${initialHint}</div>
-        <div style="text-align:center;margin-top:2px;">
-          <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;" onclick="leaveMap(${game.id})">Leave Map</span>
+        <div id="controls-row" style="margin-bottom:2px;">${controls}</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
+          <div id="hint-bar" class="font-dm" style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
+          <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
   }
@@ -974,9 +975,10 @@
     if (credRemaining > 0) {
       row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      row.innerHTML = `<div style="display:flex;gap:6px;">
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
+      row.innerHTML = `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
+      <div style="display:flex;gap:6px;">
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · 36 tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">🔥 Go All In</span><span class="shot-cost">16 shots · 64 tokens</span></button>
       </div>`;
     }
   }
