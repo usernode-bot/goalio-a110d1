@@ -561,10 +561,14 @@
   // ═══════════════════════════════════════════════════════════════
   function showToast(msg, duration) {
     duration = duration || 5000;
+    const container = document.getElementById('toast-container');
+    // Don't add a duplicate if the same message is already visible
+    const existing = Array.from(container.children).find(c => c.textContent === msg);
+    if (existing) return;
     const el = document.createElement('div');
     el.className = 'toast';
     el.textContent = msg;
-    document.getElementById('toast-container').appendChild(el);
+    container.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, duration);
   }
 
