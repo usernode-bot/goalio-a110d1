@@ -992,7 +992,7 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (!sessId) {
-      showToast('Buy shots above to play', 3000);
+      showToast('You need credits to win', 3000);
       return;
     }
     playBlip();
