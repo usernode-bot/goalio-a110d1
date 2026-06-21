@@ -1192,7 +1192,7 @@
     modal.className = 'modal-bg';
     modal.innerHTML = `<div class="modal-box">
       <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px;">Buy ${size} Shots — ${cost} tokens</div>
-      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Unused credits are forfeited if you leave this map. Credits are only refunded if you find the hidden object yourself.</p>
+      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Unused shots carry over to your next match if you win. If you abandon this map the remaining shots are forfeited.</p>
       <div style="display:flex;gap:10px;">
         <button class="bundle-btn btn-ghost" style="flex:1;" onclick="this.closest('.modal-bg').remove()">Cancel</button>
         <button class="bundle-btn btn-gold" style="flex:1;" onclick="confirmBundle(${size},this.closest('.modal-bg'))">Buy</button>

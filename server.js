@@ -255,6 +255,37 @@ app.post('/api/session/start-map', async (req, res) => {
 
     const game = gameRows[0];
 
+    // Carry over unused credits from the player's last won game into this new game.
+    // Credits are not refunded on win — they roll forward as prepaid shots.
+    const { rows: prevGameRows } = await client.query(`
+      SELECT id FROM games
+      WHERE winner_user_id = $1 AND status = 'completed'
+      ORDER BY completed_at DESC LIMIT 1
+    `, [req.user.id]);
+    if (prevGameRows.length) {
+      const prevGameId = prevGameRows[0].id;
+      const { rows: prevSessions } = await client.query(`
+        SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
+        FROM game_sessions
+        WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
+      `, [prevGameId, req.user.id]);
+      if (prevSessions.length) {
+        const totalRemaining = prevSessions.reduce((s, r) => s + parseInt(r.remaining), 0);
+        const totalValue = prevSessions.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
+        const avgRate = (totalValue / totalRemaining).toFixed(2);
+        // Close out old sessions (credits are now on the new game, not refunded to wallet)
+        await client.query(
+          'UPDATE game_sessions SET credits_used = credits_total WHERE id = ANY($1)',
+          [prevSessions.map(r => r.id)]
+        );
+        // Create one consolidated carried-over session on the new game
+        await client.query(`
+          INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
+          VALUES ($1, $2, $3, 0, $4)
+        `, [game.id, req.user.id, totalRemaining, avgRate]);
+      }
+    }
+
     await client.query(
       'UPDATE tournament_sessions SET current_game_id = $1, updated_at = NOW() WHERE user_id = $2',
       [game.id, req.user.id]
@@ -583,16 +614,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       await ensureWallet(client, req.user.id, req.user.username);
       await creditWallet(client, req.user.id, prizePaid + jackpotAmount);
 
-      // Refund remaining bundle credits (winner's own sessions)
-      const { rows: refundRows } = await client.query(`
-        UPDATE game_sessions SET refunded = true
-        WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
-        RETURNING (credits_total - credits_used) * tokens_per_credit AS refund_amount
-      `, [game.id, req.user.id]);
-      if (refundRows.length) {
-        creditsRefunded = refundRows.reduce((s, r) => s + parseFloat(r.refund_amount), 0);
-        await creditWallet(client, req.user.id, creditsRefunded);
-      }
+      // Remaining bundle credits are NOT refunded — they carry over to the next game
+      // via the start-map handler which consolidates them into a new session.
 
       // Advance tournament session
       const { rows: tourRows } = await client.query(
