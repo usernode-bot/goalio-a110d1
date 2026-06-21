@@ -30,9 +30,10 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// Prize decay formula: prize(n) = max(8, floor(150 / (1 + e^(0.12*(n-40)))))
+// Prize decay formula: prize(n) = max(8, floor(150 / (1 + e^(0.30*(n-16)))))
+// 6×6 grid (36 squares): ~148 on fresh board, 75 at n=16, 63 at n=17, floor 8 by n=26.
 function prizeDecay(n) {
-  return Math.max(8, Math.floor(150 / (1 + Math.exp(0.12 * (n - 40)))));
+  return Math.max(8, Math.floor(150 / (1 + Math.exp(0.30 * (n - 16)))));
 }
 
 // Lazy timeout check — called at start of GET /api/games and GET /api/session
@@ -239,8 +240,8 @@ app.post('/api/session/start-map', async (req, res) => {
     if (!themeRows.length) return res.status(400).json({ error: 'No opponents available' });
 
     const theme = themeRows[Math.floor(Math.random() * themeRows.length)];
-    const footballSquare = Math.floor(Math.random() * 64);
-    const revealed = new Array(64).fill(false);
+    const footballSquare = Math.floor(Math.random() * 36);
+    const revealed = new Array(36).fill(false);
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
@@ -442,7 +443,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 // POST /api/games/:id/guess
 app.post('/api/games/:id/guess', async (req, res) => {
   const { square_index, session_id } = req.body;
-  if (square_index === undefined || square_index < 0 || square_index > 63) {
+  if (square_index === undefined || square_index < 0 || square_index > 35) {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
 
@@ -967,30 +968,30 @@ async function start() {
     const { rows: themeRows } = await pool.query('SELECT id, slug FROM themes');
     const themeMap = Object.fromEntries(themeRows.map(t => [t.slug, t.id]));
 
-    const revealed8 = new Array(64).fill(false);
+    const revealed8 = new Array(36).fill(false);
     for (let i = 0; i < 8; i++) revealed8[i] = true;
-    const revealed31 = new Array(64).fill(false);
+    const revealed31 = new Array(36).fill(false);
     for (let i = 0; i < 31; i++) revealed31[i] = true;
-    const revealed51 = new Array(64).fill(false);
-    for (let i = 0; i < 51; i++) revealed51[i] = true;
+    const revealed35 = new Array(36).fill(false);
+    for (let i = 0; i < 35; i++) revealed35[i] = true;
 
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (1, $1, 0, 40, $2, 8, 2, 'open')
+      VALUES (1, $1, 0, 30, $2, 8, 2, 'open')
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['brazil'], revealed8]);
 
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (2, $1, 5, 55, $2, 31, 4, 'open')
+      VALUES (2, $1, 5, 32, $2, 31, 4, 'open')
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['france'], revealed31]);
 
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (3, $1, 3, 20, $2, 51, 6, 'open')
+      VALUES (3, $1, 3, 20, $2, 35, 6, 'open')
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], revealed51]);
+    `, [themeMap['argentina'], revealed35]);
 
     // Sequence fixup so next insert gets id > 3
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 3))`);
@@ -998,9 +999,9 @@ async function start() {
     // Completed staging game
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, status, winner_username, prize_paid, completed_at)
-      VALUES (4, $1, 6, 32, $2, 45, 'completed', 'Staging Kaiser', 136, NOW())
+      VALUES (4, $1, 6, 32, $2, 35, 'completed', 'Staging Kaiser', 136, NOW())
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['germany'], new Array(64).fill(true)]);
+    `, [themeMap['germany'], new Array(36).fill(true)]);
 
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 4))`);
 

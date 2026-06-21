@@ -172,7 +172,7 @@
     }
     .board {
       position: absolute; inset: 0; z-index: 2;
-      display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 2px;
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 2px;
     }
     .reveal {
       position: absolute; inset: 0; z-index: 6;
@@ -183,6 +183,7 @@
     .tile {
       position: relative;
       cursor: pointer;
+      aspect-ratio: 1/1;
       background: linear-gradient(150deg, #2b3068, #13152f);
       box-shadow:
         inset 0 0 0 1px rgba(150,160,255,.18),
@@ -406,7 +407,7 @@
     session: null, walletBalance: 1000, potBalance: 100,
     potLastWonAt: null, leaderState: null,
     game: null, gameTheme: null, credits: null,
-    squaresRevealed: 0, prizePot: 149,
+    squaresRevealed: 0, prizePot: 148,
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
@@ -430,7 +431,7 @@
     return `rgba(${r},${g},${b},${a})`;
   }
   function prizeDecay(n) {
-    return Math.max(8, Math.floor(150 / (1 + Math.exp(0.12 * (n - 40)))));
+    return Math.max(8, Math.floor(150 / (1 + Math.exp(0.30 * (n - 16)))));
   }
   function flagGradient(accent) {
     return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent,0.6)} 100%)`;
@@ -888,10 +889,10 @@
       <span style="margin-left:auto;color:#555;font-size:0.65rem;font-family:'Space Mono',monospace;white-space:nowrap;">${stageName(stageIdx)}</span>
     </div>`;
 
-    // Build 64 tiles; open tiles show portrait beneath
-    const revealed = game.revealed || new Array(64).fill(false);
+    // Build 36 tiles; open tiles show portrait beneath
+    const revealed = game.revealed || new Array(36).fill(false);
     let tiles = '';
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 36; i++) {
       const isOpen = revealed[i];
       tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
@@ -904,9 +905,6 @@
       controls = `<div style="display:flex;gap:6px;">
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
-      </div>
-      <div style="text-align:center;margin-top:3px;">
-        <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
       </div>`;
     }
 
@@ -949,31 +947,22 @@
       row.innerHTML = `<div style="display:flex;gap:6px;">
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">8 Shots</span><span class="shot-cost">36 tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">16 Shots</span><span class="shot-cost">64 tokens</span></button>
-      </div>
-      <div style="text-align:center;margin-top:3px;">
-        <span class="font-dm" style="font-size:0.72rem;color:#666;cursor:pointer;text-decoration:underline;" onclick="singleGuessMode()">or shoot once — 5 tokens</span>
       </div>`;
     }
   }
-
-  let singleMode = false;
-  window.singleGuessMode = function() { singleMode = true; showToast('Single guess mode: next click costs 5 tokens', 3000); };
 
   window.onCellClick = async function(idx) {
     const game = state.game;
     if (!game || game.status !== 'active') return;
     if ((game.revealed || [])[idx]) return;
 
-    // Determine if using bundle or single
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
-    if (!sessId && !singleMode) {
-      // Need to purchase — prompt
-      showToast('Buy shots above, or click "or shoot once — 5 tokens"', 3000);
+    if (!sessId) {
+      showToast('Buy shots above to play', 3000);
       return;
     }
-    singleMode = false;
     playBlip();
 
     const body = { square_index: idx };
@@ -993,7 +982,7 @@
       const d = await r.json();
 
       // Update state
-      if (!game.revealed) game.revealed = new Array(64).fill(false);
+      if (!game.revealed) game.revealed = new Array(36).fill(false);
       game.revealed[idx] = true;
       state.squaresRevealed = d.squares_revealed;
       state.walletBalance = d.wallet_balance;
@@ -1440,9 +1429,8 @@
         <div class="faq-section">
           <h2>The Game</h2>
           <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across Group Matches, Knockout rounds, and the Final.</p>
-          <p>Each match is played on an 8×8 grid of 64 glass gem tiles hiding a secret object — a football for stages 1–6, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
+          <p>Each match is played on a 6×6 grid of 36 glass gem tiles hiding a secret object — a football for stages 1–6, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
           <ul>
-            <li><strong>Single shot:</strong> 5 tokens — charged immediately on click</li>
             <li><strong>Bundle (8 shots):</strong> 36 tokens upfront — 4.5 t/shot</li>
             <li><strong>Bundle (16 shots):</strong> 64 tokens upfront — 4 t/shot</li>
           </ul>
@@ -1475,34 +1463,33 @@
 
           <h3>Prize Curve</h3>
           <p>The prize for finding the hidden object is calculated by this formula:</p>
-          <pre>prize(n) = max(8, floor(150 / (1 + e^(0.12 × (n − 40)))))</pre>
+          <pre>prize(n) = max(8, floor(150 / (1 + e^(0.30 × (n − 16)))))</pre>
           <p>where <em>n</em> is the number of tiles already revealed before the winning guess.</p>
-          <p><strong>Key values:</strong></p>
+          <p><strong>Key values (6×6 grid, 36 tiles):</strong></p>
           <table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin-bottom:12px;">
             <tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:4px 8px;color:#888;">Tiles revealed</th><th style="text-align:right;padding:4px 8px;color:#888;">Prize (tokens)</th></tr>
-            ${[[0,149],[10,147],[20,143],[25,136],[30,123],[32,108],[35,101],[40,79],[45,57],[50,38],[55,24],[60,14],[63,8]].map(([n,p]) => `<tr><td style="padding:4px 8px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 8px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td></tr>`).join('')}
+            ${[[0,148],[5,144],[10,128],[13,106],[16,75],[17,63],[20,34],[22,21],[25,9],[26,8],[35,8]].map(([n,p]) => `<tr><td style="padding:4px 8px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 8px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td></tr>`).join('')}
           </table>
 
           <h3>House-Edge Maths</h3>
-          <p><strong>Single guesses (conservative baseline):</strong></p>
+          <p><strong>Conservative baseline (4.5 t/shot, 8-shot bundle):</strong></p>
           <ul>
-            <li>Expected discovery: uniform across 64 squares → mean at guess 32.5</li>
-            <li>Revenue at median: 32.5 × 5 = <strong>162.5 tokens</strong></li>
-            <li>Captain's Pot contribution: 162.5 × 20% = 32.5 tokens (returns to players as jackpots long-run)</li>
-            <li>Net prize pool after pot: <strong>130 tokens</strong></li>
-            <li>Prize at n=32: <strong>108 tokens</strong></li>
-            <li>House keeps: 130 − 108 = <strong>22 tokens = 13.5% gross margin</strong> ✓</li>
+            <li>Expected discovery: uniform across 36 squares → mean at guess 18.5</li>
+            <li>Revenue at median (18 guesses): 18 × 4.5 = <strong>81 tokens</strong></li>
+            <li>Captain's Pot contribution: 81 × 20% = 16.2 tokens (returns to players as jackpots long-run)</li>
+            <li>Net prize pool after pot: <strong>64.8 tokens</strong></li>
+            <li>Prize at n=17: <strong>63 tokens</strong></li>
+            <li>House keeps: 64.8 − 63 = <strong>1.8 tokens ≈ 2% margin at median</strong></li>
           </ul>
-          <p><strong>With bundle mix (30% via bundles, blended 4.7 t/guess):</strong></p>
+          <p><strong>With 16-shot bundle (4.0 t/shot):</strong></p>
           <ul>
-            <li>Revenue ≈ 152.8 tokens; pot ≈ 30.6; net pool ≈ 122.2; house keeps ≈ 14.2 tokens ≈ <strong>9.3% margin</strong> — still profitable; bundles compress margin slightly as intended.</li>
+            <li>Revenue ≈ 74 tokens; pot ≈ 14.8; net pool ≈ 59.2; prize at n=17: 63 → <strong>slight house loss at median</strong> — offset by players who use many shots before finding the ball.</li>
           </ul>
-          <p><strong>Captain's Pot long-run net:</strong></p>
+          <p><strong>Captain's Pot long-run:</strong></p>
           <ul>
-            <li>Jackpot probability per fresh board: 1/64 ≈ 1.56%</li>
-            <li>Over 64 boards: pot accumulates ≈ 64 × 32.5 = 2,080 + 100 seed = ~2,180 tokens per jackpot event</li>
-            <li>House re-seeds 100 tokens per jackpot win; amortised cost ≈ 1.56 tokens/board</li>
-            <li>Adjusted house margin: (22 − 1.56) / 162.5 ≈ <strong>12.6% net</strong> — within 10–15% target ✓</li>
+            <li>Jackpot probability per fresh board: 1/36 ≈ 2.78%</li>
+            <li>Over 36 boards: pot accumulates ≈ 36 × 18 × 0.20 × 4.5 = ~583 + 100 seed tokens per jackpot event</li>
+            <li>House re-seeds 100 tokens per jackpot win</li>
           </ul>
 
           <h3>🔐 ZK Enhancement (Future)</h3>
