@@ -114,8 +114,9 @@
     }
     .nation-card:hover { transform: translateY(-6px) scale(1.02); box-shadow: 0 0 0 2px #fbbf24, 0 12px 32px rgba(251,191,36,0.35); border-color: #fbbf24; }
     .nation-card:active { transform: translateY(-2px) scale(0.99); }
-    .nation-card .flag-area { position: absolute; inset: 0; background-size: cover; background-position: center; }
-    .nation-card .flag-area::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.78) 100%); }
+    .nation-card .flag-area { position: absolute; inset: 0; overflow: hidden; }
+    .nation-card .flag-area img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .nation-card .flag-area::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 45%, rgba(0,0,0,0.78) 100%); z-index: 1; }
     .nation-card .name-area { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px; text-align: center; color: #fff; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: clamp(8px, 2.2vw, 10px) !important; line-height: 1.2; text-shadow: 0 1px 4px rgba(0,0,0,0.9); z-index: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* HUD chips */
@@ -253,7 +254,7 @@
 
     /* Nation strip — single tight row */
     .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 24px; }
-    .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+    .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
 
     /* Game footer — compact controls + hint */
     .game-footer { flex-shrink: 0; padding: 3px 8px 4px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
@@ -459,24 +460,33 @@
   function stageName(idx) { return STAGES[idx] || 'Final'; }
   function clearPolls() { state.polls.forEach(id => clearInterval(id)); state.polls = []; }
 
-  // CSS flag representations (flag-forward styling; real flag art deferred).
-  const FLAGS = {
-    france: 'linear-gradient(90deg,#0055A4 0 33.33%,#fff 33.33% 66.66%,#EF4135 66.66%)',
-    brazil: 'radial-gradient(circle at 50% 50%, #FEDF00 0 30%, transparent 31%), linear-gradient(135deg,#009C3B,#007a2e)',
-    england: 'linear-gradient(#CF142B,#CF142B) center/100% 22% no-repeat, linear-gradient(#CF142B,#CF142B) center/22% 100% no-repeat, #fff',
-    spain: 'linear-gradient(180deg,#AA151B 0 25%,#F1BF00 25% 75%,#AA151B 75%)',
-    argentina: 'linear-gradient(180deg,#74ACDF 0 33.33%,#fff 33.33% 66.66%,#74ACDF 66.66%)',
-    morocco: 'radial-gradient(circle at 50% 50%, #006233 0 16%, transparent 17%), #C1272D',
-    usa: 'linear-gradient(#3C3B6E,#3C3B6E) top left/42% 54% no-repeat, repeating-linear-gradient(#B22234 0 7.69%,#fff 7.69% 15.38%)',
-    turkey: 'radial-gradient(circle at 42% 50%, #fff 0 16%, transparent 16%), #E30A17',
-    belgium: 'linear-gradient(90deg,#000 0 33.33%,#FAE042 33.33% 66.66%,#ED2939 66.66%)',
-    egypt: 'linear-gradient(180deg,#CE1126 0 33.33%,#fff 33.33% 66.66%,#000 66.66%)',
-    portugal: 'linear-gradient(90deg,#006600 0 40%,#FF0000 40%)',
-    netherlands: 'linear-gradient(180deg,#AE1C28 0 33.33%,#fff 33.33% 66.66%,#21468B 66.66%)',
-    norway: 'linear-gradient(#002868,#002868) center/100% 22% no-repeat, linear-gradient(#002868,#002868) 36% 0/12% 100% no-repeat, linear-gradient(#fff,#fff) center/100% 44% no-repeat, linear-gradient(#fff,#fff) 36% 0/24% 100% no-repeat, #EF2B2D',
-    germany: 'linear-gradient(180deg,#000 0 33.33%,#DD0000 33.33% 66.66%,#FFCE00 66.66%)',
+  // Wikipedia SVG flag URLs for each country.
+  const FLAG_SVGS = {
+    france:      'https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg',
+    brazil:      'https://upload.wikimedia.org/wikipedia/en/0/05/Flag_of_Brazil.svg',
+    england:     'https://upload.wikimedia.org/wikipedia/en/b/be/Flag_of_England.svg',
+    spain:       'https://upload.wikimedia.org/wikipedia/en/9/9a/Flag_of_Spain.svg',
+    argentina:   'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
+    morocco:     'https://upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Morocco.svg',
+    usa:         'https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg',
+    turkey:      'https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg',
+    belgium:     'https://upload.wikimedia.org/wikipedia/commons/6/65/Flag_of_Belgium.svg',
+    egypt:       'https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg',
+    portugal:    'https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Portugal.svg',
+    netherlands: 'https://upload.wikimedia.org/wikipedia/commons/2/20/Flag_of_the_Netherlands.svg',
+    norway:      'https://upload.wikimedia.org/wikipedia/commons/d/d9/Flag_of_Norway.svg',
+    germany:     'https://upload.wikimedia.org/wikipedia/en/b/ba/Flag_of_Germany.svg',
+    mexico:      'https://upload.wikimedia.org/wikipedia/commons/f/fc/Flag_of_Mexico.svg',
   };
-  function flagBg(slug, accent) { return FLAGS[slug] || flagGradient(accent); }
+  function flagImg(slug, alt, cls, extraStyle) {
+    const src = FLAG_SVGS[slug];
+    if (!src) return '';
+    return `<img src="${src}" alt="${alt || slug}" class="${cls || ''}" ${extraStyle ? `style="${extraStyle}"` : ''}>`;
+  }
+  function flagBg(slug, accent) {
+    const svg = FLAG_SVGS[slug];
+    return svg ? `url('${svg}')` : flagGradient(accent);
+  }
   // Board backdrop: real theme photo if present, else the CSS flag.
   function boardBackdrop(slug, accent) { return `url('/images/themes/${slug}.png'), ${flagBg(slug, accent)}`; }
 
@@ -772,7 +782,7 @@
       mainSection = `
         <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
         <div style="display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
-          <div style="width:48px;height:32px;border-radius:4px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>
+          ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
           <div>
             <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
             <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
@@ -788,7 +798,7 @@
         <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           ${state.themes.map(t => `
             <div class="nation-card" onclick="pickNation('${t.slug}')">
-              <div class="flag-area" style="background:${flagBg(t.slug, t.accent_colour)};"></div>
+              <div class="flag-area">${flagImg(t.slug, t.country_name, '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(t.accent_colour)};"></div>`}</div>
               <div class="name-area">${t.country_name}</div>
             </div>
           `).join('')}
@@ -914,8 +924,8 @@
       <div class="hud-chip"><span style="display:block;">Shots</span><span class="val shots-val">${state.squaresRevealed}</span></div>
     </div>`;
 
-    const myFlag = myTeam ? `<div class="flag-mini" style="background:${flagBg(myTeam.slug, myTeam.accent_colour)};background-size:cover;"></div>` : '';
-    const oppFlag = `<div class="flag-mini" style="background:${flagBg(theme.slug, theme.accent_colour)};background-size:cover;"></div>`;
+    const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
+    const oppFlag = FLAG_SVGS[theme.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[theme.slug]}" alt="${theme.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
       ${myFlag}<span style="font-weight:600;color:#e0e0e8;">${myTeam ? myTeam.country_name : 'You'}</span>
       <span style="color:#333;margin:0 1px;">vs</span>
