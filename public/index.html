@@ -380,15 +380,24 @@
   // ═══════════════════════════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════════════════════════
-  // Read token from URL param; persist to localStorage so mobile reloads/navigations
-  // that lose the ?token= query param can still authenticate.
+  // Read token from URL param; persist to both localStorage and sessionStorage so
+  // mobile reloads/navigations that lose the ?token= query param can still authenticate.
   const _urlToken = new URLSearchParams(location.search).get('token') || '';
-  if (_urlToken) { try { localStorage.setItem('usernode_token', _urlToken); } catch(_) {} }
-  const TOKEN = _urlToken || (function() { try { return localStorage.getItem('usernode_token') || ''; } catch(_) { return ''; } })();
-  const HEADERS = () => ({
-    'Content-Type': 'application/json',
-    ...(TOKEN ? { 'x-usernode-token': TOKEN } : {})
-  });
+  if (_urlToken) {
+    try { localStorage.setItem('usernode_token', _urlToken); } catch(_) {}
+    try { sessionStorage.setItem('usernode_token', _urlToken); } catch(_) {}
+  }
+  function getToken() {
+    const u = new URLSearchParams(location.search).get('token');
+    if (u) return u;
+    try { const s = sessionStorage.getItem('usernode_token'); if (s) return s; } catch(_) {}
+    try { return localStorage.getItem('usernode_token') || ''; } catch(_) {}
+    return '';
+  }
+  const HEADERS = () => {
+    const tok = getToken();
+    return { 'Content-Type': 'application/json', ...(tok ? { 'x-usernode-token': tok } : {}) };
+  };
 
   const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 16','Quarter-Final','Semi-Final','Final'];
   const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
@@ -1540,9 +1549,21 @@
     } catch {}
 
     route();
+
+    // Staging debug indicator — shows token presence in bottom-left corner
+    fetch('/api/env').then(r => r.json()).then(d => {
+      if (!d.staging) return;
+      const pill = document.getElementById('auth-debug');
+      if (!pill) return;
+      const tok = getToken();
+      pill.textContent = tok ? 'token ✓' : 'token ✗';
+      pill.style.color = tok ? '#4ade80' : '#f87171';
+      pill.style.display = 'block';
+    }).catch(() => {});
   }
 
   init();
   </script>
+<div id="auth-debug" style="display:none;position:fixed;bottom:6px;left:6px;z-index:9999;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:2px 7px;font-size:0.6rem;font-family:monospace;color:#a1a1aa;pointer-events:none;line-height:1.5;"></div>
 </body>
 </html>
