@@ -530,7 +530,7 @@
   function playBlip() { Sound.blip(); }
   function playVictoryJingle() { Sound.victory(); }
   window.toggleMute = function() { Sound.toggle(); };
-  function muteIcon() { return Sound.muted ? '🔇' : '🔊'; }
+  function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
   function updateMuteButtons() {
     document.querySelectorAll('.mute-btn').forEach(b => {
       b.innerHTML = muteIcon();

@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
