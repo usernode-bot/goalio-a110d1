@@ -16,7 +16,9 @@ const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 app.use(express.json());
 
 app.use((req, res, next) => {
-  const token = req.query.token || req.headers['x-usernode-token'];
+  const authHeader = req.headers['authorization'] || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const token = req.query.token || req.headers['x-usernode-token'] || bearerToken;
   if (token && JWT_SECRET) {
     try { req.user = jwt.verify(token, JWT_SECRET); } catch {}
   }
@@ -771,18 +773,7 @@ app.get('/api/env', (req, res) => {
   res.json({ staging: IS_STAGING });
 });
 
-app.get('*', (req, res) => {
-  if (!req.user) {
-    return res.status(401).send(`<!doctype html><meta charset=utf-8><title>Open in Usernode</title>
-<script>(function(){try{var t=sessionStorage.getItem('usernode_token')||localStorage.getItem('usernode_token');if(t)location.replace(location.pathname+'?token='+encodeURIComponent(t));}catch(e){}})()</script>
-<body style="font-family:system-ui;background:#09090b;color:#e4e4e7;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
-  <div style="max-width:24rem;padding:2rem;text-align:center">
-    <h1 style="font-size:1.25rem;margin:0 0 0.5rem">Open this app inside Usernode</h1>
-    <p style="color:#a1a1aa;font-size:0.9rem;margin:0 0 1.25rem">This page is served via the platform; direct visits aren't authenticated.</p>
-    <a href="https://social-vibecoding.usernodelabs.org" style="display:inline-block;padding:0.5rem 1rem;background:#7c3aed;color:white;border-radius:0.5rem;text-decoration:none;font-size:0.9rem">Go to Usernode</a>
-  </div>
-</body>`);
-  }
+app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
