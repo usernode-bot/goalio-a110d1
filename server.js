@@ -946,6 +946,20 @@ async function start() {
     ON CONFLICT (id) DO NOTHING
   `);
 
+  // ── Staging boot reset ────────────────────────────────────────────────────
+  // Wipe all player/game rows on every staging boot so the seed below always
+  // starts from a clean slate. Themes, captain_pot, and game_stats are kept.
+  if (IS_STAGING) {
+    await pool.query(`DELETE FROM guesses`);
+    await pool.query(`DELETE FROM game_sessions`);
+    await pool.query(`DELETE FROM games`);
+    await pool.query(`DELETE FROM tournament_sessions`);
+    await pool.query(`DELETE FROM player_stats`);
+    await pool.query(`DELETE FROM player_wallets`);
+    await pool.query(`ALTER SEQUENCE IF EXISTS games_id_seq RESTART WITH 1`);
+    console.log('[staging] Reset: all game/player rows cleared');
+  }
+
   // ── Staging seed data ─────────────────────────────────────────────────────
   if (IS_STAGING) {
     // Override captain pot and game stats with more interesting values
