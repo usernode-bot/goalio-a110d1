@@ -468,6 +468,21 @@
     if (idx === 5) return 6;
     return 7;
   }
+  // Captain's Pot tier floors, mirrors the server. Top-up entering a stage is
+  // the floor jump when that stage is the first of a new (harder) tier:
+  //   stage 3 → +60 (knockouts), stage 5 → +70 (semi), stage 6 → +90 (final).
+  const POT_FLOORS = [100, 160, 230, 320];
+  function potTierForStage(idx) {
+    if (idx <= 2) return 0;
+    if (idx <= 4) return 1;
+    if (idx === 5) return 2;
+    return 3;
+  }
+  function potTopupEnteringStage(idx) {
+    if (idx <= 0) return 0;
+    const t = potTierForStage(idx), prev = potTierForStage(idx - 1);
+    return t > prev ? POT_FLOORS[t] - POT_FLOORS[prev] : 0;
+  }
   function fmtTokens(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
@@ -574,6 +589,33 @@
       notes.forEach((f, i) => this.tone(f, t + i * 0.12, 0.16, 'square', 0.18));
       this.tone(1046.50, t + 0.6, 0.32, 'triangle', 0.2);
     },
+    // Full ~32-bar 8-bit victory anthem: I-V-vi-IV in C major, a 16-beat lead
+    // motif repeated/varied across four 8-bar sections with a bass line under it.
+    async anthem() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      this._anthemStop = false;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12); // MIDI → Hz
+      const beat = 0.26; // ~115 BPM; 2 beats/bar → ~32 bars over 64 beats
+      let t = ctx.currentTime + 0.06;
+      // Lead: MIDI notes, 0 = rest. One value per beat.
+      const motif = [72,0,76,79, 84,0,83,79, 76,79,81,79, 76,0,72,0];
+      const lift  = [74,0,77,81, 86,0,84,81, 79,81,83,81, 84,0,86,0];
+      const lead = [].concat(motif, motif, lift, motif);
+      lead.forEach((m, i) => {
+        if (m) this.tone(f(m), t + i * beat, beat * 0.92, 'square', 0.15);
+      });
+      // Bass: I-V-vi-IV (C-G-Am-F), one root every 4 beats, low octave.
+      const roots = [48, 43, 45, 41]; // C3 G2 A2 F2
+      for (let bar4 = 0; bar4 < lead.length / 4; bar4++) {
+        const root = roots[bar4 % roots.length];
+        const bt = t + bar4 * 4 * beat;
+        this.tone(f(root), bt, beat * 1.8, 'triangle', 0.16);
+        this.tone(f(root + 7), bt + 2 * beat, beat * 1.8, 'triangle', 0.12);
+      }
+      // Final flourish chord.
+      const end = t + lead.length * beat;
+      [60, 64, 67, 72].forEach((m, i) => this.tone(f(m), end + i * 0.05, 0.7, 'square', 0.14));
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
@@ -584,6 +626,7 @@
   };
   function playBlip() { Sound.blip(); }
   function playVictoryJingle() { Sound.victory(); }
+  function playVictoryAnthem() { Sound.anthem(); }
   window.toggleMute = function() { Sound.toggle(); };
   function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
   function updateMuteButtons() {
@@ -795,9 +838,11 @@
     }
 
     const statsRow = `
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
+        <button onclick="openInfoPanel()" class="hud-chip" title="How GOAL! works" style="flex:0 0 auto;cursor:pointer;color:#cfcfe0;font-family:'DM Sans',sans-serif;font-weight:600;">ⓘ How it works</button>
+        <div style="flex:1;"></div>
         ${potChipHtml(state.potBalance)}
-        <div class="hud-chip" style="flex:1;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
+        <div class="hud-chip" style="flex:0 0 auto;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
@@ -836,6 +881,44 @@
       ${statsRow}
       ${mainSection}
       `;
+
+    maybeAutoShowInfo();
+  }
+
+  // ── Home-page info panel ───────────────────────────────────────────────────
+  function infoPanelHtml() {
+    return `<div class="modal-box" style="text-align:left;max-width:400px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.2rem;color:#fbbf24;">How GOAL! works</div>
+        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+      </div>
+      <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.86rem;color:#cfcfe0;line-height:1.55;">
+        <li style="margin-bottom:7px;"><strong>The board grows each stage</strong> — group 4×4, knockouts 5×5, semi-final 6×6, final 7×7. Reveal tiles to find the hidden ball, knock out the nation, and advance.</li>
+        <li style="margin-bottom:7px;"><strong>Shots are priced per stage</strong> so a typical board costs about the same throughout: 13 t/shot in the group stage, 8 in the knockouts, 5.5 in the semi, 4 in the final. Buy 8- or 16-shot bundles.</li>
+        <li style="margin-bottom:7px;"><strong>The Captain's Pot</strong> is a global jackpot — win it by finding the ball with your <em>very first</em> shot on a brand-new board. It starts low and is topped up as harder, longer-odds stages unlock.</li>
+        <li><strong>Find it early</strong> for a bigger Prize Pot — the reward decays as more of the board is revealed.</li>
+      </ul>
+      <button class="bundle-btn btn-gold" style="width:100%;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
+    </div>`;
+  }
+  function showInfoPanel() {
+    if (document.getElementById('info-panel')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.id = 'info-panel';
+    modal.innerHTML = infoPanelHtml();
+    document.body.appendChild(modal);
+  }
+  window.openInfoPanel = function() { showInfoPanel(); };
+  window.dismissInfoPanel = function(modal) {
+    try { localStorage.setItem('goal_info_seen', '1'); } catch(_) {}
+    if (modal) modal.remove();
+    else { const m = document.getElementById('info-panel'); if (m) m.remove(); }
+  };
+  function maybeAutoShowInfo() {
+    let seen = false;
+    try { seen = localStorage.getItem('goal_info_seen') === '1'; } catch(_) {}
+    if (!seen) showInfoPanel();
   }
 
   function setupLobbyPolls() {
@@ -859,8 +942,7 @@
     startNewMap();
   };
 
-  window.startNewMap = async function() {
-    if (!state.session) { showToast('Pick a nation first'); return; }
+  async function doStartNewMap() {
     const r = await api('POST', '/api/session/start-map');
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -870,6 +952,33 @@
     const d = await r.json();
     state.session = d.session;
     navigate('#game/' + d.game.id);
+  }
+
+  window.startNewMap = function() {
+    if (!state.session) { showToast('Pick a nation first'); return; }
+    // Pre-round Captain's Pot pop-up: if the round about to begin is the first
+    // of a harder tier, announce the top-up before play starts.
+    const topup = potTopupEnteringStage(state.session.stage_idx);
+    if (topup > 0) { showPotTopupPopup(state.session.stage_idx, topup); return; }
+    doStartNewMap();
+  };
+
+  function showPotTopupPopup(stageIdx, amount) {
+    const tierLabel = stageName(stageIdx);
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.innerHTML = `<div class="modal-box" style="text-align:center;">
+      <div style="font-size:2.2rem;margin-bottom:6px;">⚡</div>
+      <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.15rem;color:#fbbf24;margin-bottom:8px;line-height:1.25;">${amount} tokens now added to the Captain's Pot</div>
+      <p style="font-size:0.85rem;color:#aaa;margin-bottom:10px;font-family:'DM Sans',sans-serif;">You're entering the ${tierLabel}. The board grows and the odds get longer — so the jackpot grows with it.</p>
+      <div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:18px;">Captain's Pot now ${Math.round(state.potBalance).toLocaleString()} t</div>
+      <button class="bundle-btn btn-gold" style="width:100%;" onclick="confirmStartMatch(this.closest('.modal-bg'))">Start ${tierLabel} ▶</button>
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  window.confirmStartMatch = function(modal) {
+    if (modal) modal.remove();
+    doStartNewMap();
   };
 
   window.joinMap = async function(id) {
@@ -1310,6 +1419,7 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
     startConfetti();
+    playVictoryAnthem();
     const r = await api('GET', '/api/session');
     let totalWon = 0, displayName = '';
     if (r.ok) {
@@ -1318,42 +1428,29 @@
       state.walletBalance = d.wallet_balance;
     }
     const leagueR = await api('GET', '/api/league');
-    let myRank = '?', myScore = 0;
+    let myRank = '?', myScore = 0, username = '';
     if (leagueR.ok) {
       const ld = await leagueR.json();
-      if (ld.current_player) { myRank = ld.current_player.rank; myScore = ld.current_player.total_tokens_won; displayName = ld.current_player.display_name || ''; }
+      if (ld.current_player) {
+        myRank = ld.current_player.rank; myScore = ld.current_player.total_tokens_won;
+        displayName = ld.current_player.display_name || '';
+        username = ld.current_player.username || '';
+      }
     }
 
     const myTeam = state.session ? state.themes.find(t => t.slug === state.session.my_team_slug) : null;
-    const accentCol = myTeam ? myTeam.accent_colour : '#fbbf24';
-
-    // 9 flags
-    let flags = '';
-    for (let i = 0; i < 9; i++) {
-      flags += `<div class="flag-wave" style="width:40px;height:60px;background:${flagGradient(accentCol)};border-radius:2px;margin:0 4px;display:inline-block;"></div>`;
-    }
-
-    // 4 rows pixel fans — skin tones
-    const TONES = ['#f4a261','#e76f51','#264653','#2a9d8f'];
-    let fans = '';
-    for (let row = 0; row < 4; row++) {
-      fans += `<div class="fan-row" style="display:flex;gap:4px;justify-content:center;margin-bottom:4px;">`;
-      for (let col = 0; col < 12; col++) {
-        const tone = TONES[(row * 3 + col) % TONES.length];
-        fans += `<div class="fan-bob" style="animation-delay:${(col*0.06).toFixed(2)}s;">
-          <div style="width:10px;height:10px;background:${tone};border-radius:50%;"></div>
-          <div style="width:10px;height:12px;background:${tone};margin-top:1px;border-radius:2px;"></div>
-        </div>`;
-      }
-      fans += `</div>`;
-    }
+    const countryName = myTeam ? myTeam.country_name : 'your nation';
+    const playerName = displayName || username || 'You';
+    const flagMini = myTeam && FLAG_SVGS[myTeam.slug]
+      ? `<img src="${FLAG_SVGS[myTeam.slug]}" alt="${countryName}" style="width:34px;height:23px;border-radius:3px;object-fit:cover;vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;">`
+      : '';
 
     document.getElementById('app').innerHTML = `
-      <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;padding:30px 16px;min-height:100vh;overflow:auto;">
-        <div class="font-8bit" style="color:#fbbf24;font-size:clamp(1rem,4vw,2rem);text-shadow:4px 4px #7c3aed;margin-bottom:24px;text-align:center;">CHAMPIONS</div>
-        <div style="margin-bottom:20px;">${flags}</div>
-        <div style="margin-bottom:20px;">${fans}</div>
-        <div style="width:80px;height:16px;background:#1a6b1a;border-radius:4px;margin-bottom:24px;box-shadow:0 0 20px rgba(26,107,26,0.8);"></div>
+      <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;min-height:100vh;overflow:auto;">
+        <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.4rem,6vw,2rem);line-height:1.2;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;max-width:420px;margin-bottom:28px;">
+          ${playerName} representing ${flagMini}${countryName} have won the World Cup!
+        </div>
 
         <div class="result-card" style="max-width:380px;width:100%;">
           <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:16px;">TOURNAMENT COMPLETE</div>
@@ -1529,6 +1626,7 @@
           </ul>
           <p>Both conditions must be true. Joining an existing map (which has prior guesses) makes the jackpot impossible on that board. Missing your first guess on a fresh map also makes it impossible for the rest of that board.</p>
           <p>Because a blind first shot is far easier on a small group board (1 in 16) than in the Final (1 in 49), the pot is <strong>anchored low during the easy group stage and topped up as play reaches harder stages</strong>. Floors: group <strong>100</strong>, knockout <strong>160</strong>, semi <strong>230</strong>, final <strong>320</strong>. Each top-up (+60 into the knockouts, +70 into the semi, +90 into the final) is announced on-screen — the longer the odds, the bigger the top-up.</p>
+          <p>You'll see a pop-up with the top-up amount <strong>before you start</strong> the first round of each new tier, so you know how big the jackpot has grown going in. New to the game? Tap <strong>ⓘ How it works</strong> on the home screen for a quick recap any time.</p>
           <p>On a jackpot win: you receive the standard Prize Pot plus the entire Captain's Pot balance. The pot then reseeds to the floor of the stage where it was won, so an easy early win never leaves an inflated pot behind.</p>
         </div>
 
@@ -1586,6 +1684,17 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
+  function getQueryParam(name) {
+    try { return new URLSearchParams(location.search).get(name); } catch(_) { return null; }
+  }
+  async function handleDemoFinal() {
+    if (!state.themes.length) {
+      try { const r = await api('GET', '/api/themes'); if (r.ok) state.themes = (await r.json()).themes || []; } catch(_) {}
+    }
+    state.session = { my_team_slug: 'brazil', total_tokens_won: 420, session_complete: true };
+    renderVictoryStadium({ interstitial: 'final_win', jackpot_paid: 0, prize_paid: 96, new_stage_idx: 7 });
+  }
+
   async function init() {
     // Load themes globally for use across screens
     try {
@@ -1612,7 +1721,18 @@
       }
     } catch {}
 
+    // Demo triggers (staging review aids) — pure client-side UI states, so they
+    // work against an empty DB. Harmless no-op shells in prod if ever appended.
+    const demo = getQueryParam('demo');
+    if (demo === 'final') { await handleDemoFinal(); return; }
+
     route();
+
+    if (demo === 'topup') {
+      setTimeout(() => { showPotTopupPopup(3, potTopupEnteringStage(3)); }, 400);
+    } else if (demo === 'info') {
+      setTimeout(() => { showInfoPanel(); }, 400);
+    }
 
     // Staging debug indicator — shows token presence in bottom-left corner
     fetch('/api/env').then(r => r.json()).then(d => {
