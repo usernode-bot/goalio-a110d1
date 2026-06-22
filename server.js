@@ -32,10 +32,68 @@ app.use((req, res, next) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// Prize decay formula: prize(n) = max(8, floor(150 / (1 + e^(0.30*(n-16)))))
-// 6×6 grid (36 squares): ~148 on fresh board, 75 at n=16, 63 at n=17, floor 8 by n=26.
-function prizeDecay(n) {
-  return Math.max(8, Math.floor(150 / (1 + Math.exp(0.30 * (n - 16)))));
+// ── Tournament difficulty progression ──────────────────────────────────────
+// The board grows with the stage (World-Cup difficulty curve):
+//   stages 0-2 group   → 4×4 = 16 tiles   (jackpot odds 1/16 = 6.25%)
+//   stages 3-4 knockout → 5×5 = 25 tiles   (1/25 = 4.0%)
+//   stage  5   semi     → 6×6 = 36 tiles   (1/36 = 2.78%)
+//   stage  6   final    → 7×7 = 49 tiles   (1/49 = 2.04%)
+function gridSizeForStage(stageIdx) {
+  if (stageIdx <= 2) return 16;
+  if (stageIdx <= 4) return 25;
+  if (stageIdx === 5) return 36;
+  return 49;
+}
+function gridColsForStage(stageIdx) {
+  if (stageIdx <= 2) return 4;
+  if (stageIdx <= 4) return 5;
+  if (stageIdx === 5) return 6;
+  return 7;
+}
+
+// Per-stage shot pricing. Set so the house keeps ~12.5% (10-15% band) on a
+// typical board regardless of grid size: smaller easy boards are found in
+// fewer shots, so they cost more per shot; big hard boards cost less.
+//   group 13 t/shot, knockout 8, semi 5.5, final 4
+function pricingForStage(stageIdx) {
+  let perShot;
+  if (stageIdx <= 2) perShot = 13;
+  else if (stageIdx <= 4) perShot = 8;
+  else if (stageIdx === 5) perShot = 5.5;
+  else perShot = 4;
+  return { perShot, bundle8: perShot * 8, bundle16: perShot * 16 };
+}
+
+// Captain's Pot floor per stage tier — rounded UP to tidy figures (per the
+// build instruction): each floor = previous floor + the rounded top-up.
+//   group 100, knockout 160 (+60), semi 230 (+70), final 320 (+90).
+// Expected house jackpot cost per fresh board is floor/N ≈ 6.25-6.5 across all
+// tiers, so it stays roughly constant and the margin band holds.
+function potTierForStage(stageIdx) {
+  if (stageIdx <= 2) return 0;
+  if (stageIdx <= 4) return 1;
+  if (stageIdx === 5) return 2;
+  return 3;
+}
+const POT_FLOORS = [100, 160, 230, 320];
+function potFloorForTier(tier) {
+  return POT_FLOORS[Math.max(0, Math.min(3, tier))];
+}
+function potFloorForStage(stageIdx) {
+  return potFloorForTier(potTierForStage(stageIdx));
+}
+function potTierName(tier) {
+  return ['group', 'knockout', 'semi-final', 'final'][Math.max(0, Math.min(3, tier))];
+}
+
+// Prize decay formula, now keyed to the FRACTION of the board revealed so it
+// scales identically across grid sizes:
+//   prize(n, N) = max(8, floor(150 / (1 + e^(10.8*(n/N - 0.4444)))))
+// At N=36 this is exactly the original 0.30*(n-16) curve (10.8 = 0.30*36,
+// 0.4444 = 16/36): ~148 on a fresh board, ~75 at 44% revealed, floor 8 late.
+function prizeDecay(n, gridSize) {
+  const N = gridSize || 36;
+  return Math.max(8, Math.floor(150 / (1 + Math.exp(10.8 * (n / N - 0.4444)))));
 }
 
 // Lazy timeout check — called at start of GET /api/games and GET /api/session
@@ -209,7 +267,9 @@ app.get('/api/games', async (req, res) => {
 
     const games = rows.map(g => ({
       ...g,
-      prize_pot: prizeDecay(g.total_guesses)
+      grid_size: gridSizeForStage(g.stage_idx),
+      grid_cols: gridColsForStage(g.stage_idx),
+      prize_pot: prizeDecay(g.total_guesses, gridSizeForStage(g.stage_idx))
     }));
 
     res.json({ games, captain_pot_balance: potBalance });
@@ -242,8 +302,9 @@ app.post('/api/session/start-map', async (req, res) => {
     if (!themeRows.length) return res.status(400).json({ error: 'No opponents available' });
 
     const theme = themeRows[Math.floor(Math.random() * themeRows.length)];
-    const footballSquare = Math.floor(Math.random() * 36);
-    const revealed = new Array(36).fill(false);
+    const gridSize = gridSizeForStage(session.stage_idx);
+    const footballSquare = Math.floor(Math.random() * gridSize);
+    const revealed = new Array(gridSize).fill(false);
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
@@ -377,8 +438,10 @@ app.get('/api/games/:id', async (req, res) => {
     );
     const potData = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
 
+    const gridSize = gridSizeForStage(game.stage_idx);
     const squaresRevealed = (game.revealed || []).filter(Boolean).length;
-    const prizePot = prizeDecay(squaresRevealed);
+    const prizePot = prizeDecay(squaresRevealed, gridSize);
+    const pricing = pricingForStage(game.stage_idx);
 
     res.json({
       game,
@@ -388,7 +451,10 @@ app.get('/api/games/:id', async (req, res) => {
       last_winner_username: potData.last_winner_username,
       wallet_balance: walletBalance,
       prize_pot: prizePot,
-      squares_revealed: squaresRevealed
+      squares_revealed: squaresRevealed,
+      grid_size: gridSize,
+      grid_cols: gridColsForStage(game.stage_idx),
+      pricing
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -441,19 +507,24 @@ app.post('/api/games/:id/leave', async (req, res) => {
 // POST /api/games/:id/bundle
 app.post('/api/games/:id/bundle', async (req, res) => {
   const { bundle_size } = req.body;
-  let credits, cost, tokensPerCredit;
-  if (bundle_size === 8) { credits = 8; cost = 36; tokensPerCredit = 4.5; }
-  else if (bundle_size === 16) { credits = 16; cost = 64; tokensPerCredit = 4.0; }
-  else return res.status(400).json({ error: 'bundle_size must be 8 or 16' });
+  if (bundle_size !== 8 && bundle_size !== 16) {
+    return res.status(400).json({ error: 'bundle_size must be 8 or 16' });
+  }
 
   const client = await pool.connect();
   try {
     const { rows: gameRows } = await client.query(
-      'SELECT status, active_player_id FROM games WHERE id = $1', [req.params.id]
+      'SELECT status, active_player_id, stage_idx FROM games WHERE id = $1', [req.params.id]
     );
     if (!gameRows.length) return res.status(404).json({ error: 'Game not found' });
     if (gameRows[0].status !== 'active') return res.status(409).json({ error: 'Game not active' });
     if (gameRows[0].active_player_id !== req.user.id) return res.status(403).json({ error: 'Not your game' });
+
+    // Per-stage pricing: bundles prepay `bundle_size` shots at the stage rate.
+    const { perShot } = pricingForStage(gameRows[0].stage_idx);
+    const credits = bundle_size;
+    const tokensPerCredit = perShot;
+    const cost = perShot * bundle_size;
 
     await ensureWallet(client, req.user.id, req.user.username);
     const newBalance = await debitWallet(client, req.user.id, cost);
@@ -476,7 +547,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 // POST /api/games/:id/guess
 app.post('/api/games/:id/guess', async (req, res) => {
   const { square_index, session_id } = req.body;
-  if (square_index === undefined || square_index < 0 || square_index > 35) {
+  if (square_index === undefined || square_index < 0) {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
 
@@ -496,7 +567,12 @@ app.post('/api/games/:id/guess', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     const game = gameRows[0];
+    const gridSize = gridSizeForStage(game.stage_idx);
 
+    if (square_index >= gridSize) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Invalid square_index' });
+    }
     if (game.status !== 'active') {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Game not active' });
@@ -510,8 +586,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       return res.status(409).json({ error: 'Square already revealed' });
     }
 
-    // Determine cost — check for active bundle session
-    let tokensCharged = 5.0;
+    // Determine cost — check for active bundle session, else the stage single-shot rate
+    let tokensCharged = pricingForStage(game.stage_idx).perShot;
     let usedBundleId = null;
 
     if (session_id) {
@@ -585,9 +661,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
     let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, houseBonus = 0;
     let interstitial = null, newStageIdx = null, stageCompleted = false;
+    let potTopup = 0, potTopupMessage = null;
 
     if (isHit) {
-      prizePaid = prizeDecay(squaresRevealedBefore);
+      prizePaid = prizeDecay(squaresRevealedBefore, gridSize);
 
       let jackpotAmount = 0;
       if (jackpotEligible) {
@@ -596,11 +673,16 @@ app.post('/api/games/:id/guess', async (req, res) => {
         );
         jackpotAmount = parseFloat(potRows[0].balance);
         jackpotPaid = jackpotAmount;
+        // Reseed to the floor of the stage where it was won, and reset the
+        // pot's anchor tier so it can climb again. Easy group wins reseed low
+        // (100), hard final wins reseed high (320) — keeps margin balanced.
+        const reseedFloor = potFloorForStage(game.stage_idx);
+        const reseedTier = potTierForStage(game.stage_idx);
         await client.query(`
-          UPDATE captain_pot SET balance = 100, last_won_at = NOW(),
+          UPDATE captain_pot SET balance = $3, pot_floor_idx = $4, last_won_at = NOW(),
             last_winner_id = $1, last_winner_username = $2
           WHERE id = 1
-        `, [req.user.id, req.user.username]);
+        `, [req.user.id, req.user.username, reseedFloor, reseedTier]);
       }
 
       // Mark game completed
@@ -664,6 +746,26 @@ app.post('/api/games/:id/guess', async (req, res) => {
         } else {
           interstitial = 'knockout_win';
         }
+
+        // Odds-indexed Captain's Pot top-up: when advancing into a harder tier
+        // than the pot has yet reached, inject the rounded tier delta and raise
+        // the pot's anchor. Bounded — at most a few top-ups per win cycle, and
+        // the anchor resets on a jackpot win above.
+        if (!sessionComplete) {
+          const newTier = potTierForStage(updatedStage);
+          const { rows: anchorRows } = await client.query(
+            'SELECT pot_floor_idx FROM captain_pot WHERE id = 1 FOR UPDATE'
+          );
+          const anchorTier = anchorRows.length ? anchorRows[0].pot_floor_idx : 0;
+          if (newTier > anchorTier) {
+            potTopup = potFloorForTier(newTier) - potFloorForTier(anchorTier);
+            await client.query(
+              'UPDATE captain_pot SET balance = balance + $1, pot_floor_idx = $2 WHERE id = 1',
+              [potTopup, newTier]
+            );
+            potTopupMessage = `⚡ ${potTopup} tokens now added to the Captain's Pot — ${potTierName(newTier)} odds unlocked!`;
+          }
+        }
       }
     }
 
@@ -686,6 +788,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       stage_completed: stageCompleted,
       new_stage_idx: newStageIdx,
       interstitial,
+      pot_topup: potTopup,
+      pot_topup_message: potTopupMessage,
       opponent_slug: game.theme_slug,
       footballer_name: game.footballer_name
     });
@@ -842,6 +946,9 @@ async function start() {
     last_winner_id INTEGER,
     last_winner_username VARCHAR(255)
   )`);
+  // Anchor tier the pot has climbed to (0 group … 3 final). Odds-indexed
+  // top-ups raise the pot one tier at a time as play reaches harder stages.
+  await pool.query(`ALTER TABLE captain_pot ADD COLUMN IF NOT EXISTS pot_floor_idx SMALLINT NOT NULL DEFAULT 0`);
   await pool.query(`COMMENT ON TABLE captain_pot IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS games (
@@ -996,40 +1103,45 @@ async function start() {
     const { rows: themeRows } = await pool.query('SELECT id, slug FROM themes');
     const themeMap = Object.fromEntries(themeRows.map(t => [t.slug, t.id]));
 
-    const revealed8 = new Array(36).fill(false);
-    for (let i = 0; i < 8; i++) revealed8[i] = true;
-    const revealed31 = new Array(36).fill(false);
-    for (let i = 0; i < 31; i++) revealed31[i] = true;
-    const revealed35 = new Array(36).fill(false);
-    for (let i = 0; i < 35; i++) revealed35[i] = true;
+    // Boards are sized to their stage's grid (group 16, knockout 25, semi 36,
+    // final 49). football_square is kept above the revealed prefix so the ball
+    // is still hidden on the open boards.
+    const revealedPrefix = (size, count) => {
+      const arr = new Array(size).fill(false);
+      for (let i = 0; i < count; i++) arr[i] = true;
+      return arr;
+    };
 
+    // Game 1 — group stage (stage 0, 4×4 = 16 tiles), 6 revealed
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (1, $1, 0, 30, $2, 8, 2, 'open')
+      VALUES (1, $1, 0, 11, $2, 6, 2, 'open')
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['brazil'], revealed8]);
+    `, [themeMap['brazil'], revealedPrefix(16, 6)]);
 
+    // Game 2 — semi-final (stage 5, 6×6 = 36 tiles), 20 revealed
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (2, $1, 5, 32, $2, 31, 4, 'open')
+      VALUES (2, $1, 5, 32, $2, 20, 4, 'open')
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['france'], revealed31]);
+    `, [themeMap['france'], revealedPrefix(36, 20)]);
 
+    // Game 3 — knockout (stage 3, 5×5 = 25 tiles), 14 revealed
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (3, $1, 3, 20, $2, 35, 6, 'open')
+      VALUES (3, $1, 3, 20, $2, 14, 6, 'open')
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], revealed35]);
+    `, [themeMap['argentina'], revealedPrefix(25, 14)]);
 
     // Sequence fixup so next insert gets id > 3
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 3))`);
 
-    // Completed staging game
+    // Completed staging game — final (stage 6, 7×7 = 49 tiles), fully revealed
     await pool.query(`
       INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, status, winner_username, prize_paid, completed_at)
-      VALUES (4, $1, 6, 32, $2, 35, 'completed', 'Staging Kaiser', 136, NOW())
+      VALUES (4, $1, 6, 40, $2, 18, 'completed', 'Staging Kaiser', 96, NOW())
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['germany'], new Array(36).fill(true)]);
+    `, [themeMap['germany'], new Array(49).fill(true)]);
 
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 4))`);
 
