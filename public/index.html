@@ -490,7 +490,7 @@
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
-    return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
+    return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it?</div>
       <div style="display:flex;gap:4px;">
         <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
