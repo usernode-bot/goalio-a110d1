@@ -886,19 +886,22 @@
   }
 
   // ── Home-page info panel ───────────────────────────────────────────────────
+  // Minimal pop-up: just the basics, always dismissible. The header (title + ×)
+  // and "Got it" button stay fixed; only the short body scrolls if a tiny
+  // viewport ever needs it, so the close controls can never be pushed off-screen.
   function infoPanelHtml() {
-    return `<div class="modal-box" style="text-align:left;max-width:400px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.2rem;color:#fbbf24;">How GOAL! works</div>
-        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#888;font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px;">×</button>
+    return `<div class="modal-box" style="text-align:left;max-width:360px;max-height:85vh;display:flex;flex-direction:column;padding:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex:0 0 auto;">
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.1rem;color:#fbbf24;">How GOAL! works</div>
+        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;">×</button>
       </div>
-      <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.86rem;color:#cfcfe0;line-height:1.55;">
-        <li style="margin-bottom:7px;"><strong>The board grows each stage</strong> — group 4×4, knockouts 5×5, semi-final 6×6, final 7×7. Reveal tiles to find the hidden ball, knock out the nation, and advance.</li>
-        <li style="margin-bottom:7px;"><strong>Shots are priced per stage</strong> so a typical board costs about the same throughout: 13 t/shot in the group stage, 8 in the knockouts, 5.5 in the semi, 4 in the final. Buy 8- or 16-shot bundles.</li>
-        <li style="margin-bottom:7px;"><strong>The Captain's Pot</strong> is a global jackpot — win it by finding the ball with your <em>very first</em> shot on a brand-new board. It starts low and is topped up as harder, longer-odds stages unlock.</li>
-        <li><strong>Find it early</strong> for a bigger Prize Pot — the reward decays as more of the board is revealed.</li>
+      <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#cfcfe0;line-height:1.5;flex:1 1 auto;overflow-y:auto;min-height:0;">
+        <li style="margin-bottom:8px;"><strong>The board grows each stage</strong> — small in the group games, bigger in the knockouts, biggest in the final.</li>
+        <li style="margin-bottom:8px;"><strong>Shot price changes by stage</strong> so a typical board costs about the same throughout.</li>
+        <li><strong>The Captain's Pot</strong> jackpot grows as you advance — win it by finding the ball on your very first shot.</li>
       </ul>
-      <button class="bundle-btn btn-gold" style="width:100%;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
+      <button class="bundle-btn btn-gold" style="width:100%;flex:0 0 auto;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
+      <div style="text-align:center;margin-top:8px;flex:0 0 auto;"><a href="#faq" onclick="dismissInfoPanel(document.getElementById('info-panel'))" style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-decoration:underline;">Full details in the FAQ</a></div>
     </div>`;
   }
   function showInfoPanel() {
