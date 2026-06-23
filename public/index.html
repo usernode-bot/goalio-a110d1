@@ -1157,7 +1157,7 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (!sessId) {
-      showToast('Top up to play!', 3000);
+      buyBundle(2);
       return;
     }
     playBlip();
