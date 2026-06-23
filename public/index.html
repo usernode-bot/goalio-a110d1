@@ -160,13 +160,16 @@
         0 0 0 3px rgba(0,0,0,0.6),
         0 20px 60px -10px rgba(0,0,0,0.95),
         inset 0 1px 0 rgba(255,255,255,0.06);
-      width: min(96vw, calc(100vh - 200px));
+      width: min(96vw, calc(100vh - 185px));
+      width: min(96vw, calc(100svh - 165px));
       max-height: 100%;
     }
     @media (min-width: 481px) {
-      .board-wrap { width: min(400px, calc(100vh - 200px)); }
+      .board-wrap { width: min(400px, calc(100vh - 185px)); width: min(400px, calc(100svh - 165px)); }
       #game-body { max-width: 440px; margin: 0 auto; }
     }
+    /* Full-height game container using small viewport height to stay within visible area on mobile */
+    .game-screen { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; position: relative; }
     .portrait {
       position: absolute; inset: 0; z-index: 0;
       background-size: cover; background-position: center top;
@@ -246,23 +249,23 @@
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
-    .game-hud { display: flex; gap: 4px; padding: 3px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
-    .game-hud .hud-chip { padding: 3px 5px !important; border-radius: 6px !important; font-size: 8px !important; line-height: 1.1; }
-    .game-hud .hud-chip .val { font-size: 13px !important; }
+    .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
+    .game-hud .hud-chip .val { font-size: 12px !important; }
     .game-hud .pot-chip { box-shadow: 0 0 8px rgba(251,191,36,0.18) !important; }
-    .game-hud .pot-chip .val { font-size: 13px !important; color: #fbbf24 !important; }
+    .game-hud .pot-chip .val { font-size: 12px !important; color: #fbbf24 !important; }
 
     /* Nation strip — single tight row */
-    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 24px; }
-    .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
+    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 1px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 22px; }
+    .flag-mini { width: 18px; height: 12px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
 
     /* Game footer — compact controls + hint */
-    .game-footer { flex-shrink: 0; padding: 3px 8px 4px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
+    .game-footer { flex-shrink: 0; padding: 2px 8px 3px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
     .game-footer .bundle-btn { padding: 0 10px !important; font-size: 0.78rem !important; height: 34px; line-height: 34px; border-radius: 10px !important; }
-    .game-footer .credits-chip { padding: 5px 10px !important; font-size: 0.8rem !important; border-radius: 10px !important; }
+    .game-footer .credits-chip { padding: 4px 10px !important; font-size: 0.78rem !important; border-radius: 10px !important; }
 
     /* Mobile: squeeze header to save height */
-    @media (max-width: 480px) { header { padding: 6px 12px !important; } }
+    @media (max-width: 480px) { header { padding: 4px 12px !important; } }
 
     /* Controls */
     .bundle-btn {
@@ -278,12 +281,12 @@
     .btn-red { background: linear-gradient(135deg, #f87171, #ef4444); color: white; }
     .btn-ghost { background: rgba(255,255,255,0.08); color: #d0d0e0; border: 1px solid rgba(255,255,255,0.12); }
 
-    /* Header */
+    /* Header — transparent so flag image bleeds through; blur keeps text readable */
     header {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; background: rgba(10,10,15,0.78); backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 16px; background: rgba(10,10,15,0.12); backdrop-filter: blur(14px) saturate(1.2);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .header-logo-block { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
     .header-logo-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fbbf24; letter-spacing: -0.5px; }
@@ -364,13 +367,13 @@
       font-family: 'DM Sans', sans-serif; font-weight: 700; border-radius: 10px;
       background: rgba(255,255,255,0.04); border: 1.5px solid rgba(109,123,255,0.45);
       cursor: pointer; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 1px; padding: 5px 8px; flex: 1; min-width: 0;
+      justify-content: center; gap: 1px; padding: 4px 6px; flex: 1; min-width: 0;
       transition: background 0.15s, border-color 0.15s, transform 0.1s;
     }
     .shot-btn:hover { background: rgba(109,123,255,0.15); border-color: rgba(109,123,255,0.8); }
     .shot-btn:active { background: rgba(109,123,255,0.28); transform: scale(0.97); }
-    .shot-btn .shot-count { font-size: 0.8rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
-    .shot-btn .shot-cost { font-size: 0.62rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
+    .shot-btn .shot-count { font-size: 0.68rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; }
+    .shot-btn .shot-cost { font-size: 0.58rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
   </style>
 </head>
 <body>
@@ -419,6 +422,7 @@
     potLastWonAt: null, leaderState: null,
     game: null, gameTheme: null, credits: null,
     squaresRevealed: 0, prizePot: 148,
+    gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle2: 11, bundle8: 44, bundle16: 88 },
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
@@ -448,8 +452,50 @@
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
     return `rgba(${r},${g},${b},${a})`;
   }
-  function prizeDecay(n) {
-    return Math.max(8, Math.floor(150 / (1 + Math.exp(0.30 * (n - 16)))));
+  // Fraction-based prize curve — mirrors the server. Identical to the original
+  // 0.30*(n-16) curve at N=36 (10.8 = 0.30*36, 0.4444 = 16/36).
+  function prizeDecay(n, gridSize) {
+    const N = gridSize || state.gridSize || 36;
+    return Math.max(8, Math.floor(150 / (1 + Math.exp(10.8 * (n / N - 0.4444)))));
+  }
+  // Per-stage grid + columns, mirrors the server's gridSizeForStage/gridColsForStage.
+  function gridSizeForStage(idx) {
+    if (idx <= 2) return 16;
+    if (idx <= 4) return 25;
+    if (idx === 5) return 36;
+    return 49;
+  }
+  function gridColsForStage(idx) {
+    if (idx <= 2) return 4;
+    if (idx <= 4) return 5;
+    if (idx === 5) return 6;
+    return 7;
+  }
+  // Captain's Pot tier floors, mirrors the server. Top-up entering a stage is
+  // the floor jump when that stage is the first of a new (harder) tier:
+  //   stage 3 → +60 (knockouts), stage 5 → +70 (semi), stage 6 → +90 (final).
+  const POT_FLOORS = [100, 160, 230, 320];
+  function potTierForStage(idx) {
+    if (idx <= 2) return 0;
+    if (idx <= 4) return 1;
+    if (idx === 5) return 2;
+    return 3;
+  }
+  function potTopupEnteringStage(idx) {
+    if (idx <= 0) return 0;
+    const t = potTierForStage(idx), prev = potTierForStage(idx - 1);
+    return t > prev ? POT_FLOORS[t] - POT_FLOORS[prev] : 0;
+  }
+  function fmtTokens(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
+  // Shot-purchase buttons, priced for the current stage.
+  function shotButtonsHtml() {
+    const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+    return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it?</div>
+      <div style="display:flex;gap:4px;">
+        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
+      </div>`;
   }
   function flagGradient(accent) {
     return `linear-gradient(135deg, ${accent} 0%, ${hexToRgba(accent,0.6)} 100%)`;
@@ -547,6 +593,33 @@
       notes.forEach((f, i) => this.tone(f, t + i * 0.12, 0.16, 'square', 0.18));
       this.tone(1046.50, t + 0.6, 0.32, 'triangle', 0.2);
     },
+    // Full ~32-bar 8-bit victory anthem: I-V-vi-IV in C major, a 16-beat lead
+    // motif repeated/varied across four 8-bar sections with a bass line under it.
+    async anthem() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      this._anthemStop = false;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12); // MIDI → Hz
+      const beat = 0.26; // ~115 BPM; 2 beats/bar → ~32 bars over 64 beats
+      let t = ctx.currentTime + 0.06;
+      // Lead: MIDI notes, 0 = rest. One value per beat.
+      const motif = [72,0,76,79, 84,0,83,79, 76,79,81,79, 76,0,72,0];
+      const lift  = [74,0,77,81, 86,0,84,81, 79,81,83,81, 84,0,86,0];
+      const lead = [].concat(motif, motif, lift, motif);
+      lead.forEach((m, i) => {
+        if (m) this.tone(f(m), t + i * beat, beat * 0.92, 'square', 0.15);
+      });
+      // Bass: I-V-vi-IV (C-G-Am-F), one root every 4 beats, low octave.
+      const roots = [48, 43, 45, 41]; // C3 G2 A2 F2
+      for (let bar4 = 0; bar4 < lead.length / 4; bar4++) {
+        const root = roots[bar4 % roots.length];
+        const bt = t + bar4 * 4 * beat;
+        this.tone(f(root), bt, beat * 1.8, 'triangle', 0.16);
+        this.tone(f(root + 7), bt + 2 * beat, beat * 1.8, 'triangle', 0.12);
+      }
+      // Final flourish chord.
+      const end = t + lead.length * beat;
+      [60, 64, 67, 72].forEach((m, i) => this.tone(f(m), end + i * 0.05, 0.7, 'square', 0.14));
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
@@ -557,6 +630,7 @@
   };
   function playBlip() { Sound.blip(); }
   function playVictoryJingle() { Sound.victory(); }
+  function playVictoryAnthem() { Sound.anthem(); }
   window.toggleMute = function() { Sound.toggle(); };
   function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
   function updateMuteButtons() {
@@ -672,6 +746,17 @@
     </header>`;
   }
 
+  function backToGameBannerHtml() {
+    if (!state.game || state.game.status !== 'active' || !state.game.id) return '';
+    return `<a href="#game/${state.game.id}" onclick="navigate('#game/${state.game.id}');return false;"
+        style="display:flex;align-items:center;gap:8px;padding:10px 16px;min-height:44px;
+               background:rgba(109,123,255,0.13);border-bottom:1px solid rgba(109,123,255,0.28);
+               font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:700;color:#a5b4fc;
+               text-decoration:none;flex-shrink:0;">
+      ⚽ ← Back to Game
+    </a>`;
+  }
+
   function potChipHtml(balance) {
     const heartbeat = balance > 500 ? ' pot-heartbeat' : '';
     return `<div class="hud-chip pot-chip${heartbeat}" style="flex:1;">
@@ -768,9 +853,11 @@
     }
 
     const statsRow = `
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
+        <button onclick="openInfoPanel()" class="hud-chip" title="How GOAL! works" style="flex:0 0 auto;cursor:pointer;color:#cfcfe0;font-family:'DM Sans',sans-serif;font-weight:600;">ⓘ How it works</button>
+        <div style="flex:1;"></div>
         ${potChipHtml(state.potBalance)}
-        <div class="hud-chip" style="flex:1;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
+        <div class="hud-chip" style="flex:0 0 auto;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
@@ -809,6 +896,47 @@
       ${statsRow}
       ${mainSection}
       `;
+
+    maybeAutoShowInfo();
+  }
+
+  // ── Home-page info panel ───────────────────────────────────────────────────
+  // Minimal pop-up: just the basics, always dismissible. The header (title + ×)
+  // and "Got it" button stay fixed; only the short body scrolls if a tiny
+  // viewport ever needs it, so the close controls can never be pushed off-screen.
+  function infoPanelHtml() {
+    return `<div class="modal-box" style="text-align:left;max-width:360px;max-height:85vh;display:flex;flex-direction:column;padding:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex:0 0 auto;">
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.1rem;color:#fbbf24;">How GOAL! works</div>
+        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;">×</button>
+      </div>
+      <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#cfcfe0;line-height:1.5;flex:1 1 auto;overflow-y:auto;min-height:0;">
+        <li style="margin-bottom:8px;"><strong>The board grows each stage</strong> — small in the group games, bigger in the knockouts, biggest in the final.</li>
+        <li style="margin-bottom:8px;"><strong>Shot price changes by stage</strong> so a typical board costs about the same throughout.</li>
+        <li><strong>The Captain's Pot</strong> jackpot grows as you advance — win it by finding the ball on your very first shot.</li>
+      </ul>
+      <button class="bundle-btn btn-gold" style="width:100%;flex:0 0 auto;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
+      <div style="text-align:center;margin-top:8px;flex:0 0 auto;"><a href="#faq" onclick="dismissInfoPanel(document.getElementById('info-panel'))" style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-decoration:underline;">Full details in the FAQ</a></div>
+    </div>`;
+  }
+  function showInfoPanel() {
+    if (document.getElementById('info-panel')) return;
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.id = 'info-panel';
+    modal.innerHTML = infoPanelHtml();
+    document.body.appendChild(modal);
+  }
+  window.openInfoPanel = function() { showInfoPanel(); };
+  window.dismissInfoPanel = function(modal) {
+    try { localStorage.setItem('goal_info_seen', '1'); } catch(_) {}
+    if (modal) modal.remove();
+    else { const m = document.getElementById('info-panel'); if (m) m.remove(); }
+  };
+  function maybeAutoShowInfo() {
+    let seen = false;
+    try { seen = localStorage.getItem('goal_info_seen') === '1'; } catch(_) {}
+    if (!seen) showInfoPanel();
   }
 
   function setupLobbyPolls() {
@@ -832,8 +960,7 @@
     startNewMap();
   };
 
-  window.startNewMap = async function() {
-    if (!state.session) { showToast('Pick a nation first'); return; }
+  async function doStartNewMap() {
     const r = await api('POST', '/api/session/start-map');
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -843,6 +970,33 @@
     const d = await r.json();
     state.session = d.session;
     navigate('#game/' + d.game.id);
+  }
+
+  window.startNewMap = function() {
+    if (!state.session) { showToast('Pick a nation first'); return; }
+    // Pre-round Captain's Pot pop-up: if the round about to begin is the first
+    // of a harder tier, announce the top-up before play starts.
+    const topup = potTopupEnteringStage(state.session.stage_idx);
+    if (topup > 0) { showPotTopupPopup(state.session.stage_idx, topup); return; }
+    doStartNewMap();
+  };
+
+  function showPotTopupPopup(stageIdx, amount) {
+    const tierLabel = stageName(stageIdx);
+    const modal = document.createElement('div');
+    modal.className = 'modal-bg';
+    modal.innerHTML = `<div class="modal-box" style="text-align:center;">
+      <div style="font-size:2.2rem;margin-bottom:6px;">⚡</div>
+      <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.15rem;color:#fbbf24;margin-bottom:8px;line-height:1.25;">${amount} tokens now added to the Captain's Pot</div>
+      <p style="font-size:0.85rem;color:#aaa;margin-bottom:10px;font-family:'DM Sans',sans-serif;">You're entering the ${tierLabel}. The board grows and the odds get longer — so the jackpot grows with it.</p>
+      <div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:18px;">Captain's Pot now ${Math.round(state.potBalance).toLocaleString()} t</div>
+      <button class="bundle-btn btn-gold" style="width:100%;" onclick="confirmStartMatch(this.closest('.modal-bg'))">Start ${tierLabel} ▶</button>
+    </div>`;
+    document.body.appendChild(modal);
+  }
+  window.confirmStartMatch = function(modal) {
+    if (modal) modal.remove();
+    doStartNewMap();
   };
 
   window.joinMap = async function(id) {
@@ -863,7 +1017,7 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderGame(id) {
     const app = document.getElementById('app');
-    app.innerHTML = `<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
+    app.innerHTML = `<div class="game-screen">
       ${renderHeader()}
       <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
@@ -885,6 +1039,9 @@
       state.prevPotBalance = d.captain_pot_balance;
       state.squaresRevealed = d.squares_revealed;
       state.prizePot = d.prize_pot;
+      state.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
+      state.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
+      if (d.pricing) state.pricing = d.pricing;
 
       // If game is completed, go back to lobby
       if (d.game.status === 'completed') { navigate('#lobby'); return; }
@@ -927,16 +1084,18 @@
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
     const oppFlag = FLAG_SVGS[theme.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[theme.slug]}" alt="${theme.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
-      ${myFlag}<span style="font-weight:600;color:#e0e0e8;">${myTeam ? myTeam.country_name : 'You'}</span>
-      <span style="color:#333;margin:0 1px;">vs</span>
-      ${oppFlag}<span style="font-weight:600;color:#e0e0e8;">${theme.country_name}</span>
-      <span style="margin-left:auto;color:#555;font-size:0.65rem;font-family:'Space Mono',monospace;white-space:nowrap;">${stageName(stageIdx)}</span>
+      ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myTeam ? myTeam.country_name : 'You'}</span>
+      <span style="color:#fbbf24;font-weight:900;font-size:0.8rem;margin:0 4px;text-shadow:0 0 8px rgba(251,191,36,0.6);letter-spacing:0.05em;">v</span>
+      ${oppFlag}<span style="font-weight:700;color:#f0f0f5;">${theme.country_name}</span>
+      <span style="margin-left:auto;background:rgba(0,0,0,0.55);border:1px solid rgba(251,191,36,0.5);border-radius:5px;padding:1px 7px;color:#fbbf24;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap;text-transform:uppercase;letter-spacing:0.06em;box-shadow:0 0 6px rgba(251,191,36,0.2);">${stageName(stageIdx)}</span>
     </div>`;
 
-    // Build 36 tiles; open tiles show portrait beneath
-    const revealed = game.revealed || new Array(36).fill(false);
+    // Build tiles for this stage's grid; open tiles show portrait beneath
+    const gridSize = state.gridSize || gridSizeForStage(stageIdx);
+    const gridCols = state.gridCols || gridColsForStage(stageIdx);
+    const revealed = game.revealed || new Array(gridSize).fill(false);
     let tiles = '';
-    for (let i = 0; i < 36; i++) {
+    for (let i = 0; i < gridSize; i++) {
       const isOpen = revealed[i];
       tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
@@ -946,11 +1105,7 @@
     if (credRemaining > 0) {
       controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      controls = `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
-      <div style="display:flex;gap:6px;">
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · 36 tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">🔥 Go All In</span><span class="shot-cost">16 shots · 64 tokens</span></button>
-      </div>`;
+      controls = shotButtonsHtml();
     }
 
     const initialHint = `${stageName(stageIdx)} — find the ball to knock out ${theme.country_name}`;
@@ -961,7 +1116,7 @@
       <div class="board-zone" id="board-zone">
         <div class="board-wrap">
           <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
-          <div class="board game-grid" id="game-grid">
+          <div class="board game-grid" id="game-grid" style="grid-template-columns:repeat(${gridCols},1fr);">
             ${tiles}
           </div>
           <div class="reveal" id="board-reveal"></div>
@@ -978,7 +1133,7 @@
 
   function updateHud() {
     const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(state.walletBalance) + ' t';
-    const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed) + ' t';
+    const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
     const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = state.squaresRevealed;
   }
 
@@ -989,11 +1144,7 @@
     if (credRemaining > 0) {
       row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
     } else {
-      row.innerHTML = `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
-      <div style="display:flex;gap:6px;">
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · 36 tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">🔥 Go All In</span><span class="shot-cost">16 shots · 64 tokens</span></button>
-      </div>`;
+      row.innerHTML = shotButtonsHtml();
     }
   }
 
@@ -1028,11 +1179,11 @@
       const d = await r.json();
 
       // Update state
-      if (!game.revealed) game.revealed = new Array(36).fill(false);
+      if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
       game.revealed[idx] = true;
       state.squaresRevealed = d.squares_revealed;
       state.walletBalance = d.wallet_balance;
-      state.prizePot = prizeDecay(state.squaresRevealed);
+      state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
       if (state.credits && sessId) {
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) - 1;
       }
@@ -1162,6 +1313,7 @@
         ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
         <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
         ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
+        ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
         ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
         <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
       </div>`;
@@ -1187,7 +1339,7 @@
       el.className = 'result-overlay';
       el.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);';
       el.innerHTML = `<div class="result-card"><div style="font-size:2rem;">🎉</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">Through to the Knockouts!</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">You're through to the knockouts, congratulations!</div>
         <div style="color:#aaa;font-size:0.85rem;margin-bottom:16px;">All group matches won</div>
         <button class="bundle-btn btn-gold" style="width:100%;" onclick="document.querySelectorAll('.result-overlay').forEach(e=>e.remove());navigate('#lobby');">Continue →</button>
       </div>`;
@@ -1203,7 +1355,8 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
-    const cost = size === 8 ? 36 : 64;
+    const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+    const cost = fmtTokens(size === 2 ? p.bundle2 : size === 8 ? p.bundle8 : p.bundle16);
     const modal = document.createElement('div');
     modal.className = 'modal-bg';
     modal.innerHTML = `<div class="modal-box">
@@ -1284,6 +1437,7 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
     startConfetti();
+    playVictoryAnthem();
     const r = await api('GET', '/api/session');
     let totalWon = 0, displayName = '';
     if (r.ok) {
@@ -1292,58 +1446,43 @@
       state.walletBalance = d.wallet_balance;
     }
     const leagueR = await api('GET', '/api/league');
-    let myRank = '?', myScore = 0;
+    let myRank = '?', myScore = 0, username = '';
     if (leagueR.ok) {
       const ld = await leagueR.json();
-      if (ld.current_player) { myRank = ld.current_player.rank; myScore = ld.current_player.total_tokens_won; displayName = ld.current_player.display_name || ''; }
+      if (ld.current_player) {
+        myRank = ld.current_player.rank; myScore = ld.current_player.total_tokens_won;
+        displayName = ld.current_player.display_name || '';
+        username = ld.current_player.username || '';
+      }
     }
 
     const myTeam = state.session ? state.themes.find(t => t.slug === state.session.my_team_slug) : null;
-    const accentCol = myTeam ? myTeam.accent_colour : '#fbbf24';
-
-    // 9 flags
-    let flags = '';
-    for (let i = 0; i < 9; i++) {
-      flags += `<div class="flag-wave" style="width:40px;height:60px;background:${flagGradient(accentCol)};border-radius:2px;margin:0 4px;display:inline-block;"></div>`;
-    }
-
-    // 4 rows pixel fans — skin tones
-    const TONES = ['#f4a261','#e76f51','#264653','#2a9d8f'];
-    let fans = '';
-    for (let row = 0; row < 4; row++) {
-      fans += `<div class="fan-row" style="display:flex;gap:4px;justify-content:center;margin-bottom:4px;">`;
-      for (let col = 0; col < 12; col++) {
-        const tone = TONES[(row * 3 + col) % TONES.length];
-        fans += `<div class="fan-bob" style="animation-delay:${(col*0.06).toFixed(2)}s;">
-          <div style="width:10px;height:10px;background:${tone};border-radius:50%;"></div>
-          <div style="width:10px;height:12px;background:${tone};margin-top:1px;border-radius:2px;"></div>
-        </div>`;
-      }
-      fans += `</div>`;
-    }
+    const countryName = myTeam ? myTeam.country_name : 'your nation';
+    const playerName = displayName || username || 'You';
+    const flagMini = myTeam && FLAG_SVGS[myTeam.slug]
+      ? `<img src="${FLAG_SVGS[myTeam.slug]}" alt="${countryName}" style="width:34px;height:23px;border-radius:3px;object-fit:cover;vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;">`
+      : '';
 
     document.getElementById('app').innerHTML = `
-      <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;padding:30px 16px;min-height:100vh;overflow:auto;">
-        <div class="font-8bit" style="color:#fbbf24;font-size:clamp(1rem,4vw,2rem);text-shadow:4px 4px #7c3aed;margin-bottom:24px;text-align:center;">CHAMPIONS</div>
-        <div style="margin-bottom:20px;">${flags}</div>
-        <div style="margin-bottom:20px;">${fans}</div>
-        <div style="width:80px;height:16px;background:#1a6b1a;border-radius:4px;margin-bottom:24px;box-shadow:0 0 20px rgba(26,107,26,0.8);"></div>
-
-        <div class="result-card" style="max-width:380px;width:100%;">
-          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:16px;">TOURNAMENT COMPLETE</div>
+      <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;min-height:100vh;overflow:auto;">
+        <div class="result-card" style="max-width:400px;width:100%;">
+          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:14px;">TOURNAMENT COMPLETE</div>
+          <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.1rem,5vw,1.5rem);line-height:1.25;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;margin-bottom:16px;">
+            ${playerName} have won the World Cup with ${countryName}! 🏆
+          </div>
           <div style="font-family:'Space Mono',monospace;font-size:1.2rem;color:#10b981;margin-bottom:4px;">+${Math.round(totalWon)} tokens total</div>
           ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:4px;">⚡ Captain's Jackpot: +${Math.round(result.jackpot_paid)} t</div>` : ''}
           <div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:8px;">🏠 House Bonus: +50 tokens</div>
           <div style="font-size:0.8rem;color:#888;margin-bottom:16px;font-family:'DM Sans',sans-serif;">League rank: #${myRank} · Score: ${Math.round(myScore)} t</div>
-          <div style="margin-bottom:12px;">
+          <div style="margin-bottom:8px;">
             <label style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#888;display:block;margin-bottom:4px;">League display name</label>
-            <input id="display-name-input" value="${displayName}" maxlength="32" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;">
+            <input id="display-name-input" value="${displayName || username}" maxlength="32" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;">
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <button class="bundle-btn btn-gold" style="flex:1;" onclick="submitLeague()">Submit to League</button>
-            <button class="bundle-btn btn-ghost" style="flex:1;" onclick="skipLeague()">Skip</button>
+          <button class="bundle-btn btn-gold" style="width:100%;margin-bottom:12px;" onclick="submitLeague()">Save Name to League</button>
+          <div style="display:flex;gap:8px;">
+            <button class="bundle-btn btn-green" style="flex:1;" onclick="showLeaderboardAfterVictory()">🏆 Show Leaderboard</button>
+            <button class="bundle-btn btn-ghost" style="flex:1;" onclick="playAgain()">▶ Play Again</button>
           </div>
-          <button class="bundle-btn btn-green" style="width:100%;" onclick="playAgain()">▶ Play Again</button>
         </div>
       </div>`;
   }
@@ -1356,6 +1495,14 @@
     showToast('League score saved!', 2000);
   };
   window.skipLeague = function() { showToast('Score recorded', 2000); };
+  window.showLeaderboardAfterVictory = async function() {
+    const dn = document.getElementById('display-name-input');
+    if (dn && dn.value.trim()) {
+      await api('PATCH', '/api/league/display-name', { display_name: dn.value.trim() });
+    }
+    stopConfetti();
+    navigate('#league');
+  };
   window.playAgain = async function() {
     stopConfetti();
     if (state.session) {
@@ -1372,6 +1519,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
+      ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:20px 16px;width:100%;" id="league-body">
         <div style="text-align:center;color:#555;padding:40px;">Loading...</div>
       </div>
@@ -1469,18 +1617,28 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
+      ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
 
         <div class="faq-section">
           <h2>The Game</h2>
-          <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across Group Matches, Knockout rounds, and the Final.</p>
-          <p>Each match is played on a 6×6 grid of 36 glass gem tiles hiding a secret object — a football for stages 1–6, or the World Cup Trophy for the Final. Click a tile to reveal it.</p>
+          <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across the Group Stage, the Knockouts, the Semi-Final, and the Final.</p>
+          <p>The board <strong>grows as you advance</strong>, just like a real World Cup gets harder round by round:</p>
           <ul>
-            <li><strong>Bundle (8 shots):</strong> 36 tokens upfront — 4.5 t/shot</li>
-            <li><strong>Bundle (16 shots):</strong> 64 tokens upfront — 4 t/shot</li>
+            <li><strong>Group Stage</strong> (Matches 1–3): 4×4 — 16 tiles</li>
+            <li><strong>Knockouts</strong> (Round of 16, Quarter-Final): 5×5 — 25 tiles</li>
+            <li><strong>Semi-Final</strong>: 6×6 — 36 tiles</li>
+            <li><strong>Final</strong>: 7×7 — 49 tiles (find the World Cup Trophy)</li>
           </ul>
-          <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more tiles are revealed — find it early for a bigger reward. Winning all 7 stages earns a 50-token House Bonus.</p>
+          <p>Each tile hides a secret object — a football for stages 1–6, or the Trophy in the Final. Because a small board is found in only a few shots and a big board takes many, the <strong>price per shot is set per stage</strong> so a typical board costs about the same everywhere:</p>
+          <ul>
+            <li><strong>Group Stage:</strong> 13 t/shot — 8 shots = 104, 16 shots = 208</li>
+            <li><strong>Knockouts:</strong> 8 t/shot — 8 shots = 64, 16 shots = 128</li>
+            <li><strong>Semi-Final:</strong> 5.5 t/shot — 8 shots = 44, 16 shots = 88</li>
+            <li><strong>Final:</strong> 4 t/shot — 8 shots = 32, 16 shots = 64</li>
+          </ul>
+          <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more of the board is revealed — find it early for a bigger reward. Winning all 7 stages earns a 50-token House Bonus.</p>
           <p>The game features 15 nations: France, Brazil, England, Spain, Argentina, Morocco, USA, Turkey, Belgium, Egypt, Portugal, Netherlands, Norway, Germany, Mexico.</p>
         </div>
 
@@ -1493,7 +1651,9 @@
             <li>Your very first shot on that board finds the hidden object</li>
           </ul>
           <p>Both conditions must be true. Joining an existing map (which has prior guesses) makes the jackpot impossible on that board. Missing your first guess on a fresh map also makes it impossible for the rest of that board.</p>
-          <p>On a jackpot win: you receive the standard Prize Pot plus the entire Captain's Pot balance. The pot resets to a 100-token seed immediately.</p>
+          <p>Because a blind first shot is far easier on a small group board (1 in 16) than in the Final (1 in 49), the pot is <strong>anchored low during the easy group stage and topped up as play reaches harder stages</strong>. Floors: group <strong>100</strong>, knockout <strong>160</strong>, semi <strong>230</strong>, final <strong>320</strong>. Each top-up (+60 into the knockouts, +70 into the semi, +90 into the final) is announced on-screen — the longer the odds, the bigger the top-up.</p>
+          <p>You'll see a pop-up with the top-up amount <strong>before you start</strong> the first round of each new tier, so you know how big the jackpot has grown going in. New to the game? Tap <strong>ⓘ How it works</strong> on the home screen for a quick recap any time.</p>
+          <p>On a jackpot win: you receive the standard Prize Pot plus the entire Captain's Pot balance. The pot then reseeds to the floor of the stage where it was won, so an easy early win never leaves an inflated pot behind.</p>
         </div>
 
         <div class="faq-section">
@@ -1508,34 +1668,29 @@
           <h2>Tech &amp; Profitability</h2>
 
           <h3>Prize Curve</h3>
-          <p>The prize for finding the hidden object is calculated by this formula:</p>
-          <pre>prize(n) = max(8, floor(150 / (1 + e^(0.30 × (n − 16)))))</pre>
-          <p>where <em>n</em> is the number of tiles already revealed before the winning guess.</p>
-          <p><strong>Key values (6×6 grid, 36 tiles):</strong></p>
+          <p>The prize is now keyed to the <em>fraction</em> of the board revealed, so it scales identically across every grid size:</p>
+          <pre>prize(n, N) = max(8, floor(150 / (1 + e^(10.8 × (n/N − 0.4444)))))</pre>
+          <p>where <em>n</em> is the tiles revealed before the winning guess and <em>N</em> is the board size. At N=36 this is exactly the original 0.30×(n−16) curve. Expected prize per board stays ≈ 68–73 tokens at any grid size.</p>
+          <p><strong>Key values (fraction of board revealed):</strong></p>
           <table style="border-collapse:collapse;width:100%;font-size:0.8rem;margin-bottom:12px;">
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:4px 8px;color:#888;">Tiles revealed</th><th style="text-align:right;padding:4px 8px;color:#888;">Prize (tokens)</th></tr>
-            ${[[0,148],[5,144],[10,128],[13,106],[16,75],[17,63],[20,34],[22,21],[25,9],[26,8],[35,8]].map(([n,p]) => `<tr><td style="padding:4px 8px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 8px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td></tr>`).join('')}
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:4px 8px;color:#888;">% revealed</th><th style="text-align:right;padding:4px 8px;color:#888;">Prize (tokens)</th></tr>
+            ${[['0%',148],['15%',142],['30%',124],['44%',75],['50%',53],['60%',23],['70%',10],['≥73%',8]].map(([n,p]) => `<tr><td style="padding:4px 8px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 8px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td></tr>`).join('')}
           </table>
 
-          <h3>House-Edge Maths</h3>
-          <p><strong>Conservative baseline (4.5 t/shot, 8-shot bundle):</strong></p>
+          <h3>Per-Stage Pricing &amp; Margin (~12.5%)</h3>
+          <p>Price per shot is set per stage so the house keeps ~12.5% (10–15% band) regardless of board size. With the ball uniform on an N-tile board, expected shots = (N+1)/2, and net margin = (revenue − 20% pot − expected prize) / revenue.</p>
+          <table style="border-collapse:collapse;width:100%;font-size:0.78rem;margin-bottom:12px;">
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.1);"><th style="text-align:left;padding:4px 6px;color:#888;">Stage</th><th style="text-align:right;padding:4px 6px;color:#888;">Tiles</th><th style="text-align:right;padding:4px 6px;color:#888;">t/shot</th><th style="text-align:right;padding:4px 6px;color:#888;">Margin</th></tr>
+            ${[['Group',16,13,'~14%'],['Knockout',25,8,'~13%'],['Semi',36,5.5,'~13%'],['Final',49,4,'~12%']].map(([s,n,p,m]) => `<tr><td style="padding:4px 6px;color:#ccc;">${s}</td><td style="text-align:right;padding:4px 6px;color:#ccc;">${n}</td><td style="text-align:right;padding:4px 6px;color:#fbbf24;font-family:'Space Mono',monospace;">${p}</td><td style="text-align:right;padding:4px 6px;color:#93c5fd;">${m}</td></tr>`).join('')}
+          </table>
+          <p>Bundles prepay 8 or 16 shots at the same stage rate (no per-shot discount), so every purchase option holds the same ~12.5% margin.</p>
+
+          <h3>Captain's Pot — Odds-Indexed Floors</h3>
+          <p>The pot reseeds to a stage floor F = K·N (K = 6.25): group 100, knockout 160, semi 230, final 320 (rounded up to tidy figures). Expected house jackpot cost per fresh board is F/N ≈ 6.25–6.5 tokens — <strong>roughly constant across every stage</strong>, which is what keeps the long-run margin steady.</p>
           <ul>
-            <li>Expected discovery: uniform across 36 squares → mean at guess 18.5</li>
-            <li>Revenue at median (18 guesses): 18 × 4.5 = <strong>81 tokens</strong></li>
-            <li>Captain's Pot contribution: 81 × 20% = 16.2 tokens (returns to players as jackpots long-run)</li>
-            <li>Net prize pool after pot: <strong>64.8 tokens</strong></li>
-            <li>Prize at n=17: <strong>63 tokens</strong></li>
-            <li>House keeps: 64.8 − 63 = <strong>1.8 tokens ≈ 2% margin at median</strong></li>
-          </ul>
-          <p><strong>With 16-shot bundle (4.0 t/shot):</strong></p>
-          <ul>
-            <li>Revenue ≈ 74 tokens; pot ≈ 14.8; net pool ≈ 59.2; prize at n=17: 63 → <strong>slight house loss at median</strong> — offset by players who use many shots before finding the ball.</li>
-          </ul>
-          <p><strong>Captain's Pot long-run:</strong></p>
-          <ul>
-            <li>Jackpot probability per fresh board: 1/36 ≈ 2.78%</li>
-            <li>Over 36 boards: pot accumulates ≈ 36 × 18 × 0.20 × 4.5 = ~583 + 100 seed tokens per jackpot event</li>
-            <li>House re-seeds 100 tokens per jackpot win</li>
+            <li>Top-ups derived from the change in odds: +60 entering knockouts, +70 entering the semi, +90 entering the final.</li>
+            <li>Jackpot odds per fresh board: group 1/16, knockout 1/25, semi 1/36, final 1/49.</li>
+            <li>Reseed on win uses the floor of the winning stage; the pot's anchor tier resets so it can climb again.</li>
           </ul>
 
           <h3>🔐 ZK Enhancement (Future)</h3>
@@ -1555,6 +1710,17 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
+  function getQueryParam(name) {
+    try { return new URLSearchParams(location.search).get(name); } catch(_) { return null; }
+  }
+  async function handleDemoFinal() {
+    if (!state.themes.length) {
+      try { const r = await api('GET', '/api/themes'); if (r.ok) state.themes = (await r.json()).themes || []; } catch(_) {}
+    }
+    state.session = { my_team_slug: 'brazil', total_tokens_won: 420, session_complete: true };
+    renderVictoryStadium({ interstitial: 'final_win', jackpot_paid: 0, prize_paid: 96, new_stage_idx: 7 });
+  }
+
   async function init() {
     // Load themes globally for use across screens
     try {
@@ -1581,7 +1747,18 @@
       }
     } catch {}
 
+    // Demo triggers (staging review aids) — pure client-side UI states, so they
+    // work against an empty DB. Harmless no-op shells in prod if ever appended.
+    const demo = getQueryParam('demo');
+    if (demo === 'final') { await handleDemoFinal(); return; }
+
     route();
+
+    if (demo === 'topup') {
+      setTimeout(() => { showPotTopupPopup(3, potTopupEnteringStage(3)); }, 400);
+    } else if (demo === 'info') {
+      setTimeout(() => { showInfoPanel(); }, 400);
+    }
 
     // Staging debug indicator — shows token presence in bottom-left corner
     fetch('/api/env').then(r => r.json()).then(d => {
