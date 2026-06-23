@@ -160,13 +160,16 @@
         0 0 0 3px rgba(0,0,0,0.6),
         0 20px 60px -10px rgba(0,0,0,0.95),
         inset 0 1px 0 rgba(255,255,255,0.06);
-      width: min(96vw, calc(100vh - 200px));
+      width: min(96vw, calc(100vh - 185px));
+      width: min(96vw, calc(100svh - 165px));
       max-height: 100%;
     }
     @media (min-width: 481px) {
-      .board-wrap { width: min(400px, calc(100vh - 200px)); }
+      .board-wrap { width: min(400px, calc(100vh - 185px)); width: min(400px, calc(100svh - 165px)); }
       #game-body { max-width: 440px; margin: 0 auto; }
     }
+    /* Full-height game container using small viewport height to stay within visible area on mobile */
+    .game-screen { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; position: relative; }
     .portrait {
       position: absolute; inset: 0; z-index: 0;
       background-size: cover; background-position: center top;
@@ -246,23 +249,23 @@
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
-    .game-hud { display: flex; gap: 4px; padding: 3px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
-    .game-hud .hud-chip { padding: 3px 5px !important; border-radius: 6px !important; font-size: 8px !important; line-height: 1.1; }
-    .game-hud .hud-chip .val { font-size: 13px !important; }
+    .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+    .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
+    .game-hud .hud-chip .val { font-size: 12px !important; }
     .game-hud .pot-chip { box-shadow: 0 0 8px rgba(251,191,36,0.18) !important; }
-    .game-hud .pot-chip .val { font-size: 13px !important; color: #fbbf24 !important; }
+    .game-hud .pot-chip .val { font-size: 12px !important; color: #fbbf24 !important; }
 
     /* Nation strip — single tight row */
-    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.72rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 2px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 24px; }
-    .flag-mini { width: 20px; height: 14px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
+    .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 1px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 22px; }
+    .flag-mini { width: 18px; height: 12px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
 
     /* Game footer — compact controls + hint */
-    .game-footer { flex-shrink: 0; padding: 3px 8px 4px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
+    .game-footer { flex-shrink: 0; padding: 2px 8px 3px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
     .game-footer .bundle-btn { padding: 0 10px !important; font-size: 0.78rem !important; height: 34px; line-height: 34px; border-radius: 10px !important; }
-    .game-footer .credits-chip { padding: 5px 10px !important; font-size: 0.8rem !important; border-radius: 10px !important; }
+    .game-footer .credits-chip { padding: 4px 10px !important; font-size: 0.78rem !important; border-radius: 10px !important; }
 
     /* Mobile: squeeze header to save height */
-    @media (max-width: 480px) { header { padding: 6px 12px !important; } }
+    @media (max-width: 480px) { header { padding: 4px 12px !important; } }
 
     /* Controls */
     .bundle-btn {
@@ -278,12 +281,12 @@
     .btn-red { background: linear-gradient(135deg, #f87171, #ef4444); color: white; }
     .btn-ghost { background: rgba(255,255,255,0.08); color: #d0d0e0; border: 1px solid rgba(255,255,255,0.12); }
 
-    /* Header */
+    /* Header — transparent so flag image bleeds through; blur keeps text readable */
     header {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; background: rgba(10,10,15,0.78); backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 16px; background: rgba(10,10,15,0.12); backdrop-filter: blur(14px) saturate(1.2);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
     }
     .header-logo-block { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
     .header-logo-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fbbf24; letter-spacing: -0.5px; }
@@ -364,13 +367,13 @@
       font-family: 'DM Sans', sans-serif; font-weight: 700; border-radius: 10px;
       background: rgba(255,255,255,0.04); border: 1.5px solid rgba(109,123,255,0.45);
       cursor: pointer; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; gap: 1px; padding: 5px 8px; flex: 1; min-width: 0;
+      justify-content: center; gap: 1px; padding: 4px 6px; flex: 1; min-width: 0;
       transition: background 0.15s, border-color 0.15s, transform 0.1s;
     }
     .shot-btn:hover { background: rgba(109,123,255,0.15); border-color: rgba(109,123,255,0.8); }
     .shot-btn:active { background: rgba(109,123,255,0.28); transform: scale(0.97); }
-    .shot-btn .shot-count { font-size: 0.72rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; }
-    .shot-btn .shot-cost { font-size: 0.62rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
+    .shot-btn .shot-count { font-size: 0.68rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; }
+    .shot-btn .shot-cost { font-size: 0.58rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
   </style>
 </head>
 <body>
@@ -1003,7 +1006,7 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderGame(id) {
     const app = document.getElementById('app');
-    app.innerHTML = `<div style="display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;">
+    app.innerHTML = `<div class="game-screen">
       ${renderHeader()}
       <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
