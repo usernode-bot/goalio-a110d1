@@ -493,7 +493,7 @@
     return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
       <div style="display:flex;gap:4px;">
         <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
       </div>`;
   }
@@ -1073,10 +1073,10 @@
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
     const oppFlag = FLAG_SVGS[theme.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[theme.slug]}" alt="${theme.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
-      ${myFlag}<span style="font-weight:600;color:#e0e0e8;">${myTeam ? myTeam.country_name : 'You'}</span>
-      <span style="color:#333;margin:0 1px;">vs</span>
-      ${oppFlag}<span style="font-weight:600;color:#e0e0e8;">${theme.country_name}</span>
-      <span style="margin-left:auto;color:#555;font-size:0.65rem;font-family:'Space Mono',monospace;white-space:nowrap;">${stageName(stageIdx)}</span>
+      ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myTeam ? myTeam.country_name : 'You'}</span>
+      <span style="color:#fbbf24;font-weight:900;font-size:0.8rem;margin:0 4px;text-shadow:0 0 8px rgba(251,191,36,0.6);letter-spacing:0.05em;">v</span>
+      ${oppFlag}<span style="font-weight:700;color:#f0f0f5;">${theme.country_name}</span>
+      <span style="margin-left:auto;background:rgba(0,0,0,0.55);border:1px solid rgba(251,191,36,0.5);border-radius:5px;padding:1px 7px;color:#fbbf24;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap;text-transform:uppercase;letter-spacing:0.06em;box-shadow:0 0 6px rgba(251,191,36,0.2);">${stageName(stageIdx)}</span>
     </div>`;
 
     // Build tiles for this stage's grid; open tiles show portrait beneath
