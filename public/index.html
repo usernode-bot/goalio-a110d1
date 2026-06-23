@@ -746,6 +746,17 @@
     </header>`;
   }
 
+  function backToGameBannerHtml() {
+    if (!state.game || state.game.status !== 'active' || !state.game.id) return '';
+    return `<a href="#game/${state.game.id}" onclick="navigate('#game/${state.game.id}');return false;"
+        style="display:flex;align-items:center;gap:8px;padding:10px 16px;min-height:44px;
+               background:rgba(109,123,255,0.13);border-bottom:1px solid rgba(109,123,255,0.28);
+               font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:700;color:#a5b4fc;
+               text-decoration:none;flex-shrink:0;">
+      ⚽ ← Back to Game
+    </a>`;
+  }
+
   function potChipHtml(balance) {
     const heartbeat = balance > 500 ? ' pot-heartbeat' : '';
     return `<div class="hud-chip pot-chip${heartbeat}" style="flex:1;">
@@ -1508,6 +1519,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
+      ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:20px 16px;width:100%;" id="league-body">
         <div style="text-align:center;color:#555;padding:40px;">Loading...</div>
       </div>
@@ -1605,6 +1617,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
+      ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
 
