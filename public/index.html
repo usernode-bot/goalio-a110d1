@@ -490,7 +490,7 @@
     return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
       <div style="display:flex;gap:6px;">
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · ${fmtTokens(p.bundle8)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">🔥 Go All In</span><span class="shot-cost">16 shots · ${fmtTokens(p.bundle16)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots · ${fmtTokens(p.bundle16)} tokens</span></button>
       </div>`;
   }
   function flagGradient(accent) {
@@ -1324,7 +1324,7 @@
       el.className = 'result-overlay';
       el.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);';
       el.innerHTML = `<div class="result-card"><div style="font-size:2rem;">🎉</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">Through to the Knockouts!</div>
+        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">You're through to the knockouts, congratulations!</div>
         <div style="color:#aaa;font-size:0.85rem;margin-bottom:16px;">All group matches won</div>
         <button class="bundle-btn btn-gold" style="width:100%;" onclick="document.querySelectorAll('.result-overlay').forEach(e=>e.remove());navigate('#lobby');">Continue →</button>
       </div>`;
@@ -1450,26 +1450,24 @@
 
     document.getElementById('app').innerHTML = `
       <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;min-height:100vh;overflow:auto;">
-        <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
-        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.4rem,6vw,2rem);line-height:1.2;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;max-width:420px;margin-bottom:28px;">
-          ${playerName} representing ${flagMini}${countryName} have won the World Cup!
-        </div>
-
-        <div class="result-card" style="max-width:380px;width:100%;">
-          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:16px;">TOURNAMENT COMPLETE</div>
+        <div class="result-card" style="max-width:400px;width:100%;">
+          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:14px;">TOURNAMENT COMPLETE</div>
+          <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.1rem,5vw,1.5rem);line-height:1.25;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;margin-bottom:16px;">
+            ${playerName} representing ${flagMini}${countryName} have won the World Cup! 🏆
+          </div>
           <div style="font-family:'Space Mono',monospace;font-size:1.2rem;color:#10b981;margin-bottom:4px;">+${Math.round(totalWon)} tokens total</div>
           ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:4px;">⚡ Captain's Jackpot: +${Math.round(result.jackpot_paid)} t</div>` : ''}
           <div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:8px;">🏠 House Bonus: +50 tokens</div>
           <div style="font-size:0.8rem;color:#888;margin-bottom:16px;font-family:'DM Sans',sans-serif;">League rank: #${myRank} · Score: ${Math.round(myScore)} t</div>
-          <div style="margin-bottom:12px;">
+          <div style="margin-bottom:8px;">
             <label style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#888;display:block;margin-bottom:4px;">League display name</label>
             <input id="display-name-input" value="${displayName}" maxlength="32" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;">
           </div>
-          <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <button class="bundle-btn btn-gold" style="flex:1;" onclick="submitLeague()">Submit to League</button>
-            <button class="bundle-btn btn-ghost" style="flex:1;" onclick="skipLeague()">Skip</button>
+          <button class="bundle-btn btn-gold" style="width:100%;margin-bottom:12px;" onclick="submitLeague()">Save Name to League</button>
+          <div style="display:flex;gap:8px;">
+            <button class="bundle-btn btn-green" style="flex:1;" onclick="showLeaderboardAfterVictory()">🏆 Show Leaderboard</button>
+            <button class="bundle-btn btn-ghost" style="flex:1;" onclick="playAgain()">▶ Play Again</button>
           </div>
-          <button class="bundle-btn btn-green" style="width:100%;" onclick="playAgain()">▶ Play Again</button>
         </div>
       </div>`;
   }
@@ -1482,6 +1480,14 @@
     showToast('League score saved!', 2000);
   };
   window.skipLeague = function() { showToast('Score recorded', 2000); };
+  window.showLeaderboardAfterVictory = async function() {
+    const dn = document.getElementById('display-name-input');
+    if (dn && dn.value.trim()) {
+      await api('PATCH', '/api/league/display-name', { display_name: dn.value.trim() });
+    }
+    stopConfetti();
+    navigate('#league');
+  };
   window.playAgain = async function() {
     stopConfetti();
     if (state.session) {
