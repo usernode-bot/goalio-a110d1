@@ -61,7 +61,7 @@ function pricingForStage(stageIdx) {
   else if (stageIdx <= 4) perShot = 8;
   else if (stageIdx === 5) perShot = 5.5;
   else perShot = 4;
-  return { perShot, bundle8: perShot * 8, bundle16: perShot * 16 };
+  return { perShot, bundle2: perShot * 2, bundle8: perShot * 8, bundle16: perShot * 16 };
 }
 
 // Captain's Pot floor per stage tier — rounded UP to tidy figures (per the
@@ -507,8 +507,8 @@ app.post('/api/games/:id/leave', async (req, res) => {
 // POST /api/games/:id/bundle
 app.post('/api/games/:id/bundle', async (req, res) => {
   const { bundle_size } = req.body;
-  if (bundle_size !== 8 && bundle_size !== 16) {
-    return res.status(400).json({ error: 'bundle_size must be 8 or 16' });
+  if (![2, 8, 16].includes(bundle_size)) {
+    return res.status(400).json({ error: 'bundle_size must be 2, 8, or 16' });
   }
 
   const client = await pool.connect();

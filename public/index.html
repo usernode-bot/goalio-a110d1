@@ -369,7 +369,7 @@
     }
     .shot-btn:hover { background: rgba(109,123,255,0.15); border-color: rgba(109,123,255,0.8); }
     .shot-btn:active { background: rgba(109,123,255,0.28); transform: scale(0.97); }
-    .shot-btn .shot-count { font-size: 0.8rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
+    .shot-btn .shot-count { font-size: 0.72rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; }
     .shot-btn .shot-cost { font-size: 0.62rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
   </style>
 </head>
@@ -419,7 +419,7 @@
     potLastWonAt: null, leaderState: null,
     game: null, gameTheme: null, credits: null,
     squaresRevealed: 0, prizePot: 148,
-    gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle8: 44, bundle16: 88 },
+    gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle2: 11, bundle8: 44, bundle16: 88 },
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
@@ -486,9 +486,10 @@
   function fmtTokens(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
-    const p = state.pricing || { bundle8: 44, bundle16: 88 };
+    const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
     return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it first?</div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:4px;">
+        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots · ${fmtTokens(p.bundle2)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count">⚡ Take Your Shot</span><span class="shot-cost">8 shots · ${fmtTokens(p.bundle8)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots · ${fmtTokens(p.bundle16)} tokens</span></button>
       </div>`;
@@ -1340,8 +1341,8 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
-    const p = state.pricing || { bundle8: 44, bundle16: 88 };
-    const cost = fmtTokens(size === 8 ? p.bundle8 : p.bundle16);
+    const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+    const cost = fmtTokens(size === 2 ? p.bundle2 : size === 8 ? p.bundle8 : p.bundle16);
     const modal = document.createElement('div');
     modal.className = 'modal-bg';
     modal.innerHTML = `<div class="modal-box">
