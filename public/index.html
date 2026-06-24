@@ -1017,10 +1017,6 @@
 
   window.startNewMap = function() {
     if (!state.session) { showToast('Pick a nation first'); return; }
-    // Pre-round Captain's Pot pop-up: if the round about to begin is the first
-    // of a harder tier, announce the top-up before play starts.
-    const topup = potTopupEnteringStage(state.session.stage_idx);
-    if (topup > 0) { showPotTopupPopup(state.session.stage_idx, topup); return; }
     doStartNewMap();
   };
 
