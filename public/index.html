@@ -903,19 +903,17 @@
           <div style="text-align:center;margin-bottom:8px;">
             <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)} — Stage ${session.stage_idx + 1}/7</div>
           </div>
-          <div style="display:flex;align-items:center;gap:14px;">
-            ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
-            <div style="flex:1;">
-              <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;"></div>
-              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.95rem;">(you)</span></div>
+          <div style="display:flex;align-items:flex-start;justify-content:center;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.9rem;display:block;">(you)</span></div>
             </div>
             ${hasOpponent ? `
-              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:#fbbf24;">vs</div>
-              <div style="flex:1;text-align:right;">
-                <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;"></div>
-                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${state.next_opponent_theme.country_name}</div>
+              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:#fbbf24;align-self:center;flex-shrink:0;">vs</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+                ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
+                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${state.next_opponent_theme.country_name}</div>
               </div>
-              ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
             ` : ''}
           </div>
           <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
@@ -1357,7 +1355,7 @@
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
     else if (isFinal) banner = 'WORLD CHAMPIONS!';
-    else if (stageIdx >= 3) banner = 'World Cup!';
+    else if (stageIdx >= 3) banner = 'You won!';
     const bannerEl = document.createElement('div');
     bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
     bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
