@@ -1312,10 +1312,34 @@
 
     // Step 1: shake hit tile (800ms)
     if (hitCell) hitCell.classList.add('shake');
+
+    // Create banner and name tag immediately so they appear with ball animation
+    const boardZone = document.getElementById('board-zone');
+    let banner = 'GOAL!';
+    if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
+    else if (isFinal) banner = 'WORLD CHAMPIONS!';
+    else if (stageIdx >= 3) banner = 'World Cup!';
+    const bannerEl = document.createElement('div');
+    bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
+    bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
+    boardZone && boardZone.appendChild(bannerEl);
+
+    const nameTag = document.createElement('div');
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 2s ease 3s forwards;padding:0 8px;`;
+    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
+    const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
+    const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
+    nameTag.innerHTML = `<div style="display:inline-block;max-width:92%;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:white;font-weight:600;">${footballerText}</div>
+      ${factHtml}
+    </div>`;
+    boardZone && boardZone.appendChild(nameTag);
+
+    startConfetti();
+
     await sleep(800);
 
     // Step 2: dim board and float football/trophy to centre — total 2s from start
-    const boardZone = document.getElementById('board-zone');
     const dim = document.createElement('div');
     dim.className = 'board-dim';
     dim.style.transition = 'opacity 0.45s';
@@ -1357,33 +1381,8 @@
       c.classList.add('open');
     });
 
-    await sleep(5000);
-
-    // Step 4: Show banner and name tag, then fade name tag
-    let banner = 'GOAL!';
-    if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
-    else if (isFinal) banner = 'WORLD CHAMPIONS!';
-    else if (stageIdx >= 3) banner = 'World Cup!';
-    const bannerEl = document.createElement('div');
-    bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
-    bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
-    boardZone && boardZone.appendChild(bannerEl);
-
-    const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 2s ease 3s forwards;padding:0 8px;`;
-    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
-    const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
-    const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
-    nameTag.innerHTML = `<div style="display:inline-block;max-width:92%;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
-      <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:white;font-weight:600;">${footballerText}</div>
-      ${factHtml}
-    </div>`;
-    boardZone && boardZone.appendChild(nameTag);
-
-    startConfetti();
-
     // Wait while name tag is visible and fading
-    await sleep(4000);
+    await sleep(5000);
 
     // Step 5: Fade portrait to black
     const blackOverlay = document.createElement('div');
