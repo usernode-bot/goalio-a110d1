@@ -1309,7 +1309,7 @@
     // Step 1: shake hit tile (800ms)
     if (hitCell) hitCell.classList.add('shake');
 
-    // Create banner and name tag immediately so they appear with ball animation
+    // Create banner immediately so it appears with ball animation
     const boardZone = document.getElementById('board-zone');
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
@@ -1320,6 +1320,7 @@
     bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
     boardZone && boardZone.appendChild(bannerEl);
 
+    // Create name tag but don't append yet — will show after 5s portrait reveal
     const nameTag = document.createElement('div');
     nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
@@ -1329,7 +1330,6 @@
       <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:white;font-weight:600;">${footballerText}</div>
       ${factHtml}
     </div>`;
-    boardZone && boardZone.appendChild(nameTag);
 
     startConfetti();
 
@@ -1377,8 +1377,14 @@
       c.classList.add('open');
     });
 
-    // Wait while name tag is visible and fading
+    // Wait 5 seconds while portrait is visible and unobstructed
     await sleep(5000);
+
+    // Now show the name tag with trivia
+    boardZone && boardZone.appendChild(nameTag);
+
+    // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
+    await sleep(10000);
 
     // Step 5: Fade portrait to black
     const blackOverlay = document.createElement('div');
