@@ -156,6 +156,15 @@ async function creditWallet(client, userId, amount) {
   return rows.length ? parseFloat(rows[0].balance) : null;
 }
 
+async function pickNextOpponent(client, playedSlugs, myTeamSlug) {
+  const excludeSlugs = [...(playedSlugs || []), myTeamSlug];
+  const { rows: themeRows } = await client.query(
+    'SELECT slug FROM themes WHERE slug != ALL($1) ORDER BY RANDOM() LIMIT 1',
+    [excludeSlugs]
+  );
+  return themeRows.length ? themeRows[0].slug : null;
+}
+
 // GET /api/themes
 app.get('/api/themes', async (_req, res) => {
   try {
@@ -199,12 +208,24 @@ app.get('/api/session', async (req, res) => {
       }
     }
 
+    // Enrich session with next opponent theme if available
+    let nextOpponentTheme = null;
+    if (session && session.next_opponent_slug) {
+      const { rows: oppRows } = await client.query(
+        'SELECT id, slug, country_name, accent_colour FROM themes WHERE slug = $1',
+        [session.next_opponent_slug]
+      );
+      if (oppRows.length) {
+        nextOpponentTheme = oppRows[0];
+      }
+    }
+
     const { rows: potRows } = await client.query('SELECT balance, last_won_at, last_winner_username FROM captain_pot WHERE id = 1');
     const pot = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
     const potBalance = parseFloat(pot.balance);
     const walletBalance = await getWalletBalance(client, req.user.id);
 
-    res.json({ session, captain_pot_balance: potBalance, last_won_at: pot.last_won_at, last_winner_username: pot.last_winner_username, wallet_balance: walletBalance });
+    res.json({ session, next_opponent_theme: nextOpponentTheme, captain_pot_balance: potBalance, last_won_at: pot.last_won_at, last_winner_username: pot.last_winner_username, wallet_balance: walletBalance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   } finally {
@@ -225,16 +246,18 @@ app.post('/api/session', async (req, res) => {
     );
     if (!themeCheck.length) return res.status(400).json({ error: 'Invalid slug' });
 
+    const nextOpponent = await pickNextOpponent(client, [], my_team_slug);
+
     const { rows } = await client.query(`
       INSERT INTO tournament_sessions
-        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id)
-      VALUES ($1, $2, 0, '{}', 0, false, NULL)
+        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
+      VALUES ($1, $2, 0, '{}', 0, false, NULL, $3)
       ON CONFLICT (user_id) DO UPDATE SET
         my_team_slug = $2, stage_idx = 0, played_slugs = '{}',
         total_tokens_won = 0, session_complete = false,
-        current_game_id = NULL, updated_at = NOW()
+        current_game_id = NULL, next_opponent_slug = $3, updated_at = NOW()
       RETURNING *
-    `, [req.user.id, my_team_slug]);
+    `, [req.user.id, my_team_slug, nextOpponent]);
 
     res.json({ session: rows[0] });
   } catch (err) {
@@ -293,16 +316,27 @@ app.post('/api/session/start-map', async (req, res) => {
     if (session.session_complete) return res.status(400).json({ error: 'Tournament complete' });
     if (session.current_game_id) return res.status(409).json({ error: 'Already on a map' });
 
-    const playedSlugs = session.played_slugs || [];
-    const excludeSlugs = [...playedSlugs, session.my_team_slug];
+    let theme;
+    if (session.next_opponent_slug) {
+      const { rows: themeRows } = await client.query(
+        'SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE slug = $1',
+        [session.next_opponent_slug]
+      );
+      if (!themeRows.length) return res.status(400).json({ error: 'Opponent not found' });
+      theme = themeRows[0];
+    } else {
+      const playedSlugs = session.played_slugs || [];
+      const excludeSlugs = [...playedSlugs, session.my_team_slug];
 
-    const { rows: themeRows } = await client.query(
-      'SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE slug != ALL($1)',
-      [excludeSlugs]
-    );
-    if (!themeRows.length) return res.status(400).json({ error: 'No opponents available' });
+      const { rows: themeRows } = await client.query(
+        'SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE slug != ALL($1)',
+        [excludeSlugs]
+      );
+      if (!themeRows.length) return res.status(400).json({ error: 'No opponents available' });
 
-    const theme = themeRows[Math.floor(Math.random() * themeRows.length)];
+      theme = themeRows[Math.floor(Math.random() * themeRows.length)];
+    }
+
     const gridSize = gridSizeForStage(session.stage_idx);
     const footballSquare = Math.floor(Math.random() * gridSize);
     const revealed = new Array(gridSize).fill(false);
@@ -349,7 +383,7 @@ app.post('/api/session/start-map', async (req, res) => {
     }
 
     await client.query(
-      'UPDATE tournament_sessions SET current_game_id = $1, updated_at = NOW() WHERE user_id = $2',
+      'UPDATE tournament_sessions SET current_game_id = $1, next_opponent_slug = NULL, updated_at = NOW() WHERE user_id = $2',
       [game.id, req.user.id]
     );
 
@@ -720,13 +754,15 @@ app.post('/api/games/:id/guess', async (req, res) => {
           wonThisRound += houseBonus;
         }
 
+        const nextOpponentSlug = sessionComplete ? null : await pickNextOpponent(client, newPlayed, tour.my_team_slug);
+
         await client.query(`
           UPDATE tournament_sessions SET
             stage_idx = $1, played_slugs = $2,
             total_tokens_won = total_tokens_won + $3,
-            session_complete = $4, current_game_id = NULL, updated_at = NOW()
+            session_complete = $4, current_game_id = NULL, next_opponent_slug = $6, updated_at = NOW()
           WHERE user_id = $5
-        `, [updatedStage, newPlayed, wonThisRound, sessionComplete, req.user.id]);
+        `, [updatedStage, newPlayed, wonThisRound, sessionComplete, req.user.id, nextOpponentSlug]);
 
         await client.query(`
           INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed, updated_at)
@@ -1013,6 +1049,7 @@ async function start() {
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
+  await pool.query(`ALTER TABLE tournament_sessions ADD COLUMN IF NOT EXISTS next_opponent_slug VARCHAR(32) REFERENCES themes(slug)`);
   await pool.query(`COMMENT ON TABLE tournament_sessions IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS player_stats (
@@ -1165,9 +1202,14 @@ async function start() {
 
     // Tournament session for staging player -1
     await pool.query(`
-      INSERT INTO tournament_sessions (user_id, my_team_slug, stage_idx, played_slugs, session_complete, current_game_id)
-      VALUES (-1, 'england', 3, '{brazil,france,germany}', false, NULL)
+      INSERT INTO tournament_sessions (user_id, my_team_slug, stage_idx, played_slugs, session_complete, current_game_id, next_opponent_slug)
+      VALUES (-1, 'england', 3, '{brazil,france,germany}', false, NULL, 'spain')
       ON CONFLICT (user_id) DO NOTHING
+    `);
+    // Backfill existing staging rows that don't have next_opponent_slug set
+    await pool.query(`
+      UPDATE tournament_sessions SET next_opponent_slug = 'spain'
+      WHERE user_id = -1 AND next_opponent_slug IS NULL
     `);
   }
 

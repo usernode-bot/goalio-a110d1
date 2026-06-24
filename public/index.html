@@ -248,6 +248,26 @@
     }
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
+    /* Win sequence animations */
+    @keyframes fadeout { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes blackfade { 0% { opacity: 0; } 100% { opacity: 0.9; } }
+
+    /* Match-start square spawn animation */
+    @keyframes tile-spawn {
+      0% { opacity: 0; transform: scale(0.8); filter: drop-shadow(0 0 8px gold); }
+      60% { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 12px gold); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0px gold); }
+    }
+    .tile-spawn { animation: tile-spawn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    /* Full-board sparkle flash when all tiles finish spawning */
+    @keyframes tile-sparkle-flash {
+      0% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 20px gold); transform: scale(1.08); }
+      100% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
+    }
+    .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
@@ -835,7 +855,9 @@
       const session = data.session;
       const captain_pot_balance = data.captain_pot_balance;
       const wallet_balance = data.wallet_balance;
+      const next_opponent_theme = data.next_opponent_theme;
       state.session = session;
+      state.next_opponent_theme = next_opponent_theme;
       state.walletBalance = wallet_balance || 1000;
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
@@ -874,16 +896,29 @@
     if (inProgress) {
       // Tournament underway, no active match — auto-match resume state
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
+      const hasOpponent = state.next_opponent_theme && state.next_opponent_theme.slug;
       mainSection = `
         <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
-          ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
-          <div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
-            <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
-            <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:#fbbf24;margin-top:2px;">${stageName(session.stage_idx)}</div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
+          <div style="text-align:center;margin-bottom:8px;">
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)} — Stage ${session.stage_idx + 1}/7</div>
           </div>
-          <button onclick="startNewMap()" class="bundle-btn btn-gold" style="margin-left:auto;">Start Next Match ▶</button>
+          <div style="display:flex;align-items:flex-start;justify-content:center;gap:14px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.9rem;">(you)</span></div>
+            </div>
+            ${hasOpponent ? `
+              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:#fbbf24;align-self:center;flex-shrink:0;">vs</div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
+                ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
+                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${state.next_opponent_theme.country_name}</div>
+              </div>
+            ` : ''}
+          </div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
+            <button onclick="startNewMap()" class="bundle-btn btn-gold">Start Next Match ▶</button>
+          </div>
         </div>`;
     } else {
       // No tournament (or just completed) — flag-forward nation picker
@@ -982,10 +1017,6 @@
 
   window.startNewMap = function() {
     if (!state.session) { showToast('Pick a nation first'); return; }
-    // Pre-round Captain's Pot pop-up: if the round about to begin is the first
-    // of a harder tier, announce the top-up before play starts.
-    const topup = potTopupEnteringStage(state.session.stage_idx);
-    if (topup > 0) { showPotTopupPopup(state.session.stage_idx, topup); return; }
     doStartNewMap();
   };
 
@@ -1137,6 +1168,37 @@
           <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
+
+    // Match-start animation: fade in tiles sequentially with sparkle
+    // First, hide portrait initially
+    const portraitEl = document.querySelector('.portrait');
+    if (portraitEl) {
+      portraitEl.style.opacity = '0';
+    }
+
+    // Apply random fade-in animation to tiles (spread over ~2.5 seconds with sparkles)
+    const tiles_list = document.querySelectorAll('.tile');
+    tiles_list.forEach((tile) => {
+      tile.classList.add('tile-spawn');
+      // Random delay between 0 and 2000ms so tiles appear randomly throughout 2.5s window
+      // (accounting for 0.4s spawn animation, tiles finish by 2.4s total)
+      tile.style.animationDelay = (Math.random() * 2000) + 'ms';
+    });
+
+    // After all tiles finish animating, apply full-board sparkle flash
+    setTimeout(() => {
+      tiles_list.forEach((tile) => {
+        tile.classList.add('tile-sparkle-flash');
+      });
+    }, 2500);
+
+    // After all tiles finish animating and sparkle flash, fade in the portrait
+    setTimeout(() => {
+      if (portraitEl) {
+        portraitEl.style.transition = 'opacity 0.5s ease';
+        portraitEl.style.opacity = '1';
+      }
+    }, 3000);
   }
 
   function updateHud() {
@@ -1199,8 +1261,11 @@
       state.squaresRevealed = d.squares_revealed;
       state.walletBalance = d.wallet_balance;
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
-      if (state.credits && sessId) {
-        state.credits.credits_remaining = parseInt(state.credits.credits_remaining) - 1;
+      if (state.credits && sessId && state.credits.credits_remaining !== undefined) {
+        const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
+        if (currentRemaining > 0) {
+          state.credits.credits_remaining = currentRemaining - 1;
+        }
       }
 
       // If THIS player just won the jackpot, record their win timestamp so the
@@ -1241,12 +1306,78 @@
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
 
+    // Skip flag to allow touch/click to skip to result card
+    let skipWinSequence = false;
+    const skipHandler = () => { skipWinSequence = true; };
+    const boardZone = document.getElementById('board-zone');
+    boardZone && boardZone.addEventListener('click', skipHandler);
+    boardZone && boardZone.addEventListener('touchstart', skipHandler);
+
+    // Helper to show result card and clean up
+    const showResult = async () => {
+      boardZone && boardZone.removeEventListener('click', skipHandler);
+      boardZone && boardZone.removeEventListener('touchstart', skipHandler);
+      stopConfetti();
+      document.querySelectorAll('.tile').forEach(c => { c.classList.add('open'); });
+
+      let resultTitle = 'You found the net!';
+      if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
+      else if (isFinal) resultTitle = 'Champions of the World!';
+      else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
+
+      state.pendingResult = result;
+      const resultCard = document.createElement('div');
+      resultCard.className = 'result-overlay';
+      resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
+      const icon = isFinal ? '🏆' : '⚽';
+      resultCard.innerHTML = `
+        <div class="result-card">
+          <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
+          ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
+          <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
+          ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
+          ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
+          ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
+          <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
+        </div>`;
+      document.body.appendChild(resultCard);
+
+      if (result.new_stage_idx !== null) {
+        if (state.session) state.session.stage_idx = result.new_stage_idx;
+      }
+    };
+
     // Step 1: shake hit tile (800ms)
     if (hitCell) hitCell.classList.add('shake');
+
+    // Create banner immediately so it appears with ball animation
+    let banner = 'GOAL!';
+    if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
+    else if (isFinal) banner = 'WORLD CHAMPIONS!';
+    else if (stageIdx >= 3) banner = 'You won!';
+    const bannerEl = document.createElement('div');
+    bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
+    bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
+    boardZone && boardZone.appendChild(bannerEl);
+
+    // Create name tag but don't append yet — will show after 5s portrait reveal
+    const nameTag = document.createElement('div');
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
+    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
+    const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
+    const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
+    nameTag.innerHTML = `<div style="display:inline-block;max-width:92%;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:white;font-weight:600;">${footballerText}</div>
+      ${factHtml}
+    </div>`;
+
+    startConfetti();
+
     await sleep(800);
+    if (skipWinSequence) { return showResult(); }
 
     // Step 2: dim board and float football/trophy to centre — total 2s from start
-    const boardZone = document.getElementById('board-zone');
     const dim = document.createElement('div');
     dim.className = 'board-dim';
     dim.style.transition = 'opacity 0.45s';
@@ -1271,77 +1402,46 @@
     objEl.style.filter = 'drop-shadow(0 0 20px gold)';
     await sleep(1150); // 800 + 50 + 1150 = 2000ms total football animation
 
-    // Fade out icon and dim together, then cascade tiles to reveal portrait
+    if (skipWinSequence) { return showResult(); }
+
+    // Fade out icon and dim, then reveal portrait
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
     dim.style.opacity = '0';
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
-    // Step 3: cascade dissolve ALL tiles (1200ms max spread + 460ms transition)
+    // Step 3: Fade in portrait and hold for 5 seconds
+    const portrait = document.querySelector('.portrait');
+    if (portrait) {
+      portrait.style.transition = 'opacity 0.6s ease';
+      portrait.style.opacity = '1';
+    }
+    // Hide all tiles by marking them as open so they're transparent
     document.querySelectorAll('.tile').forEach(c => {
-      const delay = Math.random() * 1200;
-      setTimeout(() => {
-        c.classList.add('dissolving');
-        setTimeout(() => { c.classList.add('open'); c.classList.remove('dissolving'); }, 460);
-      }, delay);
+      c.classList.add('open');
     });
 
-    // Wait for all tiles to finish dissolving
-    await sleep(1800);
-
-    // Step 4: portrait fully revealed — show banner, name tag, confetti, hold 5s
-    let banner = 'GOAL!';
-    if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
-    else if (isFinal) banner = 'WORLD CHAMPIONS!';
-    else if (stageIdx >= 3) banner = 'World Cup!';
-    const bannerEl = document.createElement('div');
-    bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
-    bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
-    boardZone && boardZone.appendChild(bannerEl);
-
-    const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;padding:0 8px;`;
-    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
-    const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
-    const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
-    nameTag.innerHTML = `<div style="display:inline-block;max-width:92%;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
-      <div style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:white;font-weight:600;">${footballerText}</div>
-      ${factHtml}
-    </div>`;
-    boardZone && boardZone.appendChild(nameTag);
-
-    startConfetti();
-
-    // Hold portrait for 5 full seconds
+    // Wait 5 seconds while portrait is visible and unobstructed
     await sleep(5000);
 
-    // Step 5: result card
-    let resultTitle = 'You found the net!';
-    if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
-    else if (isFinal) resultTitle = 'Champions of the World!';
-    else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
+    if (skipWinSequence) { return showResult(); }
 
-    state.pendingResult = result;
-    const resultCard = document.createElement('div');
-    resultCard.className = 'result-overlay';
-    resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
-    resultCard.innerHTML = `
-      <div class="result-card">
-        <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
-        ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
-        <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
-        ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
-        ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
-        ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
-        <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
-      </div>`;
-    document.body.appendChild(resultCard);
+    // Now show the name tag with trivia
+    boardZone && boardZone.appendChild(nameTag);
 
-    // Update session state
-    if (result.new_stage_idx !== null) {
-      if (state.session) state.session.stage_idx = result.new_stage_idx;
-    }
+    // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
+    await sleep(10000);
+
+    if (skipWinSequence) { return showResult(); }
+
+    // Step 5: Fade portrait to black
+    const blackOverlay = document.createElement('div');
+    blackOverlay.style.cssText = `position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.9);animation:blackfade 1s ease forwards;pointer-events:none;`;
+    boardZone && boardZone.appendChild(blackOverlay);
+
+    await sleep(1500);
+
+    return showResult();
   }
 
   window.handleInterstitial = function() {
