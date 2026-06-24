@@ -174,9 +174,9 @@ app.get('/api/session', async (req, res) => {
   try {
     await runTimeoutCheck(client);
     if (!req.user) {
-      const { rows: potRows } = await client.query('SELECT balance FROM captain_pot WHERE id = 1');
-      const potBalance = potRows.length ? parseFloat(potRows[0].balance) : 100;
-      return res.json({ session: null, captain_pot_balance: potBalance, wallet_balance: 1000 });
+      const { rows: potRows } = await client.query('SELECT balance, last_won_at, last_winner_username FROM captain_pot WHERE id = 1');
+      const pot = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
+      return res.json({ session: null, captain_pot_balance: parseFloat(pot.balance), last_won_at: pot.last_won_at, last_winner_username: pot.last_winner_username, wallet_balance: 1000 });
     }
     await ensureWallet(client, req.user.id, req.user.username);
 
@@ -199,11 +199,12 @@ app.get('/api/session', async (req, res) => {
       }
     }
 
-    const { rows: potRows } = await client.query('SELECT balance FROM captain_pot WHERE id = 1');
-    const potBalance = potRows.length ? parseFloat(potRows[0].balance) : 100;
+    const { rows: potRows } = await client.query('SELECT balance, last_won_at, last_winner_username FROM captain_pot WHERE id = 1');
+    const pot = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
+    const potBalance = parseFloat(pot.balance);
     const walletBalance = await getWalletBalance(client, req.user.id);
 
-    res.json({ session, captain_pot_balance: potBalance, wallet_balance: walletBalance });
+    res.json({ session, captain_pot_balance: potBalance, last_won_at: pot.last_won_at, last_winner_username: pot.last_winner_username, wallet_balance: walletBalance });
   } catch (err) {
     res.status(500).json({ error: err.message });
   } finally {
@@ -771,8 +772,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
     await client.query('COMMIT');
 
-    const { rows: potRows } = await client.query('SELECT balance FROM captain_pot WHERE id = 1');
+    const { rows: potRows } = await client.query('SELECT balance, last_won_at FROM captain_pot WHERE id = 1');
     const potBalance = potRows.length ? parseFloat(potRows[0].balance) : 100;
+    const potLastWonAt = potRows.length ? potRows[0].last_won_at : null;
     const walletBalance = await getWalletBalance(client, req.user.id);
 
     res.json({
@@ -780,6 +782,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       square_index,
       prize_paid: prizePaid,
       jackpot_paid: jackpotPaid,
+      last_won_at: potLastWonAt,
       credits_refunded: creditsRefunded,
       house_bonus: houseBonus,
       squares_revealed: game.total_guesses + 1,
@@ -1069,8 +1072,14 @@ async function start() {
 
   // ── Staging seed data ─────────────────────────────────────────────────────
   if (IS_STAGING) {
-    // Override captain pot and game stats with more interesting values
-    await pool.query(`UPDATE captain_pot SET balance = 347.00 WHERE id = 1`);
+    // Override captain pot and game stats with more interesting values.
+    // Stamp a recent winner so the named broadcast ("X just won the Captain's
+    // Pot!") and the on-load seeding fix can both be exercised in staging.
+    await pool.query(`
+      UPDATE captain_pot
+      SET balance = 347.00, last_won_at = NOW(), last_winner_username = 'Staging Kaiser'
+      WHERE id = 1
+    `);
     await pool.query(`UPDATE game_stats SET total_tokens_collected = 8420.00 WHERE id = 1`);
 
     // Staging player wallets with generous starting balance
@@ -1081,6 +1090,15 @@ async function start() {
         ON CONFLICT (user_id) DO NOTHING
       `, [-i, `staging-player-${i}`]);
     }
+
+    // A broke staging player (zero balance) so the Flow 1 "out of shots —
+    // top up to play" notice and the insufficient-funds prompt are reachable
+    // without grinding a wallet down to zero by hand.
+    await pool.query(`
+      INSERT INTO player_wallets (user_id, username, balance)
+      VALUES (-6, 'staging-broke-player', 0)
+      ON CONFLICT (user_id) DO UPDATE SET balance = 0
+    `);
 
     // player_stats rows for league display
     const stagingPlayers = [

@@ -21,6 +21,8 @@
     { "name": "FAQ shows house edge section", "path": "/#faq", "expectText": "Tech & Profitability" },
     { "name": "Themes API returns all nations", "path": "/api/themes", "expectText": "brazil" },
     { "name": "Session API responds", "path": "/api/session", "expectText": "session" },
+    { "name": "Session API exposes pot last_won_at for load-seed", "path": "/api/session", "expectText": "last_won_at" },
+    { "name": "Captain-pot API names the last winner", "path": "/api/captain-pot", "expectText": "last_winner_username" },
     { "name": "League API returns rankings", "path": "/api/league", "expectText": "rankings" }
   ]
 }

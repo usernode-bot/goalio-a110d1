@@ -313,6 +313,10 @@
     .toast { font-family: 'DM Sans', sans-serif; background: rgba(30,30,40,0.97); border: 1px solid rgba(251,191,36,0.4); border-radius: 10px; padding: 12px 20px; color: white; font-size: 0.9rem; animation: toast-in 0.3s ease; max-width: 340px; text-align: center; }
     @keyframes toast-in { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
+    /* Nudge the shot-purchase buttons when a player taps the board with no shots loaded */
+    @keyframes controls-nudge { 0%,100% { transform: translateX(0); } 20% { transform: translateX(-5px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(3px); } }
+    .controls-nudge { animation: controls-nudge 0.5s ease; }
+
     /* Win overlay */
     .win-overlay { position: absolute; inset: 0; z-index: 50; pointer-events: none; }
     .board-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 40; }
@@ -685,7 +689,7 @@
     chip.appendChild(lbl);
     setTimeout(() => lbl.remove(), 900);
   }
-  function updatePotChips(newBalance, newLastWonAt) {
+  function updatePotChips(newBalance, newLastWonAt, winnerName) {
     const prev = state.prevPotBalance;
     const jackpotHit = newLastWonAt && newLastWonAt !== state.potLastWonAt;
 
@@ -708,7 +712,8 @@
     });
 
     if (jackpotHit) {
-      showToast("⚡ JACKPOT! Someone just won the Captain's Pot!");
+      const who = winnerName || 'Someone';
+      showToast(`⚡ JACKPOT! ${who} just won the Captain's Pot!`);
       state.potLastWonAt = newLastWonAt;
     }
     state.prevPotBalance = newBalance;
@@ -834,6 +839,9 @@
       state.walletBalance = wallet_balance || 1000;
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
+      // Seed the last-won marker from the server so the first poll doesn't
+      // mistake a pre-existing win for a fresh one (phantom broadcast).
+      if (data.last_won_at) state.potLastWonAt = data.last_won_at;
 
       renderLobbyBody(session);
       setupLobbyPolls();
@@ -945,7 +953,7 @@
         const r = await api('GET', '/api/captain-pot');
         if (!r.ok) return;
         const d = await r.json();
-        updatePotChips(d.balance, d.last_won_at);
+        updatePotChips(d.balance, d.last_won_at, d.last_winner_username);
       } catch {}
     }, 5000));
     state.polls.push(setInterval(pollLeagueForToast, 3000));
@@ -1157,7 +1165,14 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (!sessId) {
-      buyBundle(2);
+      showToast('Out of shots — top up to play! Pick a bundle below 👇', 3000);
+      const row = document.getElementById('controls-row');
+      if (row) {
+        row.classList.remove('controls-nudge');
+        // reflow so the animation restarts on repeated taps
+        void row.offsetWidth;
+        row.classList.add('controls-nudge');
+      }
       return;
     }
     playBlip();
@@ -1188,6 +1203,10 @@
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) - 1;
       }
 
+      // If THIS player just won the jackpot, record their win timestamp so the
+      // broadcast toast (meant for everyone else) is suppressed for them when
+      // polling resumes after the celebration.
+      if (d.jackpot_paid > 0 && d.last_won_at) state.potLastWonAt = d.last_won_at;
       updatePotChips(d.pot_balance, null);
       updateHud();
       updateCreditsDisplay();
@@ -1375,7 +1394,11 @@
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
-      showToast(e.error || 'Bundle purchase failed');
+      if (r.status === 402 || e.error === 'Insufficient balance') {
+        showToast('Not enough tokens — try a smaller bundle below 👇', 3000);
+      } else {
+        showToast(e.error || 'Bundle purchase failed');
+      }
       return;
     }
     const d = await r.json();
@@ -1418,7 +1441,7 @@
         const r = await api('GET', `/api/games/${id}`);
         if (!r.ok) return;
         const d = await r.json();
-        updatePotChips(d.captain_pot_balance, d.last_won_at);
+        updatePotChips(d.captain_pot_balance, d.last_won_at, d.last_winner_username);
       } catch {}
     }, 5000));
     state.polls.push(setInterval(pollLeagueForToast, 3000));
@@ -1737,7 +1760,9 @@
         state.walletBalance = d.wallet_balance || 1000;
         state.potBalance = d.captain_pot_balance || 100;
         state.prevPotBalance = state.potBalance;
-        state.potLastWonAt = null;
+        // Seed from the server's most recent win so a fresh page load doesn't
+        // fire a phantom "just won" broadcast on the first poll.
+        state.potLastWonAt = d.last_won_at || null;
 
         // If active game in session, go straight there
         if (d.session && d.session.current_game_id && !d.session.session_complete) {
