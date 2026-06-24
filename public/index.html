@@ -1172,12 +1172,12 @@
       portraitEl.style.opacity = '0';
     }
 
-    // Apply staggered fade-in animation to tiles (spread over ~4 seconds)
+    // Apply random fade-in animation to tiles (spread over ~3 seconds with sparkles)
     const tiles_list = document.querySelectorAll('.tile');
-    const delayPerTile = 4000 / tiles_list.length;
-    tiles_list.forEach((tile, idx) => {
+    tiles_list.forEach((tile) => {
       tile.classList.add('tile-spawn');
-      tile.style.animationDelay = (idx * delayPerTile) + 'ms';
+      // Random delay between 0 and 2500ms so tiles appear randomly throughout 3s window
+      tile.style.animationDelay = (Math.random() * 2500) + 'ms';
     });
 
     // After all tiles finish animating, fade in the portrait
@@ -1186,7 +1186,7 @@
         portraitEl.style.transition = 'opacity 0.5s ease';
         portraitEl.style.opacity = '1';
       }
-    }, 4000 + 100);
+    }, 3000);
   }
 
   function updateHud() {
