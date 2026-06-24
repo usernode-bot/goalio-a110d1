@@ -260,6 +260,14 @@
     }
     .tile-spawn { animation: tile-spawn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
+    /* Full-board sparkle flash when all tiles finish spawning */
+    @keyframes tile-sparkle-flash {
+      0% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
+      50% { filter: drop-shadow(0 0 20px gold); transform: scale(1.08); }
+      100% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
+    }
+    .tile-sparkle-flash { animation: tile-sparkle-flash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
@@ -1172,17 +1180,25 @@
       portraitEl.style.opacity = '0';
     }
 
-    // Apply random fade-in animation to tiles (spread over ~3 seconds with sparkles)
+    // Apply random fade-in animation to tiles (spread over ~2.5 seconds with sparkles)
     const tiles_list = document.querySelectorAll('.tile');
     tiles_list.forEach((tile) => {
       // Start tiles at opacity 0 so they fade in with the animation
       tile.style.opacity = '0';
       tile.classList.add('tile-spawn');
-      // Random delay between 0 and 2500ms so tiles appear randomly throughout 3s window
-      tile.style.animationDelay = (Math.random() * 2500) + 'ms';
+      // Random delay between 0 and 2000ms so tiles appear randomly throughout 2.5s window
+      // (accounting for 0.4s spawn animation, tiles finish by 2.4s total)
+      tile.style.animationDelay = (Math.random() * 2000) + 'ms';
     });
 
-    // After all tiles finish animating, fade in the portrait
+    // After all tiles finish animating, apply full-board sparkle flash
+    setTimeout(() => {
+      tiles_list.forEach((tile) => {
+        tile.classList.add('tile-sparkle-flash');
+      });
+    }, 2500);
+
+    // After all tiles finish animating and sparkle flash, fade in the portrait
     setTimeout(() => {
       if (portraitEl) {
         portraitEl.style.transition = 'opacity 0.5s ease';
