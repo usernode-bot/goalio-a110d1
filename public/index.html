@@ -258,7 +258,7 @@
       60% { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 12px gold); }
       100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0px gold); }
     }
-    .tile-spawn { animation: tile-spawn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    .tile-spawn { animation: tile-spawn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
     /* Full-board sparkle flash when all tiles finish spawning */
     @keyframes tile-sparkle-flash {
@@ -266,7 +266,7 @@
       50% { filter: drop-shadow(0 0 20px gold); transform: scale(1.08); }
       100% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
     }
-    .tile-sparkle-flash { animation: tile-sparkle-flash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+    .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
@@ -1308,11 +1308,52 @@
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
 
+    // Skip flag to allow touch/click to skip to result card
+    let skipWinSequence = false;
+    const skipHandler = () => { skipWinSequence = true; };
+    const boardZone = document.getElementById('board-zone');
+    boardZone && boardZone.addEventListener('click', skipHandler);
+    boardZone && boardZone.addEventListener('touchstart', skipHandler);
+
+    // Helper to show result card and clean up
+    const showResult = async () => {
+      boardZone && boardZone.removeEventListener('click', skipHandler);
+      boardZone && boardZone.removeEventListener('touchstart', skipHandler);
+      stopConfetti();
+      document.querySelectorAll('.tile').forEach(c => { c.classList.add('open'); });
+
+      let resultTitle = 'You found the net!';
+      if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
+      else if (isFinal) resultTitle = 'Champions of the World!';
+      else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
+
+      state.pendingResult = result;
+      const resultCard = document.createElement('div');
+      resultCard.className = 'result-overlay';
+      resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
+      const icon = isFinal ? '🏆' : '⚽';
+      resultCard.innerHTML = `
+        <div class="result-card">
+          <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
+          <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
+          ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
+          <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
+          ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
+          ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
+          ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
+          <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
+        </div>`;
+      document.body.appendChild(resultCard);
+
+      if (result.new_stage_idx !== null) {
+        if (state.session) state.session.stage_idx = result.new_stage_idx;
+      }
+    };
+
     // Step 1: shake hit tile (800ms)
     if (hitCell) hitCell.classList.add('shake');
 
     // Create banner immediately so it appears with ball animation
-    const boardZone = document.getElementById('board-zone');
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
     else if (isFinal) banner = 'WORLD CHAMPIONS!';
@@ -1336,6 +1377,7 @@
     startConfetti();
 
     await sleep(800);
+    if (skipWinSequence) { return showResult(); }
 
     // Step 2: dim board and float football/trophy to centre — total 2s from start
     const dim = document.createElement('div');
@@ -1362,6 +1404,8 @@
     objEl.style.filter = 'drop-shadow(0 0 20px gold)';
     await sleep(1150); // 800 + 50 + 1150 = 2000ms total football animation
 
+    if (skipWinSequence) { return showResult(); }
+
     // Fade out icon and dim, then reveal portrait
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
@@ -1382,11 +1426,15 @@
     // Wait 5 seconds while portrait is visible and unobstructed
     await sleep(5000);
 
+    if (skipWinSequence) { return showResult(); }
+
     // Now show the name tag with trivia
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
     await sleep(10000);
+
+    if (skipWinSequence) { return showResult(); }
 
     // Step 5: Fade portrait to black
     const blackOverlay = document.createElement('div');
@@ -1395,33 +1443,7 @@
 
     await sleep(1500);
 
-    // Step 5: result card
-    let resultTitle = 'You found the net!';
-    if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
-    else if (isFinal) resultTitle = 'Champions of the World!';
-    else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
-
-    state.pendingResult = result;
-    const resultCard = document.createElement('div');
-    resultCard.className = 'result-overlay';
-    resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
-    resultCard.innerHTML = `
-      <div class="result-card">
-        <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
-        <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
-        ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
-        <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
-        ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
-        ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
-        ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
-        <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
-      </div>`;
-    document.body.appendChild(resultCard);
-
-    // Update session state
-    if (result.new_stage_idx !== null) {
-      if (state.session) state.session.stage_idx = result.new_stage_idx;
-    }
+    return showResult();
   }
 
   window.handleInterstitial = function() {
