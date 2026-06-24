@@ -1175,6 +1175,8 @@
     // Apply random fade-in animation to tiles (spread over ~3 seconds with sparkles)
     const tiles_list = document.querySelectorAll('.tile');
     tiles_list.forEach((tile) => {
+      // Start tiles at opacity 0 so they fade in with the animation
+      tile.style.opacity = '0';
       tile.classList.add('tile-spawn');
       // Random delay between 0 and 2500ms so tiles appear randomly throughout 3s window
       tile.style.animationDelay = (Math.random() * 2500) + 'ms';
