@@ -1,6 +1,28 @@
 {
   "name": "GOAL! World Cup Edition",
-  "secrets": [],
+  "secrets": [
+    {
+      "key": "HOUSE_WALLET_PRIVATE_KEY",
+      "description": "Private key of the house wallet used to debit players when they spend credits and credit players when they win prizes",
+      "required": false,
+      "private": true,
+      "staging_default": ""
+    },
+    {
+      "key": "HOUSE_WALLET_PUBLIC_KEY",
+      "description": "Public key of the house wallet",
+      "required": false,
+      "private": false,
+      "default": "utpk1rtpjdqwm53jv6t7ax6vxczlujv577nz33veskavdn48s6k3ljr8qmn798l"
+    },
+    {
+      "key": "HOUSE_WALLET_ADDRESS",
+      "description": "On-chain address of the house wallet",
+      "required": false,
+      "private": false,
+      "default": "ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8"
+    }
+  ],
   "tests": [
     { "name": "Lobby renders nation picker", "path": "/", "expectSelector": ".nation-picker" },
     { "name": "Lobby shows Captain's Pot", "path": "/", "expectText": "Captain's Pot" },
