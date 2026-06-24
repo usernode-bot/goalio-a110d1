@@ -1321,7 +1321,7 @@
     boardZone && boardZone.appendChild(bannerEl);
 
     const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 2s ease 3s forwards;padding:0 8px;`;
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
