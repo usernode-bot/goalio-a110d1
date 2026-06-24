@@ -248,6 +248,18 @@
     }
     .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
 
+    /* Win sequence animations */
+    @keyframes fadeout { 0% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes blackfade { 0% { opacity: 0; } 100% { opacity: 0.9; } }
+
+    /* Match-start square spawn animation */
+    @keyframes tile-spawn {
+      0% { opacity: 0; transform: scale(0.8); filter: drop-shadow(0 0 8px gold); }
+      60% { opacity: 1; transform: scale(1.05); filter: drop-shadow(0 0 12px gold); }
+      100% { opacity: 1; transform: scale(1); filter: drop-shadow(0 0 0px gold); }
+    }
+    .tile-spawn { animation: tile-spawn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
@@ -1152,6 +1164,28 @@
           <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
+
+    // Match-start animation: fade in tiles sequentially with sparkle
+    // First, hide portrait initially
+    const portraitEl = document.querySelector('.portrait');
+    if (portraitEl) {
+      portraitEl.style.opacity = '0';
+    }
+
+    // Apply staggered fade-in animation to tiles
+    const tiles_list = document.querySelectorAll('.tile');
+    tiles_list.forEach((tile, idx) => {
+      tile.classList.add('tile-spawn');
+      tile.style.animationDelay = (idx * 50) + 'ms';
+    });
+
+    // After all tiles finish animating, fade in the portrait
+    setTimeout(() => {
+      if (portraitEl) {
+        portraitEl.style.transition = 'opacity 0.5s ease';
+        portraitEl.style.opacity = '1';
+      }
+    }, tiles_list.length * 50 + 100);
   }
 
   function updateHud() {
@@ -1286,25 +1320,26 @@
     objEl.style.filter = 'drop-shadow(0 0 20px gold)';
     await sleep(1150); // 800 + 50 + 1150 = 2000ms total football animation
 
-    // Fade out icon and dim together, then cascade tiles to reveal portrait
+    // Fade out icon and dim, then reveal portrait
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
     dim.style.opacity = '0';
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
-    // Step 3: cascade dissolve ALL tiles (1200ms max spread + 460ms transition)
+    // Step 3: Fade in portrait and hold for 5 seconds
+    const portrait = document.querySelector('.portrait');
+    if (portrait) {
+      portrait.style.transition = 'opacity 0.6s ease';
+      portrait.style.opacity = '1';
+    }
+    // Hide all tiles by marking them as open so they're transparent
     document.querySelectorAll('.tile').forEach(c => {
-      const delay = Math.random() * 1200;
-      setTimeout(() => {
-        c.classList.add('dissolving');
-        setTimeout(() => { c.classList.add('open'); c.classList.remove('dissolving'); }, 460);
-      }, delay);
+      c.classList.add('open');
     });
 
-    // Wait for all tiles to finish dissolving
-    await sleep(1800);
+    await sleep(5000);
 
-    // Step 4: portrait fully revealed — show banner, name tag, confetti, hold 5s
+    // Step 4: Show banner and name tag, then fade name tag
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
     else if (isFinal) banner = 'WORLD CHAMPIONS!';
@@ -1315,7 +1350,7 @@
     boardZone && boardZone.appendChild(bannerEl);
 
     const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;padding:0 8px;`;
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 2s ease 3s forwards;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
@@ -1327,8 +1362,15 @@
 
     startConfetti();
 
-    // Hold portrait for 5 full seconds
-    await sleep(5000);
+    // Wait while name tag is visible and fading
+    await sleep(4000);
+
+    // Step 5: Fade portrait to black
+    const blackOverlay = document.createElement('div');
+    blackOverlay.style.cssText = `position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.9);animation:blackfade 1s ease forwards;pointer-events:none;`;
+    boardZone && boardZone.appendChild(blackOverlay);
+
+    await sleep(1500);
 
     // Step 5: result card
     let resultTitle = 'You found the net!';
