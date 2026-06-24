@@ -835,7 +835,9 @@
       const session = data.session;
       const captain_pot_balance = data.captain_pot_balance;
       const wallet_balance = data.wallet_balance;
+      const next_opponent_theme = data.next_opponent_theme;
       state.session = session;
+      state.next_opponent_theme = next_opponent_theme;
       state.walletBalance = wallet_balance || 1000;
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
@@ -874,16 +876,29 @@
     if (inProgress) {
       // Tournament underway, no active match — auto-match resume state
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
+      const hasOpponent = state.next_opponent_theme && state.next_opponent_theme.slug;
       mainSection = `
         <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;align-items:center;gap:14px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
-          ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
-          <div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
-            <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
-            <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:#fbbf24;margin-top:2px;">${stageName(session.stage_idx)}</div>
+        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
+            <div style="flex:1;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Your team — Stage ${session.stage_idx + 1}/7</div>
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
+            </div>
+            ${hasOpponent ? `
+              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:#fbbf24;">vs</div>
+              <div style="flex:1;text-align:right;">
+                <div style="font-family:'DM Sans',sans-serif;font-size:0.78rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">Next opponent</div>
+                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.25rem;">${state.next_opponent_theme.country_name}</div>
+              </div>
+              ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);flex-shrink:0;"></div>`}
+            ` : ''}
           </div>
-          <button onclick="startNewMap()" class="bundle-btn btn-gold" style="margin-left:auto;">Start Next Match ▶</button>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:#fbbf24;">${stageName(session.stage_idx)}</div>
+            <button onclick="startNewMap()" class="bundle-btn btn-gold">Start Next Match ▶</button>
+          </div>
         </div>`;
     } else {
       // No tournament (or just completed) — flag-forward nation picker
