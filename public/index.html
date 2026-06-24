@@ -1172,11 +1172,12 @@
       portraitEl.style.opacity = '0';
     }
 
-    // Apply staggered fade-in animation to tiles
+    // Apply staggered fade-in animation to tiles (spread over ~4 seconds)
     const tiles_list = document.querySelectorAll('.tile');
+    const delayPerTile = 4000 / tiles_list.length;
     tiles_list.forEach((tile, idx) => {
       tile.classList.add('tile-spawn');
-      tile.style.animationDelay = (idx * 50) + 'ms';
+      tile.style.animationDelay = (idx * delayPerTile) + 'ms';
     });
 
     // After all tiles finish animating, fade in the portrait
@@ -1185,7 +1186,7 @@
         portraitEl.style.transition = 'opacity 0.5s ease';
         portraitEl.style.opacity = '1';
       }
-    }, tiles_list.length * 50 + 100);
+    }, 4000 + 100);
   }
 
   function updateHud() {
@@ -1248,8 +1249,11 @@
       state.squaresRevealed = d.squares_revealed;
       state.walletBalance = d.wallet_balance;
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
-      if (state.credits && sessId) {
-        state.credits.credits_remaining = parseInt(state.credits.credits_remaining) - 1;
+      if (state.credits && sessId && state.credits.credits_remaining !== undefined) {
+        const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
+        if (currentRemaining > 0) {
+          state.credits.credits_remaining = currentRemaining - 1;
+        }
       }
 
       // If THIS player just won the jackpot, record their win timestamp so the
