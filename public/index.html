@@ -1024,9 +1024,9 @@
 
     const statsRow = `
       <div class="lobby-stats-row" style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
-        <div class="lobby-stat-box" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 12px;font-family:'DM Sans',sans-serif;cursor:pointer;" onclick="openInfoPanel()" title="How GOAL! works">
-          <span style="font-size:0.7rem;color:#888;">Guide</span>
-          <span class="val" style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#f0f0f5;font-weight:700;display:block;">How it works ⓘ</span>
+        <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span style="font-size:0.7rem;color:#888;">Wallet</span>
+          <span class="val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${state.walletBalance !== undefined ? Math.round(state.walletBalance).toLocaleString() + ' t' : 'XXXXX'}</span>
         </div>
         ${(() => {
           const heartbeat = state.potBalance > 500 ? ' pot-heartbeat' : '';
@@ -1035,10 +1035,6 @@
             <span class="val pot-chip-value" style="font-family:'Space Mono',monospace;font-size:1rem;color:#fbbf24;font-weight:700;display:block;">${Math.round(state.potBalance).toLocaleString()} t</span>
           </div>`;
         })()}
-        <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span style="font-size:0.7rem;color:#888;">Wallet</span>
-          <span class="val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${Math.round(state.walletBalance)} t</span>
-        </div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
