@@ -21,6 +21,13 @@
       "required": false,
       "private": false,
       "default": "ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8"
+    },
+    {
+      "key": "MOCK_WALLET_TXS",
+      "description": "Enable mock wallet transactions in staging (no real blockchain calls)",
+      "required": false,
+      "private": false,
+      "default": "true"
     }
   ],
   "tests": [
@@ -45,6 +52,8 @@
     { "name": "Session API responds", "path": "/api/session", "expectText": "session" },
     { "name": "Session API exposes pot last_won_at for load-seed", "path": "/api/session", "expectText": "last_won_at" },
     { "name": "Captain-pot API names the last winner", "path": "/api/captain-pot", "expectText": "last_winner_username" },
-    { "name": "League API returns rankings", "path": "/api/league", "expectText": "rankings" }
+    { "name": "League API returns rankings", "path": "/api/league", "expectText": "rankings" },
+    { "name": "Wallet API returns balance", "path": "/api/wallet", "expectText": "balance" },
+    { "name": "Wallet balance displays in HUD", "path": "/#game/2", "expectText": "tokens" }
   ]
 }
