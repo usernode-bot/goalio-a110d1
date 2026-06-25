@@ -287,6 +287,10 @@
 
     .reveal-fast { animation-duration: 0.31s !important; }
 
+    /* Ensure reveal animations only apply within game board */
+    #lobby-body .reveal-zoom-burst, #lobby-body .reveal-slide,
+    #victory-bg .reveal-zoom-burst, #victory-bg .reveal-slide { animation: none !important; transform: none !important; }
+
     /* Football goal spin animation */
     @keyframes goal-spin {
       0% { transform: rotateZ(0deg); }
@@ -345,6 +349,16 @@
       .game-hud .hud-chip { padding: 1px 4px !important; font-size: 6.5px !important; }
       .game-hud .hud-chip .val { font-size: 11px !important; }
       .nation-strip { padding: 0px 6px; min-height: 20px; font-size: 0.62rem; gap: 4px; }
+      /* Lobby stat boxes on mobile */
+      .lobby-stats-row { gap: 6px !important; }
+      .lobby-stat-box { padding: 3px 6px !important; min-width: 0; }
+      .lobby-stat-box > span:first-child { font-size: 0.6rem !important; }
+      .lobby-stat-box .val { font-size: 0.85rem !important; }
+      /* Victory stadium on mobile */
+      #victory-bg { padding: 16px 12px !important; }
+      .result-card { max-width: 100% !important; margin: 0 auto; }
+      #display-name-input { font-size: 0.82rem !important; padding: 6px 10px !important; }
+      .bundle-btn { font-size: 0.78rem !important; padding: 8px 12px !important; }
     }
 
     /* Controls */
@@ -402,7 +416,10 @@
     .board-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 40; }
 
     /* Result card */
-    .result-card { background: rgba(15,15,25,0.97); border: 1px solid rgba(251,191,36,0.5); border-radius: 16px; padding: 28px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 0 40px rgba(251,191,36,0.2); }
+    .result-card { background: rgba(15,15,25,0.97); border: 1px solid rgba(251,191,36,0.5); border-radius: 16px; padding: 28px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 0 40px rgba(251,191,36,0.2); max-height: 85vh; overflow-y: auto; }
+    @media (max-width: 480px) {
+      .result-card { padding: 20px; width: 95%; max-width: 100%; }
+    }
 
     /* League table */
     .league-table { width: 100%; border-collapse: collapse; }
@@ -433,6 +450,59 @@
 
     /* Floating delta label */
     .pot-delta { position: absolute; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #fbbf24; font-weight: 700; pointer-events: none; animation: float-up 0.8s ease forwards; white-space: nowrap; }
+
+    /* ═══ GOAL CELEBRATION ANIMATIONS ═══ */
+
+    /* Confetti particles */
+    @keyframes confetti-burst {
+      0% { transform: translate(0, 0) rotateZ(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotateZ(var(--rot)); opacity: 0; }
+    }
+    .confetti { position: fixed; font-size: 1.2rem; pointer-events: none; animation: confetti-burst 2.2s ease-out forwards; }
+
+    /* Floating celebration emojis (⚽ ⭐ 🎉) */
+    @keyframes emoji-float {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-140px) scale(0.3); opacity: 0; }
+    }
+    .floating-emoji { position: fixed; font-size: 2rem; pointer-events: none; animation: emoji-float 2.4s ease-out forwards; }
+
+    /* Shockwave/pulse effect */
+    @keyframes shockwave {
+      0% { transform: scale(0.1); opacity: 0.8; }
+      50% { opacity: 0.4; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .shockwave { position: fixed; width: 60px; height: 60px; border: 2px solid; border-radius: 50%; top: 50%; left: 50%; margin-left: -30px; margin-top: -30px; pointer-events: none; animation: shockwave 0.8s ease-out forwards; z-index: 250; }
+
+    /* Screen shake on impact */
+    @keyframes screen-shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-3px, -3px); }
+      20% { transform: translate(3px, 2px); }
+      30% { transform: translate(-2px, 3px); }
+      40% { transform: translate(2px, -2px); }
+      50% { transform: translate(-1px, 2px); }
+      60% { transform: translate(1px, -1px); }
+      70% { transform: translate(0, 1px); }
+      80% { transform: translate(-1px, 0); }
+    }
+    .screen-shake { animation: screen-shake 0.6s ease-out; }
+
+    /* GOAL text scale-bounce */
+    @keyframes goal-scale-bounce {
+      0% { transform: scale(0) rotateZ(-10deg); opacity: 0; }
+      50% { transform: scale(1.15) rotateZ(5deg); }
+      100% { transform: scale(1) rotateZ(0deg); opacity: 1; }
+    }
+    .goal-text { animation: goal-scale-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    /* Subtitle fade-in */
+    @keyframes subtitle-fade {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .goal-subtitle { animation: subtitle-fade 0.6s ease-out 0.2s both; }
     @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
 
     /* Modal */
@@ -974,37 +1044,52 @@
 
     let mainSection;
     if (inProgress) {
-      // Tournament underway, no active match — auto-match resume state
+      // Tournament underway, no active match — flags as hero, premium mobile-first layout
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
       const hasOpponent = state.next_opponent_theme && state.next_opponent_theme.slug;
       const palette = session.stage_idx >= 3 ? KNOCKOUT_PALETTES[session.stage_idx] : null;
-      const cardBg = palette ? palette.cardDeep : 'rgba(255,255,255,0.04)';
-      const cardBorder = palette ? palette.accent : 'rgba(255,255,255,0.08)';
       const accentColor = palette ? palette.accent : '#fbbf24';
       const buttonGradient = palette ? `linear-gradient(135deg, ${palette.accent} 0%, ${palette.accent2} 100%)` : `linear-gradient(135deg, #ffce4a, #f59e0b)`;
       const badgeBg = palette ? palette.accent : '#fbbf24';
+      const badgeTextColor = palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f';
+
       mainSection = `
-        <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:${cardBg};border:1px solid ${cardBorder};border-radius:14px;">
-          <div style="text-align:center;margin-bottom:8px;">
-            <div style="display:inline-block;background:${badgeBg};color:${palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f'};font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)}</div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;">Stage ${session.stage_idx + 1}/7</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin:0 -16px;">
+          <!-- Stage badge at top -->
+          <div style="width:100%;padding:12px 16px;text-align:center;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:inline-block;background:${badgeBg};color:${badgeTextColor};font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;">Stage ${session.stage_idx + 1}/7 — ${stageName(session.stage_idx)}</div>
           </div>
-          <div style="display:flex;align-items:flex-start;justify-content:center;gap:14px;">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
-              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
-              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.9rem;">(you)</span></div>
+
+          <!-- Large flags as hero, centered -->
+          <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
+              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
+
             ${hasOpponent ? `
-              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:${accentColor};align-self:center;flex-shrink:0;">vs</div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
-                ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
-                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${state.next_opponent_theme.country_name}</div>
-              </div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-weight:700;color:${accentColor};font-size:1rem;text-shadow:0 0 8px ${accentColor}44;">VS</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
+              ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
+            </div>
             ` : ''}
           </div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
-            <button onclick="startNewMap()" class="bundle-btn" style="background:${buttonGradient};color:#0a0a0f;box-shadow:0 2px 12px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.28)'};font-weight:700;">Start Next Match ▶</button>
+
+          <!-- Match info bar -->
+          <div style="width:100%;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-around;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.75rem;">
+            <div><span style="color:#888;">Odds</span><br><span style="color:${accentColor};font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
+            <div><span style="color:#888;">Prize Range</span><br><span style="color:#10b981;font-weight:700;font-size:0.9rem;">${prizeDecay(0, gridSizeForStage(session.stage_idx))}–${prizeDecay(gridSizeForStage(session.stage_idx) - 1, gridSizeForStage(session.stage_idx))}</span></div>
+            <div><span style="color:#888;">Pot</span><br><span style="color:#fbbf24;font-weight:700;font-size:0.9rem;">${Math.round(state.potBalance)}</span></div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="width:100%;padding:16px;">
+            <button onclick="startNewMap()" class="bundle-btn" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;font-size:1rem;padding:14px;border-radius:12px;letter-spacing:0.02em;">⚽ KICK OFF ▶</button>
           </div>
         </div>`;
     } else {
@@ -1406,6 +1491,94 @@
   };
 
   // ═══════════════════════════════════════════════════════════════
+  // GOAL CELEBRATION
+  // ═══════════════════════════════════════════════════════════════
+  function playGoalCelebration(accentColor, isFinal) {
+    const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
+
+    // Screen shake
+    const app = document.getElementById('app');
+    if (app) app.classList.add('screen-shake');
+    setTimeout(() => app && app.classList.remove('screen-shake'), 600);
+
+    // Shockwave pulse from center
+    const shockwave = document.createElement('div');
+    shockwave.className = 'shockwave';
+    shockwave.style.borderColor = accentColor || '#fbbf24';
+    document.body.appendChild(shockwave);
+    setTimeout(() => shockwave.remove(), 800);
+
+    // Confetti burst (15 particles)
+    for (let i = 0; i < 15; i++) {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      const chars = ['🎉', '⭐', '✨', '🌟', '💫'];
+      confetti.textContent = chars[Math.floor(Math.random() * chars.length)];
+
+      const angle = (Math.random() * 360) * (Math.PI / 180);
+      const velocity = 120 + Math.random() * 180;
+      const tx = Math.cos(angle) * velocity;
+      const ty = Math.sin(angle) * velocity - 60; // gravity offset
+      const rot = Math.random() * 720;
+
+      confetti.style.setProperty('--tx', tx + 'px');
+      confetti.style.setProperty('--ty', ty + 'px');
+      confetti.style.setProperty('--rot', rot + 'deg');
+      confetti.style.left = '50%';
+      confetti.style.top = '50%';
+      confetti.style.marginLeft = '-0.6rem';
+      confetti.style.marginTop = '-0.6rem';
+
+      document.body.appendChild(confetti);
+      setTimeout(() => confetti.remove(), 2200);
+    }
+
+    // Floating emojis (5 emojis floating upward)
+    const emojiSet = ['⚽', '⭐', '🎊'];
+    for (let i = 0; i < 5; i++) {
+      const emoji = document.createElement('div');
+      emoji.className = 'floating-emoji';
+      emoji.textContent = emojiSet[Math.floor(Math.random() * emojiSet.length)];
+
+      const xPos = 20 + Math.random() * 60;
+      emoji.style.left = xPos + '%';
+      emoji.style.bottom = '10%';
+      emoji.style.animation = `emoji-float 2.4s ease-out ${i * 0.15}s forwards`;
+
+      document.body.appendChild(emoji);
+      setTimeout(() => emoji.remove(), 2400 + i * 150);
+    }
+
+    // GOAL text overlay
+    const goalOverlay = document.createElement('div');
+    goalOverlay.style.cssText = `
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      z-index:280;pointer-events:none;text-align:center;
+    `;
+
+    const goalText = isFinal ? 'CHAMPIONS!' : 'GOAL!';
+    const fontSize = isFinal ? '4.5rem' : '5.5rem';
+
+    goalOverlay.innerHTML = `
+      <div class="goal-text" style="
+        font-family:'DM Sans',sans-serif;font-size:${fontSize};font-weight:900;
+        color:${accentColor || '#fbbf24'};
+        text-shadow:0 0 20px ${accentColor || '#fbbf24'}77,
+                    0 4px 12px rgba(0,0,0,0.8);
+        line-height:1;margin:0;
+      ">${goalText}</div>
+      <div class="goal-subtitle" style="
+        font-family:'DM Sans',sans-serif;font-size:1rem;
+        color:#ccc;margin-top:8px;letter-spacing:0.05em;
+        text-transform:uppercase;font-weight:600;
+      ">${isFinal ? 'You won the World Cup!' : 'You scored!'}</div>
+    `;
+
+    document.body.appendChild(goalOverlay);
+    setTimeout(() => goalOverlay.remove(), 2600);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // WIN SEQUENCE
   // ═══════════════════════════════════════════════════════════════
   async function runWinSequence(hitCell, idx, result) {
@@ -1415,15 +1588,31 @@
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
 
+    // Play goal celebration with palette-aware colors
+    const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
+    const accentColor = palette ? palette.accent : '#fbbf24';
+    playGoalCelebration(accentColor, isFinal);
+
     // Skip flag to allow touch/click to skip to result card
     let skipWinSequence = false;
-    const skipHandler = () => { skipWinSequence = true; };
+    let resultShown = false;
     const boardZone = document.getElementById('board-zone');
+
+    const skipHandler = () => {
+      skipWinSequence = true;
+      // Don't remove listeners here; let the showResult function do cleanup
+    };
+
     boardZone && boardZone.addEventListener('click', skipHandler);
     boardZone && boardZone.addEventListener('touchstart', skipHandler);
 
     // Helper to show result card and clean up
     const showResult = async () => {
+      // Prevent showing result multiple times
+      if (resultShown) return;
+      resultShown = true;
+
+      // Remove event listeners to prevent multiple taps
       boardZone && boardZone.removeEventListener('click', skipHandler);
       boardZone && boardZone.removeEventListener('touchstart', skipHandler);
       stopConfetti();
@@ -1721,22 +1910,22 @@
     document.getElementById('app').innerHTML = `
       <div id="victory-bg" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 16px;min-height:100vh;overflow:auto;">
         <div class="result-card" style="max-width:400px;width:100%;">
-          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:14px;">TOURNAMENT COMPLETE</div>
-          <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.1rem,5vw,1.5rem);line-height:1.25;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;margin-bottom:16px;">
+          <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:12px;">TOURNAMENT COMPLETE</div>
+          <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.1rem,5vw,1.5rem);line-height:1.2;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;margin-bottom:14px;word-break:break-word;">
             ${playerName} have won the World Cup with ${countryName}! 🏆
           </div>
-          <div style="font-family:'Space Mono',monospace;font-size:1.2rem;color:#10b981;margin-bottom:4px;">+${Math.round(totalWon)} tokens total</div>
-          ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:4px;">⚡ Captain's Jackpot: +${Math.round(result.jackpot_paid)} t</div>` : ''}
-          <div style="font-family:'Space Mono',monospace;font-size:0.85rem;color:#fbbf24;margin-bottom:8px;">🏠 House Bonus: +50 tokens</div>
-          <div style="font-size:0.8rem;color:#888;margin-bottom:16px;font-family:'DM Sans',sans-serif;">League rank: #${myRank} · Score: ${Math.round(myScore)} t</div>
-          <div style="margin-bottom:8px;">
-            <label style="font-family:'DM Sans',sans-serif;font-size:0.82rem;color:#888;display:block;margin-bottom:4px;">League display name</label>
-            <input id="display-name-input" value="${displayName || username}" maxlength="32" style="width:100%;padding:8px 12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:0.9rem;">
+          <div style="font-family:'Space Mono',monospace;font-size:clamp(1rem,4vw,1.2rem);color:#10b981;margin-bottom:3px;">+${Math.round(totalWon)} tokens total</div>
+          ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#fbbf24;margin-bottom:3px;">⚡ Captain's Jackpot: +${Math.round(result.jackpot_paid)} t</div>` : ''}
+          <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#fbbf24;margin-bottom:8px;">🏠 House Bonus: +50 tokens</div>
+          <div style="font-size:0.75rem;color:#888;margin-bottom:12px;font-family:'DM Sans',sans-serif;">League rank: #${myRank} · Score: ${Math.round(myScore)} t</div>
+          <div style="margin-bottom:10px;">
+            <label style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;display:block;margin-bottom:3px;">League display name</label>
+            <input id="display-name-input" value="${displayName || username}" maxlength="32" style="width:100%;padding:8px 10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;font-family:'DM Sans',sans-serif;font-size:0.88rem;box-sizing:border-box;">
           </div>
-          <button class="bundle-btn btn-gold" style="width:100%;margin-bottom:12px;" onclick="submitLeague()">Save Name to League</button>
-          <div style="display:flex;gap:8px;">
-            <button class="bundle-btn btn-green" style="flex:1;" onclick="showLeaderboardAfterVictory()">🏆 Show Leaderboard</button>
-            <button class="bundle-btn btn-ghost" style="flex:1;" onclick="playAgain()">▶ Play Again</button>
+          <button class="bundle-btn btn-gold" style="width:100%;margin-bottom:10px;padding:8px 12px;font-size:0.8rem;height:auto;line-height:1.4;" onclick="submitLeague()">Save Name to League</button>
+          <div style="display:flex;gap:6px;">
+            <button class="bundle-btn btn-green" style="flex:1;padding:8px 8px;font-size:0.76rem;height:auto;line-height:1.3;" onclick="showLeaderboardAfterVictory()">🏆 Leaderboard</button>
+            <button class="bundle-btn btn-ghost" style="flex:1;padding:8px 8px;font-size:0.76rem;height:auto;line-height:1.3;" onclick="playAgain()">▶ Play Again</button>
           </div>
         </div>
       </div>`;
