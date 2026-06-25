@@ -450,6 +450,59 @@
 
     /* Floating delta label */
     .pot-delta { position: absolute; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: #fbbf24; font-weight: 700; pointer-events: none; animation: float-up 0.8s ease forwards; white-space: nowrap; }
+
+    /* ═══ GOAL CELEBRATION ANIMATIONS ═══ */
+
+    /* Confetti particles */
+    @keyframes confetti-burst {
+      0% { transform: translate(0, 0) rotateZ(0deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) rotateZ(var(--rot)); opacity: 0; }
+    }
+    .confetti { position: fixed; font-size: 1.2rem; pointer-events: none; animation: confetti-burst 2.2s ease-out forwards; }
+
+    /* Floating celebration emojis (⚽ ⭐ 🎉) */
+    @keyframes emoji-float {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-140px) scale(0.3); opacity: 0; }
+    }
+    .floating-emoji { position: fixed; font-size: 2rem; pointer-events: none; animation: emoji-float 2.4s ease-out forwards; }
+
+    /* Shockwave/pulse effect */
+    @keyframes shockwave {
+      0% { transform: scale(0.1); opacity: 0.8; }
+      50% { opacity: 0.4; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .shockwave { position: fixed; width: 60px; height: 60px; border: 2px solid; border-radius: 50%; top: 50%; left: 50%; margin-left: -30px; margin-top: -30px; pointer-events: none; animation: shockwave 0.8s ease-out forwards; z-index: 250; }
+
+    /* Screen shake on impact */
+    @keyframes screen-shake {
+      0%, 100% { transform: translate(0, 0); }
+      10% { transform: translate(-3px, -3px); }
+      20% { transform: translate(3px, 2px); }
+      30% { transform: translate(-2px, 3px); }
+      40% { transform: translate(2px, -2px); }
+      50% { transform: translate(-1px, 2px); }
+      60% { transform: translate(1px, -1px); }
+      70% { transform: translate(0, 1px); }
+      80% { transform: translate(-1px, 0); }
+    }
+    .screen-shake { animation: screen-shake 0.6s ease-out; }
+
+    /* GOAL text scale-bounce */
+    @keyframes goal-scale-bounce {
+      0% { transform: scale(0) rotateZ(-10deg); opacity: 0; }
+      50% { transform: scale(1.15) rotateZ(5deg); }
+      100% { transform: scale(1) rotateZ(0deg); opacity: 1; }
+    }
+    .goal-text { animation: goal-scale-bounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    /* Subtitle fade-in */
+    @keyframes subtitle-fade {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .goal-subtitle { animation: subtitle-fade 0.6s ease-out 0.2s both; }
     @keyframes float-up { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
 
     /* Modal */
@@ -1438,6 +1491,94 @@
   };
 
   // ═══════════════════════════════════════════════════════════════
+  // GOAL CELEBRATION
+  // ═══════════════════════════════════════════════════════════════
+  function playGoalCelebration(accentColor, isFinal) {
+    const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
+
+    // Screen shake
+    const app = document.getElementById('app');
+    if (app) app.classList.add('screen-shake');
+    setTimeout(() => app && app.classList.remove('screen-shake'), 600);
+
+    // Shockwave pulse from center
+    const shockwave = document.createElement('div');
+    shockwave.className = 'shockwave';
+    shockwave.style.borderColor = accentColor || '#fbbf24';
+    document.body.appendChild(shockwave);
+    setTimeout(() => shockwave.remove(), 800);
+
+    // Confetti burst (15 particles)
+    for (let i = 0; i < 15; i++) {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      const chars = ['🎉', '⭐', '✨', '🌟', '💫'];
+      confetti.textContent = chars[Math.floor(Math.random() * chars.length)];
+
+      const angle = (Math.random() * 360) * (Math.PI / 180);
+      const velocity = 120 + Math.random() * 180;
+      const tx = Math.cos(angle) * velocity;
+      const ty = Math.sin(angle) * velocity - 60; // gravity offset
+      const rot = Math.random() * 720;
+
+      confetti.style.setProperty('--tx', tx + 'px');
+      confetti.style.setProperty('--ty', ty + 'px');
+      confetti.style.setProperty('--rot', rot + 'deg');
+      confetti.style.left = '50%';
+      confetti.style.top = '50%';
+      confetti.style.marginLeft = '-0.6rem';
+      confetti.style.marginTop = '-0.6rem';
+
+      document.body.appendChild(confetti);
+      setTimeout(() => confetti.remove(), 2200);
+    }
+
+    // Floating emojis (5 emojis floating upward)
+    const emojiSet = ['⚽', '⭐', '🎊'];
+    for (let i = 0; i < 5; i++) {
+      const emoji = document.createElement('div');
+      emoji.className = 'floating-emoji';
+      emoji.textContent = emojiSet[Math.floor(Math.random() * emojiSet.length)];
+
+      const xPos = 20 + Math.random() * 60;
+      emoji.style.left = xPos + '%';
+      emoji.style.bottom = '10%';
+      emoji.style.animation = `emoji-float 2.4s ease-out ${i * 0.15}s forwards`;
+
+      document.body.appendChild(emoji);
+      setTimeout(() => emoji.remove(), 2400 + i * 150);
+    }
+
+    // GOAL text overlay
+    const goalOverlay = document.createElement('div');
+    goalOverlay.style.cssText = `
+      position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+      z-index:280;pointer-events:none;text-align:center;
+    `;
+
+    const goalText = isFinal ? 'CHAMPIONS!' : 'GOAL!';
+    const fontSize = isFinal ? '4.5rem' : '5.5rem';
+
+    goalOverlay.innerHTML = `
+      <div class="goal-text" style="
+        font-family:'DM Sans',sans-serif;font-size:${fontSize};font-weight:900;
+        color:${accentColor || '#fbbf24'};
+        text-shadow:0 0 20px ${accentColor || '#fbbf24'}77,
+                    0 4px 12px rgba(0,0,0,0.8);
+        line-height:1;margin:0;
+      ">${goalText}</div>
+      <div class="goal-subtitle" style="
+        font-family:'DM Sans',sans-serif;font-size:1rem;
+        color:#ccc;margin-top:8px;letter-spacing:0.05em;
+        text-transform:uppercase;font-weight:600;
+      ">${isFinal ? 'You won the World Cup!' : 'You scored!'}</div>
+    `;
+
+    document.body.appendChild(goalOverlay);
+    setTimeout(() => goalOverlay.remove(), 2600);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // WIN SEQUENCE
   // ═══════════════════════════════════════════════════════════════
   async function runWinSequence(hitCell, idx, result) {
@@ -1446,6 +1587,11 @@
     const isFinal = (state.session && state.session.stage_idx >= 6) || result.interstitial === 'final_win';
     const theme = state.gameTheme;
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
+
+    // Play goal celebration with palette-aware colors
+    const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
+    const accentColor = palette ? palette.accent : '#fbbf24';
+    playGoalCelebration(accentColor, isFinal);
 
     // Skip flag to allow touch/click to skip to result card
     let skipWinSequence = false;
