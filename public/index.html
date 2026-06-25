@@ -1485,13 +1485,31 @@
     const icon = isFinal ? '🏆' : '⚽';
     const objEl = document.createElement('div');
     objEl.style.cssText = `position:fixed;font-size:80px;z-index:200;pointer-events:none;transition:all 0.6s cubic-bezier(.22,1,.36,1);`;
-    if (hitCell) {
-      const rect = hitCell.getBoundingClientRect();
-      objEl.style.left = (rect.left + rect.width/2 - 40) + 'px';
-      objEl.style.top = (rect.top + rect.height/2 - 40) + 'px';
-    } else {
-      objEl.style.left = '50%'; objEl.style.top = '50%';
+
+    // Randomize starting position from different edges/corners of the board
+    const boardZoneRect = boardZone.getBoundingClientRect();
+    const boardCenterX = boardZoneRect.left + boardZoneRect.width / 2;
+    const boardCenterY = boardZoneRect.top + boardZoneRect.height / 2;
+    const edgeOffset = 120;
+
+    const edges = ['left', 'right', 'top', 'bottom', 'top-left', 'top-right', 'bottom-left', 'bottom-right'];
+    const randomEdge = edges[Math.floor(Math.random() * edges.length)];
+    let startX = boardCenterX;
+    let startY = boardCenterY;
+
+    switch(randomEdge) {
+      case 'left': startX = boardZoneRect.left - edgeOffset; break;
+      case 'right': startX = boardZoneRect.right + edgeOffset; break;
+      case 'top': startY = boardZoneRect.top - edgeOffset; break;
+      case 'bottom': startY = boardZoneRect.bottom + edgeOffset; break;
+      case 'top-left': startX = boardZoneRect.left - edgeOffset; startY = boardZoneRect.top - edgeOffset; break;
+      case 'top-right': startX = boardZoneRect.right + edgeOffset; startY = boardZoneRect.top - edgeOffset; break;
+      case 'bottom-left': startX = boardZoneRect.left - edgeOffset; startY = boardZoneRect.bottom + edgeOffset; break;
+      case 'bottom-right': startX = boardZoneRect.right + edgeOffset; startY = boardZoneRect.bottom + edgeOffset; break;
     }
+
+    objEl.style.left = startX + 'px';
+    objEl.style.top = startY + 'px';
     objEl.textContent = icon;
     document.body.appendChild(objEl);
     await sleep(50);
