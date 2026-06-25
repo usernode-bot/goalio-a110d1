@@ -1158,6 +1158,11 @@ async function start() {
   )`);
   await pool.query(`COMMENT ON TABLE player_wallets IS 'staging:private'`);
 
+  // Add columns to existing player_wallets table (idempotent for staging)
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS wallet_address VARCHAR(255)`);
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMPTZ`);
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS last_transaction_id VARCHAR(255)`);
+
   await pool.query(`CREATE TABLE IF NOT EXISTS wallet_transactions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
