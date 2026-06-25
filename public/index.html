@@ -1321,9 +1321,9 @@
         <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
         <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2);"><div style="font-weight:700;">🎯 2 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle2)} tokens</div></button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8);"><div style="font-weight:700;">⚡ 8 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle8)} tokens</div></button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16);"><div style="font-weight:700;">⭐ 16 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle16)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});"><div style="font-weight:700;">🎯 2 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle2)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});"><div style="font-weight:700;">⚡ 8 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle8)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});"><div style="font-weight:700;">⭐ 16 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle16)} tokens</div></button>
           <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
         </div>
       </div>`;
@@ -1614,23 +1614,6 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
-    const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
-    const cost = fmtTokens(size === 2 ? p.bundle2 : size === 8 ? p.bundle8 : p.bundle16);
-    const modal = document.createElement('div');
-    modal.className = 'modal-bg';
-    modal.innerHTML = `<div class="modal-box">
-      <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:8px;">Buy ${size} Shots — ${cost} tokens</div>
-      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Unused shots carry over to your next match if you win. If you abandon this map the remaining shots are forfeited.</p>
-      <div style="display:flex;gap:10px;">
-        <button class="bundle-btn btn-ghost" style="flex:1;" onclick="this.closest('.modal-bg').remove()">Cancel</button>
-        <button class="bundle-btn btn-gold" style="flex:1;" onclick="confirmBundle(${size},this.closest('.modal-bg'))">Buy</button>
-      </div>
-    </div>`;
-    document.body.appendChild(modal);
-  };
-
-  window.confirmBundle = async function(size, modal) {
-    if (modal) modal.remove();
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
