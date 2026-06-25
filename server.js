@@ -20,6 +20,7 @@ const HOUSE_BONUS_TOKENS = 50;
 const HOUSE_WALLET_PRIVATE_KEY = process.env.HOUSE_WALLET_PRIVATE_KEY || '';
 const HOUSE_WALLET_PUBLIC_KEY = process.env.HOUSE_WALLET_PUBLIC_KEY || 'utpk1rtpjdqwm53jv6t7ax6vxczlujv577nz33veskavdn48s6k3ljr8qmn798l';
 const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8';
+const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
 const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env']);
@@ -133,34 +134,79 @@ async function runTimeoutCheck(client) {
   `);
 }
 
-// ── Wallet transaction helpers ────────────────────────────────────────────
-// Mock transaction signing for staging (no real blockchain calls)
+// ── Wallet transaction helpers (sidecar-based) ──────────────────────────────
+// Mock transaction signing for staging (no real sidecar calls)
 function generateMockTxHash() {
   return 'tx_' + crypto.randomBytes(16).toString('hex');
 }
 
-async function signTransaction(direction, fromAddress, toAddress, amount, reason) {
-  // In a real implementation, this would use tweetnacl or a Usernode SDK
-  // to sign transactions. For now, we use mock hashes in staging and
-  // error in production if no private key is configured.
+async function sendTransactionViaSidecar(toAddress, amount, memo) {
+  // In staging with MOCK_WALLET_TXS, return a mock confirmed transaction immediately
   if (MOCK_WALLET_TXS) {
     return { tx_hash: generateMockTxHash(), status: 'confirmed' };
   }
 
-  if (!HOUSE_WALLET_PRIVATE_KEY) {
-    throw new Error('Wallet transactions require HOUSE_WALLET_PRIVATE_KEY');
+  try {
+    const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        to: toAddress,
+        amount: amount,
+        memo: memo
+      }),
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      if (response.status === 402) {
+        throw { status: 402, message: 'Insufficient balance' };
+      }
+      throw new Error(`Sidecar error: ${response.status} ${JSON.stringify(err)}`);
+    }
+
+    const data = await response.json();
+    return { tx_hash: data.tx_hash, status: 'pending' };
+  } catch (err) {
+    if (err.status === 402) throw err;
+    throw new Error(`Failed to submit transaction to sidecar: ${err.message}`);
+  }
+}
+
+async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
+  // Poll for on-chain confirmation of the transaction
+  const startTime = Date.now();
+  const pollIntervalMs = 2000;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      // In mock mode, immediately return confirmed
+      if (MOCK_WALLET_TXS) {
+        return { status: 'confirmed' };
+      }
+
+      const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/status/${txHash}`, {
+        method: 'GET',
+        headers: { 'content-type': 'application/json' },
+        timeout: 5000
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'confirmed') {
+          return data;
+        }
+      }
+    } catch (err) {
+      // Continue polling on error, as the sidecar may be temporarily unavailable
+    }
+
+    // Wait before polling again
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
   }
 
-  // Placeholder for real signing logic. In production this would:
-  // 1. Construct a transaction object with from/to/amount
-  // 2. Sign it using the house private key
-  // 3. Submit to blockchain RPC endpoint
-  // 4. Poll for confirmation
-  // 5. Return tx_hash and confirmed status
-
-  // For now, simulate successful transaction
-  const tx_hash = 'tx_' + crypto.randomBytes(16).toString('hex');
-  return { tx_hash, status: 'confirmed' };
+  throw new Error(`Transaction ${txHash} confirmation timeout after ${maxWaitMs}ms`);
 }
 
 async function recordTransaction(client, userId, txHash, direction, amount, reason, gameId = null) {
@@ -188,38 +234,61 @@ async function getWalletBalance(client, userId) {
 }
 
 async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameId = null) {
-  // Sign and submit blockchain transaction first
-  const txResult = await signTransaction('debit', `wallet_${userId}`, HOUSE_WALLET_ADDRESS, amount, reason);
+  const userWalletAddr = `wallet_${userId}`;
 
-  // Record transaction in audit log
-  await recordTransaction(client, userId, txResult.tx_hash, 'debit', amount, reason, gameId);
+  try {
+    // Submit transaction via sidecar (app to house transfer)
+    const txResult = await sendTransactionViaSidecar(HOUSE_WALLET_ADDRESS, amount, reason);
+    const txHash = txResult.tx_hash;
 
-  // Update local cache
-  const { rows } = await client.query(`
-    UPDATE player_wallets SET balance = balance - $2, last_transaction_id = $3, last_synced_at = NOW()
-    WHERE user_id = $1 AND balance >= $2
-    RETURNING balance
-  `, [userId, amount, txResult.tx_hash]);
+    // Record transaction in audit log as pending
+    await recordTransaction(client, userId, txHash, 'debit', amount, reason, gameId);
 
-  if (!rows.length) throw new Error('Insufficient balance');
-  return parseFloat(rows[0].balance);
+    // Poll for on-chain confirmation
+    await pollTransactionConfirmation(txHash);
+
+    // Update local cache only after on-chain confirmation
+    const { rows } = await client.query(`
+      UPDATE player_wallets SET balance = balance - $2, last_transaction_id = $3, last_synced_at = NOW()
+      WHERE user_id = $1 AND balance >= $2
+      RETURNING balance
+    `, [userId, amount, txHash]);
+
+    if (!rows.length) throw new Error('Insufficient balance');
+    return parseFloat(rows[0].balance);
+  } catch (err) {
+    if (err.status === 402 || err.message === 'Insufficient balance') {
+      throw new Error('Insufficient balance');
+    }
+    throw err;
+  }
 }
 
 async function creditWallet(client, userId, amount, reason = 'prize_payout', gameId = null) {
-  // Sign and submit blockchain transaction first
-  const txResult = await signTransaction('credit', HOUSE_WALLET_ADDRESS, `wallet_${userId}`, amount, reason);
+  const userWalletAddr = `wallet_${userId}`;
 
-  // Record transaction in audit log
-  await recordTransaction(client, userId, txResult.tx_hash, 'credit', amount, reason, gameId);
+  try {
+    // Submit transaction via sidecar (house to app transfer)
+    const txResult = await sendTransactionViaSidecar(userWalletAddr, amount, reason);
+    const txHash = txResult.tx_hash;
 
-  // Update local cache
-  const { rows } = await client.query(`
-    UPDATE player_wallets SET balance = balance + $2, last_transaction_id = $3, last_synced_at = NOW()
-    WHERE user_id = $1
-    RETURNING balance
-  `, [userId, amount, txResult.tx_hash]);
+    // Record transaction in audit log as pending
+    await recordTransaction(client, userId, txHash, 'credit', amount, reason, gameId);
 
-  return rows.length ? parseFloat(rows[0].balance) : null;
+    // Poll for on-chain confirmation
+    await pollTransactionConfirmation(txHash);
+
+    // Update local cache only after on-chain confirmation
+    const { rows } = await client.query(`
+      UPDATE player_wallets SET balance = balance + $2, last_transaction_id = $3, last_synced_at = NOW()
+      WHERE user_id = $1
+      RETURNING balance
+    `, [userId, amount, txHash]);
+
+    return rows.length ? parseFloat(rows[0].balance) : null;
+  } catch (err) {
+    throw err;
+  }
 }
 
 async function pickNextOpponent(client, playedSlugs, myTeamSlug) {

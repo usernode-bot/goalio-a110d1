@@ -3,7 +3,7 @@
   "secrets": [
     {
       "key": "HOUSE_WALLET_PRIVATE_KEY",
-      "description": "Private key of the house wallet used to debit players when they spend credits and credit players when they win prizes",
+      "description": "Private key of the house wallet (held only in the Usernode sidecar, never accessed by the app)",
       "required": false,
       "private": true,
       "staging_default": ""
@@ -23,8 +23,16 @@
       "default": "ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8"
     },
     {
+      "key": "USERNODE_SIDECAR_URL",
+      "description": "Usernode sidecar RPC endpoint URL for wallet transaction signing",
+      "required": false,
+      "private": false,
+      "staging_default": "http://localhost:3001",
+      "default": "http://usernode:3000"
+    },
+    {
       "key": "MOCK_WALLET_TXS",
-      "description": "Enable mock wallet transactions in staging (no real blockchain calls)",
+      "description": "Enable mock wallet transactions in staging (no real sidecar calls)",
       "required": false,
       "private": false,
       "default": "true"
