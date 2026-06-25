@@ -145,7 +145,7 @@
 
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
-      flex: 1 1 auto; min-height: 0; position: relative;
+      flex: 1 1 auto; min-height: auto; position: relative;
       display: flex; align-items: center; justify-content: center; padding: 12px 2px 12px 2px;
     }
 
@@ -162,7 +162,7 @@
         inset 0 1px 0 rgba(255,255,255,0.06);
       width: min(96vw, calc(100vh - 185px));
       width: min(96vw, calc(100svh - 165px));
-      max-height: 100%;
+      max-height: none;
     }
     @media (min-width: 481px) {
       .board-wrap { width: min(400px, calc(100vh - 185px)); width: min(400px, calc(100svh - 165px)); }
