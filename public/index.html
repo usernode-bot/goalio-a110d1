@@ -161,11 +161,11 @@
         0 20px 60px -10px rgba(0,0,0,0.95),
         inset 0 1px 0 rgba(255,255,255,0.06);
       width: min(96vw, calc(100vh - 185px));
-      width: min(96vw, calc(100svh - 165px));
+      width: min(96vw, calc((100svh - 140px) * 3/4));
       max-height: none;
     }
     @media (min-width: 481px) {
-      .board-wrap { width: min(400px, calc(100vh - 185px)); width: min(400px, calc(100svh - 165px)); }
+      .board-wrap { width: min(400px, calc(100vh - 185px)); width: min(400px, calc((100svh - 140px) * 3/4)); }
       #game-body { max-width: 440px; margin: 0 auto; }
     }
     /* Full-height game container using small viewport height to stay within visible area on mobile */
