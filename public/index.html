@@ -1309,14 +1309,19 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (!sessId) {
-      showToast('Out of shots — top up to play! Pick a bundle below 👇', 3000);
-      const row = document.getElementById('controls-row');
-      if (row) {
-        row.classList.remove('controls-nudge');
-        // reflow so the animation restarts on repeated taps
-        void row.offsetWidth;
-        row.classList.add('controls-nudge');
-      }
+      const modal = document.createElement('div');
+      modal.className = 'modal-bg';
+      modal.innerHTML = `<div class="modal-box">
+        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
+        <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
+        <div style="display:flex;gap:10px;flex-direction:column;">
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2);">🎯 Buy 2 Shots</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8);">⚡ Buy 8 Shots</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16);">⭐ Buy 16 Shots</button>
+          <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
+        </div>
+      </div>`;
+      document.body.appendChild(modal);
       return;
     }
     playBlip();
