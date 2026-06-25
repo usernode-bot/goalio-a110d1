@@ -268,6 +268,60 @@
     }
     .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
+    /* Reveal animation variants */
+    @keyframes reveal-zoom-burst {
+      0% { transform: perspective(600px) scale(0.8) rotateZ(0deg); opacity: 1; filter: brightness(1); }
+      40% { filter: brightness(2.5) saturate(1.5); }
+      60% { transform: perspective(600px) scale(1.3) rotateZ(8deg); opacity: 0.5; }
+      100% { transform: perspective(600px) scale(2) rotateZ(15deg); opacity: 0; }
+    }
+    .reveal-zoom-burst { animation: reveal-zoom-burst 0.62s cubic-bezier(.4,0,.2,1) forwards; }
+
+    @keyframes reveal-slide {
+      0% { transform: translateX(0) scaleY(1); opacity: 1; filter: brightness(1); }
+      20% { filter: brightness(2.2) saturate(1.8); }
+      50% { transform: translateX(40px) scaleY(0.95) rotateZ(-5deg); opacity: 0.4; }
+      100% { transform: translateX(80px) scaleY(0.1) rotateZ(-15deg); opacity: 0; }
+    }
+    .reveal-slide { animation: reveal-slide 0.62s cubic-bezier(.4,0,.6,1) forwards; }
+
+    .reveal-fast { animation-duration: 0.31s !important; }
+
+    /* Football goal spin animation */
+    @keyframes goal-spin {
+      0% { transform: rotateZ(0deg); }
+      100% { transform: rotateZ(var(--spin-amount)); }
+    }
+    .goal-spin { animation: goal-spin var(--spin-duration, 2s) linear forwards; }
+
+    /* 80s GOAL text animations */
+    @keyframes goal-neon-flicker {
+      0% { color: #ff006e; text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e; }
+      20% { color: #00f5ff; text-shadow: 0 0 10px #00f5ff, 0 0 20px #00f5ff; }
+      40% { color: #ffbe0b; text-shadow: 0 0 10px #ffbe0b, 0 0 20px #ffbe0b; }
+      60% { color: #ff006e; text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e; }
+      80% { color: #00f5ff; text-shadow: 0 0 10px #00f5ff, 0 0 20px #00f5ff; }
+      100% { color: #ffbe0b; text-shadow: 0 0 10px #ffbe0b, 0 0 20px #ffbe0b; }
+    }
+    .goal-neon-flicker { animation: goal-neon-flicker 1.2s ease-in-out forwards; }
+
+    @keyframes goal-marquee {
+      0% { transform: translateX(-100%); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
+    .goal-marquee { animation: goal-marquee 2.5s linear forwards; overflow: hidden; white-space: nowrap; }
+
+    @keyframes goal-stack-pulse {
+      0% { transform: scale(0.8); opacity: 0; filter: blur(2px); }
+      30% { transform: scale(1.1); opacity: 1; filter: blur(0); }
+      60% { transform: scale(1); opacity: 1; }
+      85% { transform: scale(0.95); opacity: 0.8; }
+      100% { transform: scale(0.9); opacity: 0; }
+    }
+    .goal-stack-pulse { animation: goal-stack-pulse 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
@@ -441,6 +495,15 @@
   const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 16','Quarter-Final','Semi-Final','Final'];
   const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
 
+  const KNOCKOUT_PALETTES = {
+    3: { accent: '#88C0D0', accent2: '#5E81AC', cardDeep: '#2E3440', name: 'Nord Frost' },
+    4: { accent: '#34D399', accent2: '#2DD4BF', cardDeep: '#042F2E', name: 'Emerald Teal' },
+    5: { accent: '#BD93F9', accent2: '#FF79C6', cardDeep: '#282A36', name: 'Dracula' },
+    6: { accent: '#F9C846', accent2: '#E63946', cardDeep: '#1A1423', name: 'Champions Gold & Crimson' },
+  };
+
+  const REVEAL_VARIANTS = ['flip-miss', 'dissolving', 'reveal-zoom-burst', 'reveal-slide'];
+
   let state = {
     session: null, walletBalance: 1000, potBalance: 100,
     potLastWonAt: null, leaderState: null,
@@ -450,6 +513,7 @@
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
+    revealVariantIdx: 0,
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -883,11 +947,22 @@
     }
 
     const statsRow = `
-      <div style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
-        <button onclick="openInfoPanel()" class="hud-chip" title="How GOAL! works" style="flex:0 0 auto;cursor:pointer;color:#cfcfe0;font-family:'DM Sans',sans-serif;font-weight:600;">ⓘ How it works</button>
-        <div style="flex:1;"></div>
-        ${potChipHtml(state.potBalance)}
-        <div class="hud-chip" style="flex:0 0 auto;"><span style="font-size:0.7rem;color:#888;">Wallet</span><span class="val">${Math.round(state.walletBalance)} t</span></div>
+      <div class="lobby-stats-row" style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
+        <div class="lobby-stat-box" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 12px;font-family:'DM Sans',sans-serif;cursor:pointer;" onclick="openInfoPanel()" title="How GOAL! works">
+          <span style="font-size:0.7rem;color:#888;">Guide</span>
+          <span class="val" style="font-family:'DM Sans',sans-serif;font-size:0.9rem;color:#f0f0f5;font-weight:700;display:block;">How it works ⓘ</span>
+        </div>
+        ${(() => {
+          const heartbeat = state.potBalance > 500 ? ' pot-heartbeat' : '';
+          return `<div class="lobby-stat-box hud-chip pot-chip${heartbeat}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <span style="color:#888;font-size:0.7rem;">Captain's Pot</span>
+            <span class="val pot-chip-value" style="font-family:'Space Mono',monospace;font-size:1rem;color:#fbbf24;font-weight:700;display:block;">${Math.round(state.potBalance).toLocaleString()} t</span>
+          </div>`;
+        })()}
+        <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span style="font-size:0.7rem;color:#888;">Wallet</span>
+          <span class="val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${Math.round(state.walletBalance)} t</span>
+        </div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
@@ -897,11 +972,18 @@
       // Tournament underway, no active match — auto-match resume state
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
       const hasOpponent = state.next_opponent_theme && state.next_opponent_theme.slug;
+      const palette = session.stage_idx >= 3 ? KNOCKOUT_PALETTES[session.stage_idx] : null;
+      const cardBg = palette ? palette.cardDeep : 'rgba(255,255,255,0.04)';
+      const cardBorder = palette ? palette.accent : 'rgba(255,255,255,0.08)';
+      const accentColor = palette ? palette.accent : '#fbbf24';
+      const buttonGradient = palette ? `linear-gradient(135deg, ${palette.accent} 0%, ${palette.accent2} 100%)` : `linear-gradient(135deg, #ffce4a, #f59e0b)`;
+      const badgeBg = palette ? palette.accent : '#fbbf24';
       mainSection = `
         <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;">
+        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:${cardBg};border:1px solid ${cardBorder};border-radius:14px;">
           <div style="text-align:center;margin-bottom:8px;">
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)} — Stage ${session.stage_idx + 1}/7</div>
+            <div style="display:inline-block;background:${badgeBg};color:${palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f'};font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)}</div>
+            <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;">Stage ${session.stage_idx + 1}/7</div>
           </div>
           <div style="display:flex;align-items:flex-start;justify-content:center;gap:14px;">
             <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
@@ -909,7 +991,7 @@
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.9rem;">(you)</span></div>
             </div>
             ${hasOpponent ? `
-              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:#fbbf24;align-self:center;flex-shrink:0;">vs</div>
+              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:${accentColor};align-self:center;flex-shrink:0;">vs</div>
               <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
                 ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
                 <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${state.next_opponent_theme.country_name}</div>
@@ -917,7 +999,7 @@
             ` : ''}
           </div>
           <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
-            <button onclick="startNewMap()" class="bundle-btn btn-gold">Start Next Match ▶</button>
+            <button onclick="startNewMap()" class="bundle-btn" style="background:${buttonGradient};color:#0a0a0f;box-shadow:0 2px 12px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.28)'};font-weight:700;">Start Next Match ▶</button>
           </div>
         </div>`;
     } else {
@@ -1280,10 +1362,17 @@
       if (d.hit) {
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss — shake + flip tile
+        // Miss — rotate reveal variant + optionally double speed
         if (cell) {
-          cell.classList.add('flip-miss');
-          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('flip-miss'); cell.style.pointerEvents = 'none'; }, 680);
+          const variant = REVEAL_VARIANTS[state.revealVariantIdx % REVEAL_VARIANTS.length];
+          state.revealVariantIdx++;
+          const isFast = Math.random() < 0.33;
+          const baseDuration = variant === 'flip-miss' ? 0.62 : variant === 'dissolving' ? 0.42 : 0.62;
+          const actualDuration = isFast ? baseDuration * 0.5 : baseDuration;
+          cell.classList.add(variant);
+          if (isFast) cell.classList.add('reveal-fast');
+          const cleanupTime = Math.round(actualDuration * 1000);
+          setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
         // Update hint bar
         const hint = document.getElementById('hint-bar');
@@ -1356,9 +1445,19 @@
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
     else if (isFinal) banner = 'WORLD CHAMPIONS!';
     else if (stageIdx >= 3) banner = 'You won!';
+
     const bannerEl = document.createElement('div');
     bannerEl.style.cssText = `position:absolute;top:20px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease;`;
-    bannerEl.innerHTML = `<span style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
+
+    // Pick a random 80s GOAL text treatment
+    const goalTreatments = ['goal-neon-flicker', 'goal-marquee', 'goal-stack-pulse'];
+    const selectedTreatment = goalTreatments[Math.floor(Math.random() * goalTreatments.length)];
+
+    if (selectedTreatment === 'goal-marquee') {
+      bannerEl.innerHTML = `<span class="goal-marquee" style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,0.7);display:inline-block;">GOAL! GOAL! GOAL!</span>`;
+    } else {
+      bannerEl.innerHTML = `<span class="${selectedTreatment}" style="font-family:'DM Sans',sans-serif;font-size:2rem;font-weight:900;display:inline-block;text-shadow:0 0 20px rgba(251,191,36,0.7);">${banner}</span>`;
+    }
     boardZone && boardZone.appendChild(bannerEl);
 
     // Create name tag but don't append yet — will show after 5s portrait reveal
@@ -1396,11 +1495,23 @@
     objEl.textContent = icon;
     document.body.appendChild(objEl);
     await sleep(50);
+
+    // Randomized spin: 3–6 rotations, 1.6–2.8s duration, random direction
+    const spinRotations = 3 + Math.floor(Math.random() * 4); // 3-6
+    const spinDirection = Math.random() < 0.5 ? 1 : -1;
+    const spinDuration = 1600 + Math.random() * 1200; // 1.6-2.8s
+    const spinAmount = spinRotations * 360 * spinDirection;
+
+    objEl.style.setProperty('--spin-amount', spinAmount + 'deg');
+    objEl.style.setProperty('--spin-duration', spinDuration + 'ms');
+
     objEl.style.left = '50%';
     objEl.style.top = '40%';
-    objEl.style.transform = 'translate(-50%, -50%) scale(1.5)';
+    objEl.style.transform = `translate(-50%, -50%) scale(1.5)`;
     objEl.style.filter = 'drop-shadow(0 0 20px gold)';
-    await sleep(1150); // 800 + 50 + 1150 = 2000ms total football animation
+    objEl.classList.add('goal-spin');
+
+    await sleep(Math.max(spinDuration, 1150) + 200); // 800 + 50 + spin duration = ~2500-3000ms total
 
     if (skipWinSequence) { return showResult(); }
 
