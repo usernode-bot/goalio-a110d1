@@ -936,6 +936,7 @@
   function route() {
     clearPolls();
     stopConfetti();
+    document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) flagBgEl.style.backgroundImage = '';
     document.documentElement.style.removeProperty('--accent');
@@ -1616,6 +1617,7 @@
       boardZone && boardZone.removeEventListener('click', skipHandler);
       boardZone && boardZone.removeEventListener('touchstart', skipHandler);
       stopConfetti();
+      document.getElementById('goal-ball')?.remove();
       document.querySelectorAll('.tile').forEach(c => { c.classList.add('open'); });
 
       let resultTitle = 'You found the net!';
@@ -1693,6 +1695,7 @@
 
     const icon = isFinal ? '🏆' : '⚽';
     const objEl = document.createElement('div');
+    objEl.id = 'goal-ball';
     objEl.style.cssText = `position:fixed;font-size:80px;z-index:200;pointer-events:none;transition:all 0.6s cubic-bezier(.22,1,.36,1);`;
 
     // Randomize starting position from different edges/corners of the board
