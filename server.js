@@ -1037,6 +1037,7 @@ const THEMES_SEED = [
 ];
 
 async function start() {
+  console.log('[init] Starting database migrations...');
   // ── Core tables ───────────────────────────────────────────────────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS presses (
     id SERIAL PRIMARY KEY,
@@ -1307,6 +1308,7 @@ async function start() {
     `);
   }
 
+  console.log('[init] Database migrations completed, starting server...');
   app.listen(port, () => console.log(`Listening on :${port}`));
 }
 
