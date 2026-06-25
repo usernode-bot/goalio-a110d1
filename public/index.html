@@ -146,7 +146,7 @@
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
       flex: 1 1 auto; min-height: 0; position: relative;
-      display: flex; align-items: center; justify-content: center; padding: 2px 2px 12px 2px;
+      display: flex; align-items: center; justify-content: center; padding: 12px 2px 12px 2px;
     }
 
     /* Three-layer board stack — mobile-first: near-full width */
@@ -1102,7 +1102,16 @@
     navigate('#game/' + d.game.id);
   }
 
-  window.startNewMap = function() {
+  window.startNewMap = async function() {
+    if (!state.session) { showToast('Pick a nation first'); return; }
+    const r = await api('GET', '/api/session');
+    if (!r.ok) {
+      showToast('Error loading session. Please try again.');
+      return;
+    }
+    const d = await r.json();
+    state.session = d.session;
+    state.next_opponent_theme = d.next_opponent_theme;
     if (!state.session) { showToast('Pick a nation first'); return; }
     doStartNewMap();
   };
@@ -1321,9 +1330,9 @@
         <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
         <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});"><div style="font-weight:700;">🎯 2 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle2)} tokens</div></button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});"><div style="font-weight:700;">⚡ 8 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle8)} tokens</div></button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});"><div style="font-weight:700;">⭐ 16 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle16)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">🎯 Buy 2 Shots</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">⚡ Buy 8 Shots</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">⭐ Buy 16 Shots</button>
           <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
         </div>
       </div>`;
