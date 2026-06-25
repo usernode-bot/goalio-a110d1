@@ -1595,13 +1595,24 @@
 
     // Skip flag to allow touch/click to skip to result card
     let skipWinSequence = false;
-    const skipHandler = () => { skipWinSequence = true; };
+    let resultShown = false;
     const boardZone = document.getElementById('board-zone');
+
+    const skipHandler = () => {
+      skipWinSequence = true;
+      // Don't remove listeners here; let the showResult function do cleanup
+    };
+
     boardZone && boardZone.addEventListener('click', skipHandler);
     boardZone && boardZone.addEventListener('touchstart', skipHandler);
 
     // Helper to show result card and clean up
     const showResult = async () => {
+      // Prevent showing result multiple times
+      if (resultShown) return;
+      resultShown = true;
+
+      // Remove event listeners to prevent multiple taps
       boardZone && boardZone.removeEventListener('click', skipHandler);
       boardZone && boardZone.removeEventListener('touchstart', skipHandler);
       stopConfetti();
