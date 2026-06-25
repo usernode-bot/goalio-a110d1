@@ -2257,20 +2257,9 @@
       setTimeout(() => { showInfoPanel(); }, 400);
     }
 
-    // Staging debug indicator — shows token presence in bottom-left corner
-    fetch('/api/env').then(r => r.json()).then(d => {
-      if (!d.staging) return;
-      const pill = document.getElementById('auth-debug');
-      if (!pill) return;
-      const tok = getToken();
-      pill.textContent = tok ? 'token ✓' : 'token ✗';
-      pill.style.color = tok ? '#4ade80' : '#f87171';
-      pill.style.display = 'block';
-    }).catch(() => {});
   }
 
   init();
   </script>
-<div id="auth-debug" style="display:none;position:fixed;bottom:6px;left:6px;z-index:9999;background:rgba(0,0,0,0.75);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:2px 7px;font-size:0.6rem;font-family:monospace;color:#a1a1aa;pointer-events:none;line-height:1.5;"></div>
 </body>
 </html>
