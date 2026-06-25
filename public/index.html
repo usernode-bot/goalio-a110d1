@@ -146,7 +146,7 @@
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
       flex: 1 1 auto; min-height: 0; position: relative;
-      display: flex; align-items: center; justify-content: center; padding: 2px;
+      display: flex; align-items: center; justify-content: center; padding: 2px 2px 12px 2px;
     }
 
     /* Three-layer board stack — mobile-first: near-full width */
@@ -338,8 +338,14 @@
     .game-footer .bundle-btn { padding: 0 10px !important; font-size: 0.78rem !important; height: 34px; line-height: 34px; border-radius: 10px !important; }
     .game-footer .credits-chip { padding: 4px 10px !important; font-size: 0.78rem !important; border-radius: 10px !important; }
 
-    /* Mobile: squeeze header to save height */
-    @media (max-width: 480px) { header { padding: 4px 12px !important; } }
+    /* Mobile: squeeze header, HUD, and nation strip to save height */
+    @media (max-width: 480px) {
+      header { padding: 4px 12px !important; }
+      .game-hud { padding: 1px 6px; }
+      .game-hud .hud-chip { padding: 1px 4px !important; font-size: 6.5px !important; }
+      .game-hud .hud-chip .val { font-size: 11px !important; }
+      .nation-strip { padding: 0px 6px; min-height: 20px; font-size: 0.62rem; gap: 4px; }
+    }
 
     /* Controls */
     .bundle-btn {
@@ -578,8 +584,7 @@
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
-    return `<div style="margin-bottom:3px;font-size:10px;color:#9ca3af;font-family:'DM Sans',sans-serif;text-align:center;">⚽ The ball is hidden — can you find it?</div>
-      <div style="display:flex;gap:4px;">
+    return `<div style="display:flex;gap:4px;">
         <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
         <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
@@ -1309,15 +1314,16 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (!sessId) {
+      const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
       modal.innerHTML = `<div class="modal-box">
         <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
         <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2);">🎯 Buy 2 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8);">⚡ Buy 8 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16);">⭐ Buy 16 Shots</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2);"><div style="font-weight:700;">🎯 2 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle2)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8);"><div style="font-weight:700;">⚡ 8 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle8)} tokens</div></button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16);"><div style="font-weight:700;">⭐ 16 Shots</div><div style="font-size:0.8rem;font-weight:600;">${fmtTokens(p.bundle16)} tokens</div></button>
           <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
         </div>
       </div>`;
