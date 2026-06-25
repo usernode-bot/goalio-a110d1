@@ -991,37 +991,52 @@
 
     let mainSection;
     if (inProgress) {
-      // Tournament underway, no active match — auto-match resume state
+      // Tournament underway, no active match — flags as hero, premium mobile-first layout
       const myTeam = state.themes.find(t => t.slug === session.my_team_slug);
       const hasOpponent = state.next_opponent_theme && state.next_opponent_theme.slug;
       const palette = session.stage_idx >= 3 ? KNOCKOUT_PALETTES[session.stage_idx] : null;
-      const cardBg = palette ? palette.cardDeep : 'rgba(255,255,255,0.04)';
-      const cardBorder = palette ? palette.accent : 'rgba(255,255,255,0.08)';
       const accentColor = palette ? palette.accent : '#fbbf24';
       const buttonGradient = palette ? `linear-gradient(135deg, ${palette.accent} 0%, ${palette.accent2} 100%)` : `linear-gradient(135deg, #ffce4a, #f59e0b)`;
       const badgeBg = palette ? palette.accent : '#fbbf24';
+      const badgeTextColor = palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f';
+
       mainSection = `
-        <p class="hero-sub" style="margin-bottom:14px;">You're mid-tournament — knock out the next nation to advance.</p>
-        <div style="display:flex;flex-direction:column;gap:12px;padding:16px;background:${cardBg};border:1px solid ${cardBorder};border-radius:14px;">
-          <div style="text-align:center;margin-bottom:8px;">
-            <div style="display:inline-block;background:${badgeBg};color:${palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f'};font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:6px;text-transform:uppercase;letter-spacing:0.08em;">${stageName(session.stage_idx)}</div>
-            <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-top:6px;">Stage ${session.stage_idx + 1}/7</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin:0 -16px;">
+          <!-- Stage badge at top -->
+          <div style="width:100%;padding:12px 16px;text-align:center;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div style="display:inline-block;background:${badgeBg};color:${badgeTextColor};font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;">Stage ${session.stage_idx + 1}/7 — ${stageName(session.stage_idx)}</div>
           </div>
-          <div style="display:flex;align-items:flex-start;justify-content:center;gap:14px;">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
-              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
-              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${myTeam ? myTeam.country_name : session.my_team_slug} <span style="font-weight:600;color:#9ca3af;font-size:0.9rem;">(you)</span></div>
+
+          <!-- Large flags as hero, centered -->
+          <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
+              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
+
             ${hasOpponent ? `
-              <div style="font-family:'DM Sans',sans-serif;font-weight:600;color:${accentColor};align-self:center;flex-shrink:0;">vs</div>
-              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;">
-                ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:48px;height:32px;border-radius:4px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,0.4);">` : `<div style="width:48px;height:32px;border-radius:4px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 2px 8px rgba(0,0,0,0.4);"></div>`}
-                <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1rem;text-align:center;">${state.next_opponent_theme.country_name}</div>
-              </div>
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-weight:700;color:${accentColor};font-size:1rem;text-shadow:0 0 8px ${accentColor}44;">VS</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+              <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
+              ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
+            </div>
             ` : ''}
           </div>
-          <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-top:4px;">
-            <button onclick="startNewMap()" class="bundle-btn" style="background:${buttonGradient};color:#0a0a0f;box-shadow:0 2px 12px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.28)'};font-weight:700;">Start Next Match ▶</button>
+
+          <!-- Match info bar -->
+          <div style="width:100%;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-around;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.75rem;">
+            <div><span style="color:#888;">Odds</span><br><span style="color:${accentColor};font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
+            <div><span style="color:#888;">Prize Range</span><br><span style="color:#10b981;font-weight:700;font-size:0.9rem;">${prizeDecay(0, gridSizeForStage(session.stage_idx))}–${prizeDecay(gridSizeForStage(session.stage_idx) - 1, gridSizeForStage(session.stage_idx))}</span></div>
+            <div><span style="color:#888;">Pot</span><br><span style="color:#fbbf24;font-weight:700;font-size:0.9rem;">${Math.round(state.potBalance)}</span></div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="width:100%;padding:16px;">
+            <button onclick="startNewMap()" class="bundle-btn" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;font-size:1rem;padding:14px;border-radius:12px;letter-spacing:0.02em;">⚽ KICK OFF ▶</button>
           </div>
         </div>`;
     } else {
