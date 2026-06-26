@@ -1119,39 +1119,19 @@ async function start() {
     `);
     await pool.query(`UPDATE game_stats SET total_tokens_collected = 8420.00 WHERE id = 1`);
 
-    // Staging player wallets with generous starting balance
-    for (let i = 1; i <= 5; i++) {
-      await pool.query(`
-        INSERT INTO player_wallets (user_id, username, balance)
-        VALUES ($1, $2, 5000)
-        ON CONFLICT (user_id) DO NOTHING
-      `, [-i, `staging-player-${i}`]);
-    }
-
-    // A broke staging player (zero balance) so the Flow 1 "out of shots —
-    // top up to play" notice and the insufficient-funds prompt are reachable
-    // without grinding a wallet down to zero by hand.
+    // Test user with standard starting balance for fresh game testing
     await pool.query(`
       INSERT INTO player_wallets (user_id, username, balance)
-      VALUES (-6, 'staging-broke-player', 0)
-      ON CONFLICT (user_id) DO UPDATE SET balance = 0
+      VALUES (-1, 'staging-test-user', 1000)
+      ON CONFLICT (user_id) DO UPDATE SET balance = 1000
     `);
 
-    // player_stats rows for league display
-    const stagingPlayers = [
-      { id: -1, username: 'Staging Player 1', display_name: 'Staging Player 1', won: 842, sessions: 3 },
-      { id: -2, username: 'Staging Player 2', display_name: 'Staging Player 2', won: 617, sessions: 2 },
-      { id: -3, username: 'Staging Player 3', display_name: 'Staging Player 3', won: 490, sessions: 1 },
-      { id: -4, username: 'Staging Kaiser',   display_name: 'Staging Kaiser',   won: 380, sessions: 1 },
-      { id: -5, username: 'Staging Demo',     display_name: 'Staging Demo',     won: 210, sessions: 0 },
-    ];
-    for (const p of stagingPlayers) {
-      await pool.query(`
-        INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (user_id) DO NOTHING
-      `, [p.id, p.username, p.display_name, p.won, p.sessions]);
-    }
+    // Basic leaderboard entry for test user
+    await pool.query(`
+      INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
+      VALUES (-1, 'staging-test-user', 'staging-test-user', 0, 0)
+      ON CONFLICT (user_id) DO NOTHING
+    `);
 
     // 3 open staging game boards
     // We need theme IDs — fetch them
@@ -1200,17 +1180,6 @@ async function start() {
 
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 4))`);
 
-    // Tournament session for staging player -1
-    await pool.query(`
-      INSERT INTO tournament_sessions (user_id, my_team_slug, stage_idx, played_slugs, session_complete, current_game_id, next_opponent_slug)
-      VALUES (-1, 'england', 3, '{brazil,france,germany}', false, NULL, 'spain')
-      ON CONFLICT (user_id) DO NOTHING
-    `);
-    // Backfill existing staging rows that don't have next_opponent_slug set
-    await pool.query(`
-      UPDATE tournament_sessions SET next_opponent_slug = 'spain'
-      WHERE user_id = -1 AND next_opponent_slug IS NULL
-    `);
   }
 
   app.listen(port, () => console.log(`Listening on :${port}`));
