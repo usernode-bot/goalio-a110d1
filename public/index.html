@@ -941,6 +941,52 @@
   // ROUTING
   // ═══════════════════════════════════════════════════════════════
   function navigate(hash) { location.hash = hash; }
+
+  // Admin functions
+  async function checkAdminStatus() {
+    try {
+      const r = await api('GET', '/api/admin/check');
+      if (r.ok) {
+        const data = await r.json();
+        const adminSection = document.getElementById('admin-reset-section');
+        if (adminSection) {
+          adminSection.style.display = data.isAdmin ? 'block' : 'none';
+        }
+      }
+    } catch (err) {
+      console.error('Failed to check admin status:', err);
+    }
+  }
+
+  function confirmResetGame() {
+    const confirmed = confirm('This will clear all game data and reset all player balances to 2000 tokens. Continue?');
+    if (!confirmed) return;
+    resetGame();
+  }
+
+  async function resetGame() {
+    try {
+      const r = await api('POST', '/api/admin/reset-game');
+      if (r.ok) {
+        showToast('Game reset complete');
+        setTimeout(() => location.reload(), 500);
+      } else {
+        const err = await r.json();
+        showToast('Reset failed: ' + (err.error || 'Unknown error'));
+      }
+    } catch (err) {
+      showToast('Reset failed: ' + err.message);
+    }
+  }
+
+  function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:12px 20px;border-radius:8px;z-index:9999;font-family:"DM Sans",sans-serif;font-size:0.9rem;';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
   function route() {
     clearPolls();
     stopConfetti();
@@ -2211,8 +2257,19 @@
           </ul>
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
         </div>
+
+        <div id="admin-reset-section" style="display:none;">
+          <button id="reset-game-btn" onclick="confirmResetGame()"
+            style="background:rgba(200,50,50,0.2);border:1px solid rgba(200,50,50,0.5);
+                   border-radius:8px;padding:12px 16px;color:#ff6b6b;font-weight:700;
+                   font-family:'DM Sans',sans-serif;font-size:0.9rem;margin-top:16px;
+                   cursor:pointer;width:100%;transition:all 0.2s;">
+            🔄 Reset Game
+          </button>
+        </div>
       </div>
     </div>`;
+    checkAdminStatus();
   }
 
   // ═══════════════════════════════════════════════════════════════
