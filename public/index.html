@@ -71,6 +71,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1/dist/confetti.browser.min.js"></script>
+  <script src="/i18n.js"></script>
 
   <style>
     :root {
@@ -508,6 +509,13 @@
     /* Modal */
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; }
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
+
+    /* Language Selector */
+    .language-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .language-btn { padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
+    .language-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); color: white; }
+    .language-btn:active { transform: scale(0.95); }
+    .language-btn.active { background: linear-gradient(135deg, #ffce4a, #f59e0b); color: #0a0a0f; border-color: #fbbf24; font-weight: 700; }
 
     /* Lobby sections */
     .section-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.8rem !important; color: #f0f0f5; margin-bottom: 6px; }
@@ -1352,9 +1360,10 @@
       </div>`;
 
     // Match-start animation: fade in tiles sequentially with sparkle
-    // First, hide portrait initially
+    // First, hide portrait initially with transition ready
     const portraitEl = document.querySelector('.portrait');
     if (portraitEl) {
+      portraitEl.style.transition = 'opacity 0.6s ease';
       portraitEl.style.opacity = '0';
     }
 
@@ -1673,7 +1682,7 @@
 
     // Create name tag but don't append yet — will show after 5s portrait reveal
     const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
@@ -1767,7 +1776,8 @@
 
     if (skipWinSequence) { return showResult(); }
 
-    // Now show the name tag with trivia
+    // Now show the name tag with trivia — add animations when appending
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 4s ease 6s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
