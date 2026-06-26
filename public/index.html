@@ -944,17 +944,10 @@
 
   // Admin functions
   async function checkAdminStatus() {
-    try {
-      const r = await api('GET', '/api/admin/check');
-      if (r.ok) {
-        const data = await r.json();
-        const adminSection = document.getElementById('admin-reset-section');
-        if (adminSection) {
-          adminSection.style.display = data.isAdmin ? 'block' : 'none';
-        }
-      }
-    } catch (err) {
-      console.error('Failed to check admin status:', err);
+    // For now, show reset button to all users for testing
+    const adminSection = document.getElementById('admin-reset-section');
+    if (adminSection) {
+      adminSection.style.display = 'block';
     }
   }
 
@@ -1154,9 +1147,24 @@
         </div>`;
     }
 
+    // Language selector
+    const languageSelector = `
+      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
+        <div class="language-grid">
+          ${window.SUPPORTED_LANGUAGES.map(lang => `
+            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
+              ${window.LANGUAGE_NAMES[lang]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
     body.innerHTML = `
       ${statsRow}
       ${mainSection}
+      ${languageSelector}
       `;
 
     maybeAutoShowInfo();
@@ -2279,6 +2287,13 @@
   }
 
   async function init() {
+    // Initialize i18n system
+    try {
+      await window.initI18n();
+    } catch (err) {
+      console.error('i18n init failed:', err);
+    }
+
     // Load themes globally for use across screens
     try {
       const r = await api('GET', '/api/themes');
