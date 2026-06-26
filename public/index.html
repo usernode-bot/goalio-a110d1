@@ -1360,9 +1360,10 @@
       </div>`;
 
     // Match-start animation: fade in tiles sequentially with sparkle
-    // First, hide portrait initially
+    // First, hide portrait initially with transition ready
     const portraitEl = document.querySelector('.portrait');
     if (portraitEl) {
+      portraitEl.style.transition = 'opacity 0.6s ease';
       portraitEl.style.opacity = '0';
     }
 
@@ -1681,7 +1682,7 @@
 
     // Create name tag but don't append yet — will show after 5s portrait reveal
     const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
@@ -1775,7 +1776,8 @@
 
     if (skipWinSequence) { return showResult(); }
 
-    // Now show the name tag with trivia
+    // Now show the name tag with trivia — add animations when appending
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 4s ease 6s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
