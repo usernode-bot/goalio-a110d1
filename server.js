@@ -1189,10 +1189,10 @@ async function start() {
     `);
     await pool.query(`UPDATE game_stats SET total_tokens_collected = 8420.00 WHERE id = 1`);
 
-    // Admin user for testing the reset button
+    // Admin users for testing the reset button
     await pool.query(`
       INSERT INTO admin_users (user_id, username)
-      VALUES (-1, 'staging-admin')
+      VALUES (-1, 'staging-admin'), (-2, 'flushthefashion')
       ON CONFLICT (user_id) DO NOTHING
     `);
 
