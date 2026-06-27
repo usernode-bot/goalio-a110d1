@@ -5,15 +5,15 @@ let currentLanguage = null;
 let translations = {};
 const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'it', 'de', 'nl', 'zh', 'hi', 'tr'];
 const LANGUAGE_NAMES = {
-  en: 'English',
-  fr: 'Français',
-  es: 'Español',
-  it: 'Italiano',
-  de: 'Deutsch',
-  nl: 'Nederlands',
-  zh: '简体中文',
-  hi: 'हिन्दी',
-  tr: 'Türkçe'
+  en: 'England',
+  fr: 'Francia',
+  es: 'España',
+  it: 'Italia',
+  de: 'Deutschland',
+  nl: 'Nederland',
+  zh: '中国',
+  hi: 'भारत',
+  tr: 'Türkiye'
 };
 
 async function loadTranslations(lang) {
