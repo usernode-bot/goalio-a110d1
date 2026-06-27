@@ -363,6 +363,7 @@
       .result-card { max-width: 100% !important; margin: 0 auto; }
       #display-name-input { font-size: 0.82rem !important; padding: 6px 10px !important; }
       .bundle-btn { font-size: 0.78rem !important; padding: 8px 12px !important; }
+      #victory-bg > .result-card > div:nth-child(2) { font-size: clamp(0.95rem, 4vw, 1.3rem) !important; word-break: break-word; overflow-wrap: break-word; }
     }
 
     /* Controls */
@@ -1142,6 +1143,20 @@
     }
   }
 
+  function clearFrontendState() {
+    state = {
+      session: null, walletBalance: null, potBalance: 100,
+      potLastWonAt: null, leaderState: null,
+      game: null, gameTheme: null, credits: null,
+      squaresRevealed: 0, prizePot: 148,
+      gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle2: 11, bundle8: 44, bundle16: 88 },
+      themes: [], polls: [],
+      prevPotBalance: 100,
+      pendingResult: null,
+      revealVariantIdx: 0,
+    };
+  }
+
   function confirmResetGame() {
     const confirmed = confirm('This will clear all game data and reset all player balances to 2000 tokens. Continue?');
     if (!confirmed) return;
@@ -1153,6 +1168,7 @@
       const r = await api('POST', '/api/admin/reset-game');
       if (r.ok) {
         showToast('Game reset complete');
+        clearFrontendState();
         setTimeout(() => location.reload(), 500);
       } else {
         const err = await r.json();
@@ -1345,10 +1361,17 @@
         </div>`;
     }
 
+    const demoButtons = `
+      <div style="padding:16px;display:flex;gap:8px;">
+        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=final'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">📺 Demo Final</button>
+        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=topup'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">⚡ Demo Topup</button>
+      </div>`;
+
     body.innerHTML = `
       ${statsRow}
       ${languageSelectorHtml()}
       ${mainSection}
+      ${demoButtons}
       `;
 
     maybeAutoShowInfo();
@@ -1642,6 +1665,9 @@
   window.onCellClick = async function(idx) {
     const game = state.game;
     if (!game || game.status !== 'active') return;
+    if (!game.revealed || game.revealed.length !== (state.gridSize || 36)) {
+      game.revealed = new Array(state.gridSize || 36).fill(false);
+    }
     if ((game.revealed || [])[idx]) return;
 
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
@@ -1796,7 +1822,8 @@
       z-index:280;pointer-events:none;text-align:center;
     `;
 
-    const goalText = isFinal ? 'CHAMPIONS!' : 'GOAL!';
+    const goalText = isFinal ? t('celebration.champions') : t('celebration.goal');
+    const subtitleText = isFinal ? t('celebration.won_cup') : t('celebration.scored');
     const fontSize = isFinal ? '4.5rem' : '5.5rem';
 
     goalOverlay.innerHTML = `
@@ -1811,7 +1838,7 @@
         font-family:'DM Sans',sans-serif;font-size:1rem;
         color:#ccc;margin-top:8px;letter-spacing:0.05em;
         text-transform:uppercase;font-weight:600;
-      ">${isFinal ? 'You won the World Cup!' : 'You scored!'}</div>
+      ">${subtitleText}</div>
     `;
 
     document.body.appendChild(goalOverlay);
