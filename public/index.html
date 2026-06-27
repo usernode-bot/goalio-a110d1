@@ -1602,8 +1602,9 @@
   }
 
   function renderGameBody() {
-    const game = state.game;
-    const theme = state.gameTheme;
+    const currentState = getState();
+    const game = currentState.game;
+    const theme = currentState.gameTheme;
 
     // Set full-window flag background (opponent theme image) + CSS accent vars
     const flagBgEl = document.getElementById('flag-bg');
@@ -1613,8 +1614,8 @@
     document.documentElement.style.setProperty('--accent', theme.accent_colour);
     document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
 
-    const myTeam = state.themes.find(t => t.slug === (state.session ? state.session.my_team_slug : ''));
-    const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
+    const myTeam = currentState.themes.find(t => t.slug === (currentState.session ? currentState.session.my_team_slug : ''));
+    const stageIdx = currentState.session ? currentState.session.stage_idx : game.stage_idx;
 
     // Portrait behind tiles — footballer image or trophy for final
     const portraitUrl = stageIdx >= 6
@@ -1639,8 +1640,8 @@
     </div>`;
 
     // Build tiles for this stage's grid; open tiles show portrait beneath
-    const gridSize = state.gridSize || gridSizeForStage(stageIdx);
-    const gridCols = state.gridCols || gridColsForStage(stageIdx);
+    const gridSize = currentState.gridSize || gridSizeForStage(stageIdx);
+    const gridCols = currentState.gridCols || gridColsForStage(stageIdx);
     const revealed = game.revealed || new Array(gridSize).fill(false);
     let tiles = '';
     for (let i = 0; i < gridSize; i++) {

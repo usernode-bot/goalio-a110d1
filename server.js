@@ -604,7 +604,7 @@ app.get('/api/games/:id', async (req, res) => {
   const client = await pool.connect();
   try {
     const { rows: gameRows } = await client.query(`
-      SELECT g.id, g.theme_id, g.stage_idx, g.revealed, g.total_guesses,
+      SELECT g.id, g.theme_id, g.stage_idx, g.football_square, g.revealed, g.total_guesses,
              g.total_players_count, g.status, g.active_player_id,
              g.winner_username, g.prize_paid, g.jackpot_paid, g.created_at, g.completed_at,
              t.slug, t.country_name, t.accent_colour, t.footballer_name
