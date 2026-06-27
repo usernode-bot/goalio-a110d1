@@ -62,6 +62,7 @@
   "game.best_value": "⭐ 最佳价值",
   "game.best_value_count": "16 次射击",
   "game.shots_remaining": "🎯 {count} 次射击{plural}剩余",
+  "game.shots_loaded": "⚽ {size} 次射击已加载！",
   "victory.you_won": "你赢了!",
   "victory.total_tokens": "赢得的总代币",
   "victory.house_bonus": "庄家奖金: +50",

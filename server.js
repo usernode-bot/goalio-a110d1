@@ -10,7 +10,7 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
@@ -933,6 +933,68 @@ app.get('/api/wallet', async (req, res) => {
   }
 });
 
+// Admin check endpoint
+async function isUserAdmin(client, userId) {
+  const { rows } = await client.query('SELECT user_id FROM admin_users WHERE user_id = $1', [userId]);
+  return rows.length > 0;
+}
+
+app.get('/api/admin/check', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const client = await pool.connect();
+  try {
+    const isAdmin = await isUserAdmin(client, req.user.id);
+    res.json({ isAdmin });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Admin reset game endpoint
+app.post('/api/admin/reset-game', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const client = await pool.connect();
+  try {
+    const isAdmin = await isUserAdmin(client, req.user.id);
+    if (!isAdmin) return res.status(403).json({ error: 'Not authorized' });
+
+    await client.query('BEGIN');
+    try {
+      // Delete all game-related data
+      await client.query('DELETE FROM guesses');
+      await client.query('DELETE FROM game_sessions');
+      await client.query('DELETE FROM games');
+      await client.query('DELETE FROM tournament_sessions');
+      await client.query('DELETE FROM player_stats');
+
+      // Reset player wallets to 2000
+      await client.query('UPDATE player_wallets SET balance = 2000');
+
+      // Reset captain pot
+      await client.query(`
+        UPDATE captain_pot
+        SET balance = 100, pot_floor_idx = 0, last_won_at = NULL, last_winner_id = NULL, last_winner_username = NULL
+        WHERE id = 1
+      `);
+
+      // Reset game stats
+      await client.query('UPDATE game_stats SET total_tokens_collected = 0 WHERE id = 1');
+
+      await client.query('COMMIT');
+      res.json({ success: true, message: 'Game reset complete' });
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/env', (req, res) => {
@@ -1073,6 +1135,13 @@ async function start() {
     balance NUMERIC(12,2) NOT NULL DEFAULT 1000
   )`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_users (
+    user_id INTEGER PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    granted_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`COMMENT ON TABLE admin_users IS 'staging:private'`);
+
   // ── Seed reference data (unconditional) ───────────────────────────────────
   for (const t of THEMES_SEED) {
     await pool.query(`
@@ -1103,6 +1172,7 @@ async function start() {
     await pool.query(`DELETE FROM tournament_sessions`);
     await pool.query(`DELETE FROM player_stats`);
     await pool.query(`DELETE FROM player_wallets`);
+    await pool.query(`DELETE FROM admin_users`);
     await pool.query(`ALTER SEQUENCE IF EXISTS games_id_seq RESTART WITH 1`);
     console.log('[staging] Reset: all game/player rows cleared');
   }
@@ -1118,6 +1188,13 @@ async function start() {
       WHERE id = 1
     `);
     await pool.query(`UPDATE game_stats SET total_tokens_collected = 8420.00 WHERE id = 1`);
+
+    // Admin users for testing the reset button
+    await pool.query(`
+      INSERT INTO admin_users (user_id, username)
+      VALUES (-1, 'staging-admin'), (-2, 'flushthefashion')
+      ON CONFLICT (user_id) DO NOTHING
+    `);
 
     // Test user with standard starting balance for fresh game testing
     await pool.query(`
