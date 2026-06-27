@@ -360,6 +360,7 @@
       .result-card { max-width: 100% !important; margin: 0 auto; }
       #display-name-input { font-size: 0.82rem !important; padding: 6px 10px !important; }
       .bundle-btn { font-size: 0.78rem !important; padding: 8px 12px !important; }
+      #victory-bg > .result-card > div:nth-child(2) { font-size: clamp(0.95rem, 4vw, 1.3rem) !important; word-break: break-word; overflow-wrap: break-word; }
     }
 
     /* Controls */
@@ -1611,7 +1612,8 @@
       z-index:280;pointer-events:none;text-align:center;
     `;
 
-    const goalText = isFinal ? 'CHAMPIONS!' : 'GOAL!';
+    const goalText = isFinal ? t('celebration.champions') : t('celebration.goal');
+    const subtitleText = isFinal ? t('celebration.won_cup') : t('celebration.scored');
     const fontSize = isFinal ? '4.5rem' : '5.5rem';
 
     goalOverlay.innerHTML = `
@@ -1626,7 +1628,7 @@
         font-family:'DM Sans',sans-serif;font-size:1rem;
         color:#ccc;margin-top:8px;letter-spacing:0.05em;
         text-transform:uppercase;font-weight:600;
-      ">${isFinal ? 'You won the World Cup!' : 'You scored!'}</div>
+      ">${subtitleText}</div>
     `;
 
     document.body.appendChild(goalOverlay);
