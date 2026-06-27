@@ -209,12 +209,20 @@ async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
   throw new Error(`Transaction ${txHash} confirmation timeout after ${maxWaitMs}ms`);
 }
 
-async function recordTransaction(client, userId, txHash, direction, amount, reason, gameId = null) {
+async function recordTransaction(client, userId, txHash, direction, amount, reason, gameId = null, status = 'pending') {
   await client.query(`
-    INSERT INTO wallet_transactions (user_id, tx_hash, direction, amount, reason, game_id, status, created_at, confirmed_at)
-    VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', NOW(), NOW())
+    INSERT INTO wallet_transactions (user_id, tx_hash, direction, amount, reason, game_id, status, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
     ON CONFLICT (tx_hash) DO NOTHING
-  `, [userId, txHash, direction, amount, reason, gameId]);
+  `, [userId, txHash, direction, amount, reason, gameId, status]);
+}
+
+async function updateTransactionStatus(client, txHash, status = 'confirmed') {
+  await client.query(`
+    UPDATE wallet_transactions
+    SET status = $2, confirmed_at = NOW()
+    WHERE tx_hash = $1
+  `, [txHash, status]);
 }
 
 // Local wallet helpers (now blockchain-backed with local cache)
@@ -234,27 +242,36 @@ async function getWalletBalance(client, userId) {
 }
 
 async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameId = null) {
-  const userWalletAddr = `wallet_${userId}`;
-
   try {
+    // Check local balance BEFORE calling sidecar, using pessimistic locking
+    const { rows: balanceRows } = await client.query(`
+      SELECT balance FROM player_wallets
+      WHERE user_id = $1 AND balance >= $2
+      FOR UPDATE
+    `, [userId, amount]);
+
+    if (!balanceRows.length) throw new Error('Insufficient balance');
+
     // Submit transaction via sidecar (app to house transfer)
     const txResult = await sendTransactionViaSidecar(HOUSE_WALLET_ADDRESS, amount, reason);
     const txHash = txResult.tx_hash;
 
     // Record transaction in audit log as pending
-    await recordTransaction(client, userId, txHash, 'debit', amount, reason, gameId);
+    await recordTransaction(client, userId, txHash, 'debit', amount, reason, gameId, 'pending');
 
     // Poll for on-chain confirmation
     await pollTransactionConfirmation(txHash);
 
+    // Update transaction status to confirmed
+    await updateTransactionStatus(client, txHash, 'confirmed');
+
     // Update local cache only after on-chain confirmation
     const { rows } = await client.query(`
       UPDATE player_wallets SET balance = balance - $2, last_transaction_id = $3, last_synced_at = NOW()
-      WHERE user_id = $1 AND balance >= $2
+      WHERE user_id = $1
       RETURNING balance
     `, [userId, amount, txHash]);
 
-    if (!rows.length) throw new Error('Insufficient balance');
     return parseFloat(rows[0].balance);
   } catch (err) {
     if (err.status === 402 || err.message === 'Insufficient balance') {
@@ -273,10 +290,13 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
     const txHash = txResult.tx_hash;
 
     // Record transaction in audit log as pending
-    await recordTransaction(client, userId, txHash, 'credit', amount, reason, gameId);
+    await recordTransaction(client, userId, txHash, 'credit', amount, reason, gameId, 'pending');
 
     // Poll for on-chain confirmation
     await pollTransactionConfirmation(txHash);
+
+    // Update transaction status to confirmed
+    await updateTransactionStatus(client, txHash, 'confirmed');
 
     // Update local cache only after on-chain confirmation
     const { rows } = await client.query(`
@@ -864,7 +884,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
       // Credit prize + jackpot
       await ensureWallet(client, req.user.id, req.user.username);
-      await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+      let prizeWalletError = null;
+      try {
+        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+      } catch (err) {
+        prizeWalletError = err;
+        console.error('Prize payout wallet transaction failed:', err.message);
+      }
 
       // Remaining bundle credits are NOT refunded — they carry over to the next game
       // via the start-map handler which consolidates them into a new session.
@@ -883,9 +909,15 @@ app.post('/api/games/:id/guess', async (req, res) => {
         stageCompleted = true;
 
         let wonThisRound = prizePaid + jackpotAmount;
+        let bonusWalletError = null;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+          try {
+            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+          } catch (err) {
+            bonusWalletError = err;
+            console.error('House bonus wallet transaction failed:', err.message);
+          }
           wonThisRound += houseBonus;
         }
 
@@ -965,7 +997,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
       pot_topup: potTopup,
       pot_topup_message: potTopupMessage,
       opponent_slug: game.theme_slug,
-      footballer_name: game.footballer_name
+      footballer_name: game.footballer_name,
+      prize_pending: prizeWalletError ? true : false,
+      bonus_pending: bonusWalletError ? true : false
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
