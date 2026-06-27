@@ -651,6 +651,8 @@
 
   const REVEAL_VARIANTS = ['flip-miss', 'dissolving', 'reveal-zoom-burst', 'reveal-slide'];
 
+  let appMode = 'real'; // 'real' or 'testing'
+
   let state = {
     session: null, walletBalance: 1000, potBalance: 100,
     potLastWonAt: null, leaderState: null,
@@ -663,6 +665,29 @@
     revealVariantIdx: 0,
   };
 
+  let testingState = {
+    session: null, walletBalance: 1000, potBalance: 100,
+    potLastWonAt: null, leaderState: null,
+    game: null, gameTheme: null, credits: null,
+    squaresRevealed: 0, prizePot: 148,
+    gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle2: 11, bundle8: 44, bundle16: 88 },
+    themes: [], polls: [],
+    prevPotBalance: 100,
+    pendingResult: null,
+    revealVariantIdx: 0,
+  };
+
+  function getState() {
+    return appMode === 'testing' ? testingState : state;
+  }
+
+  window.setMode = function(newMode) {
+    if (appMode === newMode) return;
+    appMode = newMode;
+    navigate('#lobby');
+    setTimeout(() => location.reload(), 300);
+  };
+
   // ═══════════════════════════════════════════════════════════════
   // API
   // ═══════════════════════════════════════════════════════════════
@@ -673,6 +698,11 @@
     if (tok) {
       const sep = path.includes('?') ? '&' : '?';
       url = path + sep + 'token=' + encodeURIComponent(tok);
+    }
+    // Add mode parameter for testing/real distinction
+    if (appMode === 'testing') {
+      const sep = url.includes('?') ? '&' : '?';
+      url = url + sep + 'mode=testing';
     }
     const opts = { method, headers: HEADERS() };
     if (body !== undefined) opts.body = JSON.stringify(body);
@@ -1368,17 +1398,18 @@
       const r = await api('GET', `/api/games/${id}`);
       if (!r.ok) { navigate('#lobby'); return; }
       const d = await r.json();
-      state.game = d.game;
-      state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
-      state.credits = d.credits;
-      state.walletBalance = d.wallet_balance;
-      state.potBalance = d.captain_pot_balance;
-      state.prevPotBalance = d.captain_pot_balance;
-      state.squaresRevealed = d.squares_revealed;
-      state.prizePot = d.prize_pot;
-      state.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
-      state.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
-      if (d.pricing) state.pricing = d.pricing;
+      const currentState = getState();
+      currentState.game = d.game;
+      currentState.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
+      currentState.credits = d.credits;
+      currentState.walletBalance = d.wallet_balance;
+      currentState.potBalance = d.captain_pot_balance;
+      currentState.prevPotBalance = d.captain_pot_balance;
+      currentState.squaresRevealed = d.squares_revealed;
+      currentState.prizePot = d.prize_pot;
+      currentState.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
+      currentState.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
+      if (d.pricing) currentState.pricing = d.pricing;
 
       // If game is completed, go back to lobby
       if (d.game.status === 'completed') { navigate('#lobby'); return; }
@@ -1412,10 +1443,11 @@
       : `/images/footballers/${theme.slug}.png`;
 
     const hud = `<div class="game-hud">
-      <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
-      <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
-      ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip mode-badge" style="background:${appMode === 'testing' ? 'rgba(255,20,147,0.3)' : 'rgba(52,211,153,0.3)'};border:1px solid ${appMode === 'testing' ? '#ff1493' : '#34d399'};border-radius:5px;">${appMode === 'testing' ? '🧪 TEST' : '💎 REAL'}</div>
+      <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(getState().walletBalance)} t</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${getState().prizePot} t</span></div>
+      ${potChipHtml(getState().potBalance)}
+      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${getState().squaresRevealed}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1437,7 +1469,7 @@
       tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const credRemaining = getState().credits ? parseInt(getState().credits.credits_remaining) : 0;
     let controls = '';
     if (credRemaining > 0) {
       controls = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
@@ -1501,15 +1533,22 @@
   }
 
   function updateHud() {
-    const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(state.walletBalance) + ' t';
-    const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
-    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = state.squaresRevealed;
+    const currentState = getState();
+    const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(currentState.walletBalance) + ' t';
+    const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(currentState.squaresRevealed, currentState.gridSize) + ' t';
+    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = currentState.squaresRevealed;
+    const modeBadge = document.querySelector('.mode-badge');
+    if (modeBadge) {
+      modeBadge.innerHTML = appMode === 'testing' ? '🧪 TEST' : '💎 REAL';
+      modeBadge.style.background = appMode === 'testing' ? 'rgba(255,20,147,0.3)' : 'rgba(52,211,153,0.3)';
+      modeBadge.style.borderColor = appMode === 'testing' ? '#ff1493' : '#34d399';
+    }
   }
 
   function updateCreditsDisplay() {
     const row = document.getElementById('controls-row');
     if (!row) return;
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const credRemaining = getState().credits ? parseInt(getState().credits.credits_remaining) : 0;
     if (credRemaining > 0) {
       row.innerHTML = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
     } else {
@@ -1518,15 +1557,16 @@
   }
 
   window.onCellClick = async function(idx) {
-    const game = state.game;
+    const currentState = getState();
+    const game = currentState.game;
     if (!game || game.status !== 'active') return;
     if ((game.revealed || [])[idx]) return;
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
-    const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
+    const credRemaining = currentState.credits ? parseInt(currentState.credits.credits_remaining) : 0;
+    const sessId = (credRemaining > 0 && currentState.credits) ? currentState.credits.id : null;
 
     if (!sessId) {
-      const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+      const p = currentState.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
       modal.innerHTML = `<div class="modal-box">
@@ -1561,22 +1601,22 @@
       const d = await r.json();
 
       // Update state
-      if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
+      if (!game.revealed) game.revealed = new Array(currentState.gridSize || 36).fill(false);
       game.revealed[idx] = true;
-      state.squaresRevealed = d.squares_revealed;
-      state.walletBalance = d.wallet_balance;
-      state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
-      if (state.credits && sessId && state.credits.credits_remaining !== undefined) {
-        const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
+      currentState.squaresRevealed = d.squares_revealed;
+      currentState.walletBalance = d.wallet_balance;
+      currentState.prizePot = prizeDecay(currentState.squaresRevealed, currentState.gridSize);
+      if (currentState.credits && sessId && currentState.credits.credits_remaining !== undefined) {
+        const currentRemaining = parseInt(currentState.credits.credits_remaining) || 0;
         if (currentRemaining > 0) {
-          state.credits.credits_remaining = currentRemaining - 1;
+          currentState.credits.credits_remaining = currentRemaining - 1;
         }
       }
 
       // If THIS player just won the jackpot, record their win timestamp so the
       // broadcast toast (meant for everyone else) is suppressed for them when
       // polling resumes after the celebration.
-      if (d.jackpot_paid > 0 && d.last_won_at) state.potLastWonAt = d.last_won_at;
+      if (d.jackpot_paid > 0 && d.last_won_at) currentState.potLastWonAt = d.last_won_at;
       updatePotChips(d.pot_balance, null);
       updateHud();
       updateCreditsDisplay();
@@ -1587,8 +1627,8 @@
       } else {
         // Miss — rotate reveal variant + optionally double speed
         if (cell) {
-          const variant = REVEAL_VARIANTS[state.revealVariantIdx % REVEAL_VARIANTS.length];
-          state.revealVariantIdx++;
+          const variant = REVEAL_VARIANTS[currentState.revealVariantIdx % REVEAL_VARIANTS.length];
+          currentState.revealVariantIdx++;
           const isFast = Math.random() < 0.33;
           const baseDuration = variant === 'flip-miss' ? 0.62 : variant === 'dissolving' ? 0.42 : 0.62;
           const actualDuration = isFast ? baseDuration * 0.5 : baseDuration;
@@ -1933,11 +1973,25 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
-    if (state.walletBalance === undefined || state.walletBalance === null) {
+    const currentState = getState();
+    if (currentState.walletBalance === undefined || currentState.walletBalance === null) {
       showToast('Wallet not initialized — please reload', 3000);
       return;
     }
-    const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
+
+    if (appMode === 'testing') {
+      const pricing = currentState.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+      const bundleKey = `bundle${size}`;
+      const cost = pricing[bundleKey] || 0;
+      currentState.walletBalance = Math.max(0, currentState.walletBalance - cost);
+      currentState.credits = { credits_remaining: size, tokens_per_credit: 1 };
+      updateHud();
+      updateCreditsDisplay();
+      showToast(t('game.shots_loaded', {size: size}), 2000);
+      return;
+    }
+
+    const r = await api('POST', `/api/games/${currentState.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
       if (r.status === 402 || e.error === 'Insufficient balance') {
@@ -1948,8 +2002,8 @@
       return;
     }
     const d = await r.json();
-    state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
-    state.walletBalance = d.wallet_balance;
+    currentState.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
+    currentState.walletBalance = d.wallet_balance;
     updateHud();
     updateCreditsDisplay();
     showToast(t('game.shots_loaded', {size: size}), 2000);
@@ -2190,6 +2244,14 @@
       <div style="max-width:520px;margin:0 auto;padding:40px 20px;width:100%;">
         <h1 style="font-family:'Press Start 2P',monospace;font-size:1.1rem;font-weight:900;margin-bottom:32px;text-transform:uppercase;color:#00ffff;letter-spacing:0.1em;text-shadow:3px 3px 0 #ff1493, 6px 6px 0 #1e90ff;">⚽ How to Play ⚽</h1>
         ${languageSelectorHtml()}
+
+        <div style="margin-top:28px;padding:20px;background:rgba(138,43,226,0.12);border:3px solid #ff1493;border-radius:0;display:flex;gap:12px;flex-direction:column;">
+          <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;font-weight:900;color:#00ffff;text-transform:uppercase;letter-spacing:0.08em;text-shadow:1px 1px 0 #ff1493;">Mode</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="window.setMode('testing')" style="flex:1;padding:12px 16px;background:${appMode === 'testing' ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.08)'};border:2px solid ${appMode === 'testing' ? '#ffff00' : 'rgba(255,255,255,0.2)'};border-radius:0;color:${appMode === 'testing' ? '#000' : '#ccc'};font-family:'Press Start 2P',monospace;font-size:0.6rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.2s;">🧪 Test</button>
+            <button onclick="window.setMode('real')" style="flex:1;padding:12px 16px;background:${appMode === 'real' ? 'linear-gradient(135deg, #34d399, #10b981)' : 'rgba(255,255,255,0.08)'};border:2px solid ${appMode === 'real' ? '#00ffff' : 'rgba(255,255,255,0.2)'};border-radius:0;color:${appMode === 'real' ? '#000' : '#ccc'};font-family:'Press Start 2P',monospace;font-size:0.6rem;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.05em;transition:all 0.2s;">💎 Real</button>
+          </div>
+        </div>
 
         <div class="faq-section">
           <h2>The Game</h2>

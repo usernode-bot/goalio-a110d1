@@ -35,6 +35,7 @@ app.use((req, res, next) => {
   if (token && JWT_SECRET) {
     try { req.user = jwt.verify(token, JWT_SECRET); } catch {}
   }
+  req.gameMode = req.query.mode === 'testing' ? 'testing' : 'real';
   if (req.method !== 'GET' || req.path.startsWith('/api/')) {
     if (PUBLIC_API_PATHS.has(req.path)) return next();
     if (PUBLIC_PREFIXES.some((p) => req.path.startsWith(p))) return next();
@@ -627,8 +628,10 @@ app.get('/api/games/:id', async (req, res) => {
         ORDER BY created_at DESC LIMIT 1
       `, [game.id, req.user.id]);
       credRows = rows;
-      await ensureWallet(client, req.user.id, req.user.username);
-      walletBalance = await getWalletBalance(client, req.user.id);
+      if (req.gameMode !== 'testing') {
+        await ensureWallet(client, req.user.id, req.user.username);
+        walletBalance = await getWalletBalance(client, req.user.id);
+      }
     }
 
     const { rows: potRows } = await client.query(
@@ -735,26 +738,30 @@ app.post('/api/games/:id/bundle', async (req, res) => {
     const tokensPerCredit = perShot;
     const cost = perShot * bundle_size;
 
-    // Ensure wallet exists before attempting debit
-    try {
-      await ensureWallet(client, req.user.id, req.user.username);
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('Wallet initialization failed:', err.message);
-      return res.status(500).json({ error: 'Wallet initialization failed' });
-    }
+    let newBalance = 1000;
 
-    // Attempt wallet debit with explicit error handling
-    let newBalance;
-    try {
-      newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
-    } catch (err) {
-      await client.query('ROLLBACK');
-      if (err.message === 'Insufficient balance') {
-        return res.status(402).json({ error: 'Insufficient balance' });
+    // In testing mode, skip wallet operations
+    if (req.gameMode !== 'testing') {
+      // Ensure wallet exists before attempting debit
+      try {
+        await ensureWallet(client, req.user.id, req.user.username);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Wallet initialization failed:', err.message);
+        return res.status(500).json({ error: 'Wallet initialization failed' });
       }
-      console.error('Bundle wallet debit failed:', err.message);
-      return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
+
+      // Attempt wallet debit with explicit error handling
+      try {
+        newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        if (err.message === 'Insufficient balance') {
+          return res.status(402).json({ error: 'Insufficient balance' });
+        }
+        console.error('Bundle wallet debit failed:', err.message);
+        return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
+      }
     }
 
     const { rows: sessRows } = await client.query(`
@@ -818,12 +825,14 @@ app.post('/api/games/:id/guess', async (req, res) => {
     }
 
     // Ensure wallet exists at the start of guess (prevents state pollution)
-    try {
-      await ensureWallet(client, req.user.id, req.user.username);
-    } catch (err) {
-      await client.query('ROLLBACK');
-      console.error('Wallet initialization failed in guess:', err.message);
-      return res.status(500).json({ error: 'Wallet initialization failed' });
+    if (req.gameMode !== 'testing') {
+      try {
+        await ensureWallet(client, req.user.id, req.user.username);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Wallet initialization failed in guess:', err.message);
+        return res.status(500).json({ error: 'Wallet initialization failed' });
+      }
     }
 
     // Determine cost — check for active bundle session, else the stage single-shot rate
@@ -849,7 +858,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     }
 
     // Debit wallet for single guess (bundles pre-paid)
-    if (!usedBundleId) {
+    if (!usedBundleId && req.gameMode !== 'testing') {
       await ensureWallet(client, req.user.id, req.user.username);
       try {
         await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
@@ -932,14 +941,16 @@ app.post('/api/games/:id/guess', async (req, res) => {
         WHERE id = $5
       `, [req.user.id, req.user.username, prizePaid, jackpotPaid, game.id]);
 
-      // Credit prize + jackpot
-      await ensureWallet(client, req.user.id, req.user.username);
-      let prizeWalletError = null;
-      try {
-        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
-      } catch (err) {
-        prizeWalletError = err;
-        console.error('Prize payout wallet transaction failed:', err.message);
+      // Credit prize + jackpot (skip in testing mode)
+      if (req.gameMode !== 'testing') {
+        await ensureWallet(client, req.user.id, req.user.username);
+        let prizeWalletError = null;
+        try {
+          await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+        } catch (err) {
+          prizeWalletError = err;
+          console.error('Prize payout wallet transaction failed:', err.message);
+        }
       }
 
       // Remaining bundle credits are NOT refunded — they carry over to the next game
@@ -962,11 +973,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
         let bonusWalletError = null;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          try {
-            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
-          } catch (err) {
-            bonusWalletError = err;
-            console.error('House bonus wallet transaction failed:', err.message);
+          if (req.gameMode !== 'testing') {
+            try {
+              await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+            } catch (err) {
+              bonusWalletError = err;
+              console.error('House bonus wallet transaction failed:', err.message);
+            }
           }
           wonThisRound += houseBonus;
         }
