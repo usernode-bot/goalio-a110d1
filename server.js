@@ -282,10 +282,12 @@ async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameI
 }
 
 async function creditWallet(client, userId, amount, reason = 'prize_payout', gameId = null) {
-  const userWalletAddr = `wallet_${userId}`;
-
   try {
+    // Ensure wallet exists before crediting
+    await ensureWallet(client, userId, `user_${userId}`);
+
     // Submit transaction via sidecar (house to app transfer)
+    const userWalletAddr = `wallet_${userId}`;
     const txResult = await sendTransactionViaSidecar(userWalletAddr, amount, reason);
     const txHash = txResult.tx_hash;
 
@@ -305,7 +307,7 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
       RETURNING balance
     `, [userId, amount, txHash]);
 
-    return rows.length ? parseFloat(rows[0].balance) : null;
+    return rows.length ? parseFloat(rows[0].balance) : 0;
   } catch (err) {
     throw err;
   }
@@ -990,7 +992,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       house_bonus: houseBonus,
       squares_revealed: game.total_guesses + 1,
       pot_balance: potBalance,
-      wallet_balance: walletBalance,
+      wallet_balance: walletBalance || 0,
       stage_completed: stageCompleted,
       new_stage_idx: newStageIdx,
       interstitial,
