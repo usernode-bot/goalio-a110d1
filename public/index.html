@@ -937,6 +937,21 @@
     </div>`;
   }
 
+  function languageSelectorHtml() {
+    return `
+      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
+        <div class="language-grid">
+          ${window.SUPPORTED_LANGUAGES.map(lang => `
+            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
+              ${window.LANGUAGE_NAMES[lang]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // ROUTING
   // ═══════════════════════════════════════════════════════════════
@@ -1143,24 +1158,10 @@
         </div>`;
     }
 
-    // Language selector
-    const languageSelector = `
-      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
-        <div class="language-grid">
-          ${window.SUPPORTED_LANGUAGES.map(lang => `
-            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
-              ${window.LANGUAGE_NAMES[lang]}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
     body.innerHTML = `
       ${statsRow}
+      ${languageSelectorHtml()}
       ${mainSection}
-      ${languageSelector}
       `;
 
     maybeAutoShowInfo();
@@ -2119,6 +2120,7 @@
       ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
+        ${languageSelectorHtml()}
 
         <div class="faq-section">
           <h2>The Game</h2>
