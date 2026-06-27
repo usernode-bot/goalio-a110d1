@@ -967,6 +967,20 @@
     }
   }
 
+  function clearFrontendState() {
+    state = {
+      session: null, walletBalance: 1000, potBalance: 100,
+      potLastWonAt: null, leaderState: null,
+      game: null, gameTheme: null, credits: null,
+      squaresRevealed: 0, prizePot: 148,
+      gridSize: 36, gridCols: 6, pricing: { perShot: 5.5, bundle2: 11, bundle8: 44, bundle16: 88 },
+      themes: [], polls: [],
+      prevPotBalance: 100,
+      pendingResult: null,
+      revealVariantIdx: 0,
+    };
+  }
+
   function confirmResetGame() {
     const confirmed = confirm('This will clear all game data and reset all player balances to 2000 tokens. Continue?');
     if (!confirmed) return;
@@ -978,6 +992,7 @@
       const r = await api('POST', '/api/admin/reset-game');
       if (r.ok) {
         showToast('Game reset complete');
+        clearFrontendState();
         setTimeout(() => location.reload(), 500);
       } else {
         const err = await r.json();

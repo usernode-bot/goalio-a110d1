@@ -1190,9 +1190,6 @@ app.post('/api/admin/reset-game', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const client = await pool.connect();
   try {
-    const isAdmin = await isUserAdmin(client, req.user.id);
-    if (!isAdmin) return res.status(403).json({ error: 'Not authorized' });
-
     await client.query('BEGIN');
     try {
       // Delete all game-related data
