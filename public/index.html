@@ -969,7 +969,7 @@
 
   function clearFrontendState() {
     state = {
-      session: null, walletBalance: 1000, potBalance: 100,
+      session: null, walletBalance: null, potBalance: 100,
       potLastWonAt: null, leaderState: null,
       game: null, gameTheme: null, credits: null,
       squaresRevealed: 0, prizePot: 148,
@@ -1176,10 +1176,17 @@
         </div>`;
     }
 
+    const demoButtons = `
+      <div style="padding:16px;display:flex;gap:8px;">
+        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=final'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">📺 Demo Final</button>
+        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=topup'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">⚡ Demo Topup</button>
+      </div>`;
+
     body.innerHTML = `
       ${statsRow}
       ${languageSelectorHtml()}
       ${mainSection}
+      ${demoButtons}
       `;
 
     maybeAutoShowInfo();
@@ -1473,6 +1480,9 @@
   window.onCellClick = async function(idx) {
     const game = state.game;
     if (!game || game.status !== 'active') return;
+    if (!game.revealed || game.revealed.length !== (state.gridSize || 36)) {
+      game.revealed = new Array(state.gridSize || 36).fill(false);
+    }
     if ((game.revealed || [])[idx]) return;
 
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
