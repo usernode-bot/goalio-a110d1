@@ -663,9 +663,9 @@
   function shotButtonsHtml() {
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
     return `<div style="display:flex;gap:4px;">
-        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">${t('game.quick_shot')}</span><span class="shot-cost">${t('game.quick_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">${t('game.take_shot')}</span><span class="shot-cost">${t('game.take_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">${t('game.best_value')}</span><span class="shot-cost">${t('game.best_value_count')}</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
       </div>`;
   }
   function flagGradient(accent) {
@@ -1075,7 +1075,7 @@
           </div>`;
         })()}
         <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span style="font-size:0.7rem;color:#888;">Wallet</span>
+          <span style="font-size:0.7rem;color:#888;">${t('hud.wallet')}</span>
           <span class="val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${Math.round(state.walletBalance)} t</span>
         </div>
       </div>`;
@@ -1350,10 +1350,10 @@
       : `/images/footballers/${theme.slug}.png`;
 
     const hud = `<div class="game-hud">
-      <div class="hud-chip"><span style="display:block;">Wallet</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
-      <div class="hud-chip"><span style="display:block;">Prize Pot</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">Shots</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${state.squaresRevealed}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1378,7 +1378,7 @@
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     let controls = '';
     if (credRemaining > 0) {
-      controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
+      controls = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
     } else {
       controls = shotButtonsHtml();
     }
@@ -1449,7 +1449,7 @@
     if (!row) return;
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     if (credRemaining > 0) {
-      row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
+      row.innerHTML = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
     } else {
       row.innerHTML = shotButtonsHtml();
     }
@@ -1468,13 +1468,13 @@
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
       modal.innerHTML = `<div class="modal-box">
-        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
-        <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
+        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">${t('game.out_of_shots_title')}</div>
+        <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">${t('game.out_of_shots_desc')}</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">🎯 Buy 2 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">⚡ Buy 8 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">⭐ Buy 16 Shots</button>
-          <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">${t('game.buy_2')}</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">${t('game.buy_8')}</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">${t('game.buy_16')}</button>
+          <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">${t('game.close')}</button>
         </div>
       </div>`;
       document.body.appendChild(modal);
@@ -1886,7 +1886,7 @@
     state.walletBalance = d.wallet_balance;
     updateHud();
     updateCreditsDisplay();
-    showToast(`${size} shots loaded!`, 2000);
+    showToast(t('game.shots_loaded', {size: size}), 2000);
   };
 
   // ═══════════════════════════════════════════════════════════════
