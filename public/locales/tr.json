@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Gol marşı — tüm 7 etabı kazanıp Final'de Dünya Kupasını kaldırdığında epik 32 barı orkestra zafer melodisi çalınır",
   "faq.sounds.api": "Ses sistemi sentezlenmiş kare ve üçgen dalgalarla Web Audio API'sini kullanır — ses dosyasına gerek yok, bu nedenle sesler anında yüklenebilir. Sessiz oyunu tercih edersen, sessiz düğmeyi dokunun ve tüm ses efektleri devre dışı bırakılacak.",
   "language.select": "Dil Seç",
-  "language.selected": "Dil Seçildi"
+  "language.selected": "Dil Seçildi",
+  "countries.france": "Fransa",
+  "countries.brazil": "Brezilya",
+  "countries.england": "İngiltere",
+  "countries.spain": "İspanya",
+  "countries.argentina": "Arjantin",
+  "countries.morocco": "Fas",
+  "countries.usa": "ABD",
+  "countries.turkey": "Türkiye",
+  "countries.belgium": "Belçika",
+  "countries.egypt": "Mısır",
+  "countries.portugal": "Portekiz",
+  "countries.netherlands": "Hollanda",
+  "countries.norway": "Norveç",
+  "countries.germany": "Almanya",
+  "countries.mexico": "Meksika"
 }

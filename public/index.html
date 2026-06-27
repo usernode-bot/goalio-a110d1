@@ -937,6 +937,21 @@
     </div>`;
   }
 
+  function languageSelectorHtml() {
+    return `
+      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
+        <div class="language-grid">
+          ${window.SUPPORTED_LANGUAGES.map(lang => `
+            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
+              ${window.LANGUAGE_NAMES[lang]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // ROUTING
   // ═══════════════════════════════════════════════════════════════
@@ -1131,36 +1146,24 @@
     } else {
       // No tournament (or just completed) — flag-forward nation picker
       mainSection = `
-        <h2 class="section-title">Choose your nation</h2>
-        <p class="hero-sub">${session && session.session_complete ? '🏆 ' + t('lobby.return_hero') : t('lobby.instructions')}</p>
-        <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-          ${state.themes.map(t => `
-            <div class="nation-card" onclick="pickNation('${t.slug}')">
-              <div class="flag-area">${flagImg(t.slug, t.country_name, '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(t.accent_colour)};"></div>`}</div>
-              <div class="name-area">${t.country_name}</div>
-            </div>
-          `).join('')}
+        <div style="margin-top:32px;">
+          <h2 class="section-title">${t('lobby.title')}</h2>
+          <p class="hero-sub">${session && session.session_complete ? '🏆 ' + t('lobby.return_hero') : t('lobby.instructions')}</p>
+          <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            ${state.themes.map(theme => `
+              <div class="nation-card" onclick="pickNation('${theme.slug}')">
+                <div class="flag-area">${flagImg(theme.slug, t('countries.' + theme.slug), '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(theme.accent_colour)};"></div>`}</div>
+                <div class="name-area">${t('countries.' + theme.slug)}</div>
+              </div>
+            `).join('')}
+          </div>
         </div>`;
     }
 
-    // Language selector
-    const languageSelector = `
-      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
-        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
-        <div class="language-grid">
-          ${window.SUPPORTED_LANGUAGES.map(lang => `
-            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
-              ${window.LANGUAGE_NAMES[lang]}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
     body.innerHTML = `
       ${statsRow}
+      ${languageSelectorHtml()}
       ${mainSection}
-      ${languageSelector}
       `;
 
     maybeAutoShowInfo();
@@ -1867,6 +1870,10 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
+    if (state.walletBalance === undefined || state.walletBalance === null) {
+      showToast('Wallet not initialized — please reload', 3000);
+      return;
+    }
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -2119,6 +2126,7 @@
       ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
+        ${languageSelectorHtml()}
 
         <div class="faq-section">
           <h2>The Game</h2>

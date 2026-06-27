@@ -254,6 +254,9 @@ async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameI
 
     // Submit transaction via sidecar (app to house transfer)
     const txResult = await sendTransactionViaSidecar(HOUSE_WALLET_ADDRESS, amount, reason);
+    if (!txResult || !txResult.tx_hash) {
+      throw new Error('Sidecar transaction failed: no tx_hash returned');
+    }
     const txHash = txResult.tx_hash;
 
     // Record transaction in audit log as pending
@@ -289,6 +292,9 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
     // Submit transaction via sidecar (house to app transfer)
     const userWalletAddr = `wallet_${userId}`;
     const txResult = await sendTransactionViaSidecar(userWalletAddr, amount, reason);
+    if (!txResult || !txResult.tx_hash) {
+      throw new Error('Sidecar transaction failed: no tx_hash returned');
+    }
     const txHash = txResult.tx_hash;
 
     // Record transaction in audit log as pending
@@ -705,12 +711,23 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     const { rows: gameRows } = await client.query(
       'SELECT status, active_player_id, stage_idx FROM games WHERE id = $1', [req.params.id]
     );
-    if (!gameRows.length) return res.status(404).json({ error: 'Game not found' });
-    if (gameRows[0].status !== 'active') return res.status(409).json({ error: 'Game not active' });
-    if (gameRows[0].active_player_id !== req.user.id) return res.status(403).json({ error: 'Not your game' });
+    if (!gameRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    if (gameRows[0].status !== 'active') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Game not active' });
+    }
+    if (gameRows[0].active_player_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Not your game' });
+    }
 
     // Per-stage pricing: bundles prepay `bundle_size` shots at the stage rate.
     const { perShot } = pricingForStage(gameRows[0].stage_idx);
@@ -718,8 +735,27 @@ app.post('/api/games/:id/bundle', async (req, res) => {
     const tokensPerCredit = perShot;
     const cost = perShot * bundle_size;
 
-    await ensureWallet(client, req.user.id, req.user.username);
-    const newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
+    // Ensure wallet exists before attempting debit
+    try {
+      await ensureWallet(client, req.user.id, req.user.username);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Wallet initialization failed:', err.message);
+      return res.status(500).json({ error: 'Wallet initialization failed' });
+    }
+
+    // Attempt wallet debit with explicit error handling
+    let newBalance;
+    try {
+      newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      if (err.message === 'Insufficient balance') {
+        return res.status(402).json({ error: 'Insufficient balance' });
+      }
+      console.error('Bundle wallet debit failed:', err.message);
+      return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
+    }
 
     const { rows: sessRows } = await client.query(`
       INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
@@ -727,10 +763,13 @@ app.post('/api/games/:id/bundle', async (req, res) => {
       RETURNING id, credits_total, credits_used, tokens_per_credit
     `, [req.params.id, req.user.id, credits, tokensPerCredit]);
 
+    await client.query('COMMIT');
+
     res.json({ session: sessRows[0], wallet_balance: newBalance, credits_remaining: credits });
   } catch (err) {
-    if (err.message === 'Insufficient balance') return res.status(402).json({ error: 'Insufficient balance' });
-    res.status(500).json({ error: err.message });
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Bundle endpoint error:', err.message);
+    res.status(500).json({ error: 'Bundle purchase failed' });
   } finally {
     client.release();
   }
@@ -776,6 +815,15 @@ app.post('/api/games/:id/guess', async (req, res) => {
     if (game.revealed[square_index]) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Square already revealed' });
+    }
+
+    // Ensure wallet exists at the start of guess (prevents state pollution)
+    try {
+      await ensureWallet(client, req.user.id, req.user.username);
+    } catch (err) {
+      await client.query('ROLLBACK');
+      console.error('Wallet initialization failed in guess:', err.message);
+      return res.status(500).json({ error: 'Wallet initialization failed' });
     }
 
     // Determine cost — check for active bundle session, else the stage single-shot rate
