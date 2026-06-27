@@ -1870,6 +1870,10 @@
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
+    if (state.walletBalance === undefined || state.walletBalance === null) {
+      showToast('Wallet not initialized — please reload', 3000);
+      return;
+    }
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
