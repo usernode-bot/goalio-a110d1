@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Hymne des buts — une épopée de 32 mesures orchestrale se joue quand vous gagnez les 7 étapes et levez la Coupe du Monde en Finale",
   "faq.sounds.api": "Le système audio utilise l'API Web Audio avec des ondes carrées et triangulaires synthétisées — aucun fichier audio n'est nécessaire, donc les sons se chargent instantanément. Si vous préférez jouer silencieusement, appuyez simplement sur le bouton muet et tous les effets sonores seront désactivés.",
   "language.select": "Sélectionner la Langue",
-  "language.selected": "Langue Sélectionnée"
+  "language.selected": "Langue Sélectionnée",
+  "countries.france": "France",
+  "countries.brazil": "Brésil",
+  "countries.england": "Angleterre",
+  "countries.spain": "Espagne",
+  "countries.argentina": "Argentine",
+  "countries.morocco": "Maroc",
+  "countries.usa": "États-Unis",
+  "countries.turkey": "Turquie",
+  "countries.belgium": "Belgique",
+  "countries.egypt": "Égypte",
+  "countries.portugal": "Portugal",
+  "countries.netherlands": "Pays-Bas",
+  "countries.norway": "Norvège",
+  "countries.germany": "Allemagne",
+  "countries.mexico": "Mexique"
 }

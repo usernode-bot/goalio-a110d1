@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Inno del gol — un'epica di 32 battute orchestrale si riproduce quando vinci le 7 fasi e sollevi la Coppa del Mondo in Finale",
   "faq.sounds.api": "Il sistema audio utilizza l'API Web Audio con onde quadrate e triangolari sintetizzate — non sono necessari file audio, quindi i suoni si caricano istantaneamente. Se preferisci giocare in silenzio, tocca semplicemente il pulsante muto e tutti gli effetti sonori verranno disabilitati.",
   "language.select": "Seleziona Lingua",
-  "language.selected": "Lingua Selezionata"
+  "language.selected": "Lingua Selezionata",
+  "countries.france": "Francia",
+  "countries.brazil": "Brasile",
+  "countries.england": "Inghilterra",
+  "countries.spain": "Spagna",
+  "countries.argentina": "Argentina",
+  "countries.morocco": "Marocco",
+  "countries.usa": "Stati Uniti",
+  "countries.turkey": "Turchia",
+  "countries.belgium": "Belgio",
+  "countries.egypt": "Egitto",
+  "countries.portugal": "Portogallo",
+  "countries.netherlands": "Paesi Bassi",
+  "countries.norway": "Norvegia",
+  "countries.germany": "Germania",
+  "countries.mexico": "Messico"
 }

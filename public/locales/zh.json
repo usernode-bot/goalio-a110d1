@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "进球国歌 — 当你赢得所有 7 个阶段并在决赛中举起世界杯时,播放一个史诗 32 小节的管弦乐胜利曲调",
   "faq.sounds.api": "音频系统使用 Web Audio API 和合成的方形和三角形波——不需要音频文件,所以声音立即加载。如果你喜欢无声游戏,只需点击静音按钮,所有音效都将被禁用。",
   "language.select": "选择语言",
-  "language.selected": "已选择语言"
+  "language.selected": "已选择语言",
+  "countries.france": "法国",
+  "countries.brazil": "巴西",
+  "countries.england": "英格兰",
+  "countries.spain": "西班牙",
+  "countries.argentina": "阿根廷",
+  "countries.morocco": "摩洛哥",
+  "countries.usa": "美国",
+  "countries.turkey": "土耳其",
+  "countries.belgium": "比利时",
+  "countries.egypt": "埃及",
+  "countries.portugal": "葡萄牙",
+  "countries.netherlands": "荷兰",
+  "countries.norway": "挪威",
+  "countries.germany": "德国",
+  "countries.mexico": "墨西哥"
 }

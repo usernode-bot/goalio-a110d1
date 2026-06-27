@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Goal anthem — an epic 32-bar orchestral victory tune plays when you win all 7 stages and lift the World Cup in the Final",
   "faq.sounds.api": "The audio system uses the Web Audio API with synthesized square and triangle waves — no audio files are needed, so sounds load instantly. If you prefer silent play, just tap the mute button and all sound effects will be disabled.",
   "language.select": "Select Language",
-  "language.selected": "Language Selected"
+  "language.selected": "Language Selected",
+  "countries.france": "France",
+  "countries.brazil": "Brazil",
+  "countries.england": "England",
+  "countries.spain": "Spain",
+  "countries.argentina": "Argentina",
+  "countries.morocco": "Morocco",
+  "countries.usa": "USA",
+  "countries.turkey": "Turkey",
+  "countries.belgium": "Belgium",
+  "countries.egypt": "Egypt",
+  "countries.portugal": "Portugal",
+  "countries.netherlands": "Netherlands",
+  "countries.norway": "Norway",
+  "countries.germany": "Germany",
+  "countries.mexico": "Mexico"
 }

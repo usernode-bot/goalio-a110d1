@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "गोल एंथेम — एक महाकाव्य 32-बार ऑर्केस्ट्रल विजय ट्यून बजता है जब आप सभी 7 चरणों को जीतते हैं और फाइनल में विश्व कप उठाते हैं",
   "faq.sounds.api": "ऑडियो सिस्टम संश्लेषित वर्ग और त्रिकोण तरंगों के साथ Web Audio API का उपयोग करता है — कोई ऑडियो फाइल की आवश्यकता नहीं है, इसलिए ध्वनियां तुरंत लोड होती हैं। यदि आप मौन खेल पसंद करते हैं, तो बस म्यूट बटन टैप करें और सभी ध्वनि प्रभाव अक्षम हो जाएंगे।",
   "language.select": "भाषा का चयन करें",
-  "language.selected": "भाषा का चयन किया गया"
+  "language.selected": "भाषा का चयन किया गया",
+  "countries.france": "फ्रांस",
+  "countries.brazil": "ब्राजील",
+  "countries.england": "इंग्लैंड",
+  "countries.spain": "स्पेन",
+  "countries.argentina": "अर्जेंटीना",
+  "countries.morocco": "मोरक्को",
+  "countries.usa": "संयुक्त राज्य अमेरिका",
+  "countries.turkey": "तुर्की",
+  "countries.belgium": "बेल्जियम",
+  "countries.egypt": "मिस्र",
+  "countries.portugal": "पुर्तगाल",
+  "countries.netherlands": "नीदरलैंड",
+  "countries.norway": "नॉर्वे",
+  "countries.germany": "जर्मनी",
+  "countries.mexico": "मेक्सिको"
 }

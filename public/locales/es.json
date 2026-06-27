@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Himno de gol — una épica de 32 compases orquestada se reproduce cuando ganas las 7 etapas y levantas la Copa del Mundo en la Final",
   "faq.sounds.api": "El sistema de audio usa la API Web Audio con ondas cuadradas y triangulares sintetizadas — no se necesitan archivos de audio, por lo que los sonidos se cargan instantáneamente. Si prefieres jugar silenciosamente, simplemente toca el botón silencio y todos los efectos de sonido estarán deshabilitados.",
   "language.select": "Seleccionar Idioma",
-  "language.selected": "Idioma Seleccionado"
+  "language.selected": "Idioma Seleccionado",
+  "countries.france": "Francia",
+  "countries.brazil": "Brasil",
+  "countries.england": "Inglaterra",
+  "countries.spain": "España",
+  "countries.argentina": "Argentina",
+  "countries.morocco": "Marruecos",
+  "countries.usa": "Estados Unidos",
+  "countries.turkey": "Turquía",
+  "countries.belgium": "Bélgica",
+  "countries.egypt": "Egipto",
+  "countries.portugal": "Portugal",
+  "countries.netherlands": "Países Bajos",
+  "countries.norway": "Noruega",
+  "countries.germany": "Alemania",
+  "countries.mexico": "México"
 }

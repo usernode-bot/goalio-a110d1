@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Doelhymne — een epische 32-bar orkest victorytune speelt af wanneer je alle 7 fasen wint en de Wereldbeker in de Finale tilt",
   "faq.sounds.api": "Het audiosysteem gebruikt de Web Audio API met gesynthetiseerde vierkante en driehoekige golven — geen audiobestanden nodig, dus geluiden laden onmiddellijk. Als je liever stil speelt, tik gewoon op de muteknop en alle geluidseffecten worden uitgeschakeld.",
   "language.select": "Selecteer Taal",
-  "language.selected": "Taal Geselecteerd"
+  "language.selected": "Taal Geselecteerd",
+  "countries.france": "Frankrijk",
+  "countries.brazil": "Brazilië",
+  "countries.england": "Engeland",
+  "countries.spain": "Spanje",
+  "countries.argentina": "Argentinië",
+  "countries.morocco": "Marokko",
+  "countries.usa": "USA",
+  "countries.turkey": "Turkije",
+  "countries.belgium": "België",
+  "countries.egypt": "Egypte",
+  "countries.portugal": "Portugal",
+  "countries.netherlands": "Nederland",
+  "countries.norway": "Noorwegen",
+  "countries.germany": "Duitsland",
+  "countries.mexico": "Mexico"
 }

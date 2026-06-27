@@ -1147,13 +1147,13 @@
       // No tournament (or just completed) — flag-forward nation picker
       mainSection = `
         <div style="margin-top:32px;">
-          <h2 class="section-title">Choose your nation</h2>
+          <h2 class="section-title">${t('lobby.title')}</h2>
           <p class="hero-sub">${session && session.session_complete ? '🏆 ' + t('lobby.return_hero') : t('lobby.instructions')}</p>
           <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-            ${state.themes.map(t => `
-              <div class="nation-card" onclick="pickNation('${t.slug}')">
-                <div class="flag-area">${flagImg(t.slug, t.country_name, '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(t.accent_colour)};"></div>`}</div>
-                <div class="name-area">${t.country_name}</div>
+            ${state.themes.map(theme => `
+              <div class="nation-card" onclick="pickNation('${theme.slug}')">
+                <div class="flag-area">${flagImg(theme.slug, t('countries.' + theme.slug), '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(theme.accent_colour)};"></div>`}</div>
+                <div class="name-area">${t('countries.' + theme.slug)}</div>
               </div>
             `).join('')}
           </div>

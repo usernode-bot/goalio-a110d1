@@ -142,5 +142,20 @@
   "faq.sounds.anthem": "Tor-Hymne — eine epische 32-taktige orchestrale Melodie erklingt, wenn du alle 7 Phasen gewinnst und die Weltmeisterschafts-Trophäe im Finale hebst",
   "faq.sounds.api": "Das Audiosystem verwendet die Web Audio API mit synthetisierten Quadrat- und Dreieckswellen — keine Audiodateien erforderlich, daher laden Sounds sofort. Wenn du lieber still spielen möchtest, tippe einfach die Stummschaltungsschaltfläche und alle Soundeffekte werden deaktiviert.",
   "language.select": "Sprache wählen",
-  "language.selected": "Sprache ausgewählt"
+  "language.selected": "Sprache ausgewählt",
+  "countries.france": "Frankreich",
+  "countries.brazil": "Brasilien",
+  "countries.england": "England",
+  "countries.spain": "Spanien",
+  "countries.argentina": "Argentinien",
+  "countries.morocco": "Marokko",
+  "countries.usa": "USA",
+  "countries.turkey": "Türkei",
+  "countries.belgium": "Belgien",
+  "countries.egypt": "Ägypten",
+  "countries.portugal": "Portugal",
+  "countries.netherlands": "Niederlande",
+  "countries.norway": "Norwegen",
+  "countries.germany": "Deutschland",
+  "countries.mexico": "Mexiko"
 }
