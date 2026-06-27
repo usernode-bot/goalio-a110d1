@@ -146,6 +146,8 @@ async function sendTransactionViaSidecar(toAddress, amount, memo) {
     return { tx_hash: generateMockTxHash(), status: 'confirmed' };
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
   try {
     const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/send`, {
       method: 'POST',
@@ -155,7 +157,7 @@ async function sendTransactionViaSidecar(toAddress, amount, memo) {
         amount: amount,
         memo: memo
       }),
-      timeout: 10000
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -171,6 +173,8 @@ async function sendTransactionViaSidecar(toAddress, amount, memo) {
   } catch (err) {
     if (err.status === 402) throw err;
     throw new Error(`Failed to submit transaction to sidecar: ${err.message}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -180,6 +184,8 @@ async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
   const pollIntervalMs = 2000;
 
   while (Date.now() - startTime < maxWaitMs) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
       // In mock mode, immediately return confirmed
       if (MOCK_WALLET_TXS) {
@@ -189,7 +195,7 @@ async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
       const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/status/${txHash}`, {
         method: 'GET',
         headers: { 'content-type': 'application/json' },
-        timeout: 5000
+        signal: controller.signal
       });
 
       if (response.ok) {
@@ -200,6 +206,8 @@ async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
       }
     } catch (err) {
       // Continue polling on error, as the sidecar may be temporarily unavailable
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     // Wait before polling again
@@ -531,7 +539,7 @@ app.post('/api/session/start-map', async (req, res) => {
       if (prevSessions.length) {
         const totalRemaining = prevSessions.reduce((s, r) => s + parseInt(r.remaining), 0);
         const totalValue = prevSessions.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
-        const avgRate = (totalValue / totalRemaining).toFixed(2);
+        const avgRate = parseFloat((totalValue / totalRemaining).toFixed(2));
         // Close out old sessions (credits are now on the new game, not refunded to wallet)
         await client.query(
           'UPDATE game_sessions SET credits_used = credits_total WHERE id = ANY($1)',
@@ -1243,7 +1251,7 @@ const THEMES_SEED = [
   { slug: 'brazil',      country_name: 'Brazil',      accent_colour: '#22c55e', footballer_name: 'Ronaldo Nazário' },
   { slug: 'england',     country_name: 'England',     accent_colour: '#e23b4e', footballer_name: 'David Beckham' },
   { slug: 'spain',       country_name: 'Spain',       accent_colour: '#f1bf00', footballer_name: 'Andrés Iniesta' },
-  { slug: 'argentina',   country_name: 'Argentina',   accent_colour: '#74ACDF', footballer_name: 'Lionel Messi' },
+  { slug: 'argentina',   country_name: 'Argentina',   accent_colour: '#74ACDF', footballer_name: 'Diego Maradona' },
   { slug: 'morocco',     country_name: 'Morocco',     accent_colour: '#1db954', footballer_name: 'Hakim Ziyech' },
   { slug: 'usa',         country_name: 'USA',         accent_colour: '#4f7bff', footballer_name: 'Landon Donovan' },
   { slug: 'turkey',      country_name: 'Turkey',      accent_colour: '#ff3b4e', footballer_name: 'Hakan Şükür' },
