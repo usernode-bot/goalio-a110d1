@@ -509,6 +509,178 @@
     .faq-section ul li:before { content: '▶'; position: absolute; left: 0; color: #ff1493; font-weight: 900; }
     .faq-section pre { background: rgba(30,144,255,0.15); border: 2px solid #00ffff; border-radius: 0; padding: 16px; font-family: 'Space Mono', monospace; font-size: 0.78rem; color: #00ffff; overflow-x: auto; margin: 16px 0; text-shadow: 0 0 10px rgba(0,255,255,0.5); }
 
+    /* 80's Retro FAQ Section */
+    .faq-retro-container {
+      background: linear-gradient(135deg, rgba(20,10,40,0.9) 0%, rgba(10,10,30,0.95) 100%);
+      border: 3px solid #FF1493;
+      border-right: 3px solid #FFD700;
+      border-bottom: 3px solid #FFD700;
+      box-shadow:
+        0 0 20px rgba(255,20,147,0.6),
+        0 0 40px rgba(0,255,255,0.3),
+        inset 0 0 20px rgba(0,255,255,0.1);
+      padding: 24px;
+      margin: 24px 0;
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+
+    .faq-retro-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1.2rem;
+      color: #00FFFF;
+      margin-bottom: 16px;
+      text-shadow:
+        2px 2px 0 #FF1493,
+        4px 4px 0 #FFD700,
+        6px 6px 10px rgba(0,0,0,0.8);
+      letter-spacing: 2px;
+    }
+
+    .faq-retro-section {
+      border-top: 2px solid #FF1493;
+      border-bottom: 2px solid #00FFFF;
+      padding: 16px 0;
+      margin: 16px 0;
+    }
+
+    .faq-retro-section h3 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.9rem;
+      color: #00FFFF;
+      margin: 0 0 12px 0;
+      text-shadow:
+        1px 1px 0 #FF1493,
+        2px 2px 0 #FFD700,
+        3px 3px 8px rgba(0,0,0,0.8);
+      letter-spacing: 1px;
+    }
+
+    .faq-retro-bullet {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 8px 0;
+      color: #FFF;
+    }
+
+    .faq-retro-bullet::before {
+      content: '▶';
+      color: #FF1493;
+      font-weight: bold;
+      flex-shrink: 0;
+      text-shadow: 0 0 8px rgba(255,20,147,0.8);
+    }
+
+    .faq-retro-bullet.alt::before {
+      content: '⚡';
+      color: #FFD700;
+      text-shadow: 0 0 8px rgba(255,215,0,0.8);
+    }
+
+    /* Testing Mode Toggle */
+    .testing-mode-section {
+      background: linear-gradient(135deg, rgba(20,40,20,0.9) 0%, rgba(10,30,10,0.95) 100%);
+      border: 3px solid #00FF00;
+      border-right: 3px solid #00FFFF;
+      border-bottom: 3px solid #00FFFF;
+      box-shadow:
+        0 0 20px rgba(0,255,0,0.5),
+        0 0 40px rgba(0,255,255,0.2),
+        inset 0 0 20px rgba(0,255,0,0.08);
+      padding: 20px;
+      margin: 24px 0;
+      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    }
+
+    .testing-mode-title {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 1rem;
+      color: #00FF00;
+      margin-bottom: 12px;
+      text-shadow:
+        2px 2px 0 #00FFFF,
+        4px 4px 10px rgba(0,0,0,0.8);
+      letter-spacing: 1px;
+    }
+
+    .testing-mode-toggle {
+      display: flex;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #00FFFF;
+      background: rgba(0,255,0,0.1);
+      color: #00FFFF;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.7rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-shadow: 0 0 8px rgba(0,255,255,0.6);
+    }
+
+    .toggle-btn.active {
+      background: linear-gradient(135deg, rgba(0,255,0,0.4), rgba(0,255,255,0.3));
+      border-color: #00FF00;
+      box-shadow: 0 0 15px rgba(0,255,0,0.6);
+      color: #00FF00;
+      text-shadow:
+        0 0 8px rgba(0,255,0,0.8),
+        1px 1px 0 #00FFFF;
+    }
+
+    /* Reset Game Button - 80's style */
+    .reset-btn-container {
+      margin: 24px 0;
+      text-align: center;
+    }
+
+    .reset-btn {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #FF1493, #FF69B4, #FF1493);
+      border: 3px solid #FFD700;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      box-shadow:
+        0 0 20px rgba(255,20,147,0.8),
+        0 0 40px rgba(255,215,0,0.4),
+        0 8px 16px rgba(0,0,0,0.4),
+        inset 0 -3px 8px rgba(0,0,0,0.3),
+        inset 0 2px 4px rgba(255,255,255,0.2);
+      transition: all 0.1s;
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    }
+
+    .reset-btn:hover {
+      box-shadow:
+        0 0 30px rgba(255,20,147,1),
+        0 0 60px rgba(255,215,0,0.6),
+        0 12px 24px rgba(0,0,0,0.5),
+        inset 0 -3px 8px rgba(0,0,0,0.3),
+        inset 0 2px 4px rgba(255,255,255,0.3);
+      transform: translateY(-2px);
+    }
+
+    .reset-btn:active {
+      transform: translateY(2px);
+      box-shadow:
+        0 0 15px rgba(255,20,147,0.8),
+        0 0 30px rgba(255,215,0,0.3),
+        0 2px 4px rgba(0,0,0,0.4),
+        inset 0 -1px 3px rgba(0,0,0,0.3),
+        inset 0 2px 4px rgba(255,255,255,0.1);
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 
@@ -663,6 +835,7 @@
     prevPotBalance: 100,
     pendingResult: null,
     revealVariantIdx: 0,
+    testingMode: localStorage.getItem('testingMode') === 'true',
   };
 
   let testingState = {
@@ -1141,8 +1314,14 @@
       const data = await sessionRes.json();
       const session = data.session;
       const captain_pot_balance = data.captain_pot_balance;
-      const wallet_balance = data.wallet_balance;
+      let wallet_balance = data.wallet_balance;
       const next_opponent_theme = data.next_opponent_theme;
+
+      // In testing mode, use fake wallet balance
+      if (testingModeActive) {
+        wallet_balance = 1000;
+      }
+
       state.session = session;
       state.next_opponent_theme = next_opponent_theme;
       state.walletBalance = wallet_balance || 1000;
@@ -2236,14 +2415,46 @@
   // ═══════════════════════════════════════════════════════════════
   // FAQ PAGE
   // ═══════════════════════════════════════════════════════════════
-  function renderFaq() {
+  let testingModeActive = false;
+  let testingModeAvailable = false;
+
+  async function renderFaq() {
     const app = document.getElementById('app');
+
+    // Check if testing mode is available
+    try {
+      const r = await api('GET', '/api/testing-mode');
+      if (r.ok) {
+        const d = await r.json();
+        testingModeAvailable = d.available;
+      }
+    } catch (e) {
+      console.error('Failed to check testing mode availability:', e);
+    }
+
+    const testingModeHtml = testingModeAvailable ? `
+        <!-- Testing Mode Toggle Section -->
+        <div class="testing-mode-section">
+          <div class="testing-mode-title">🧪 TESTING MODE</div>
+          <p style="color:#00FF00;font-size:0.85rem;margin:0 0 12px 0;">Toggle between Testing (fake wallets) and Real Token Mode</p>
+          <div class="testing-mode-toggle">
+            <button class="toggle-btn ${testingModeActive ? '' : 'active'}" onclick="switchToRealMode()">🎮 REAL TOKENS</button>
+            <button class="toggle-btn ${testingModeActive ? 'active' : ''}" onclick="switchToTestingMode()">🧪 TEST MODE</button>
+          </div>
+          <p style="color:#00FFFF;font-size:0.8rem;margin:8px 0 0 0;text-shadow:0 0 4px rgba(0,255,255,0.6);">
+            ${testingModeActive ? '⚡ Testing Mode: 1000 credit wallets, no blockchain' : '💰 Real Token Mode: Play with real tokens'}
+          </p>
+        </div>
+    ` : '';
+
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
       ${backToGameBannerHtml()}
       <div style="max-width:520px;margin:0 auto;padding:40px 20px;width:100%;">
         <h1 style="font-family:'Press Start 2P',monospace;font-size:1.1rem;font-weight:900;margin-bottom:32px;text-transform:uppercase;color:#00ffff;letter-spacing:0.1em;text-shadow:3px 3px 0 #ff1493, 6px 6px 0 #1e90ff;">⚽ How to Play ⚽</h1>
         ${languageSelectorHtml()}
+
+        ${testingModeHtml}
 
         <div style="margin-top:28px;padding:20px;background:rgba(138,43,226,0.12);border:3px solid #ff1493;border-radius:0;display:flex;gap:12px;flex-direction:column;">
           <div style="font-family:'Press Start 2P',monospace;font-size:0.7rem;font-weight:900;color:#00ffff;text-transform:uppercase;letter-spacing:0.08em;text-shadow:1px 1px 0 #ff1493;">Mode</div>
@@ -2387,31 +2598,33 @@
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
         </div>
 
+        <!-- Reset Game Section -->
         <div id="admin-reset-section" style="display:none;margin-top:48px;">
-          <button id="reset-game-btn" onclick="confirmResetGame()"
-            style="background:linear-gradient(135deg, #ff1493, #ff69b4);border:4px solid #ffff00;
-                   border-radius:0;padding:16px 24px;color:#000;font-weight:900;
-                   font-family:'Press Start 2P',monospace;font-size:0.75rem;margin-top:0;
-                   cursor:pointer;width:100%;transition:all 0.15s;text-transform:uppercase;
-                   letter-spacing:0.1em;box-shadow:8px 8px 0 rgba(0,255,255,0.6), 12px 12px 0 rgba(138,43,226,0.4);
-                   position:relative;text-shadow:1px 1px 0 rgba(0,0,0,0.5);">
-            🔄 RESET GAME 🔄
-          </button>
-          <style>
-            #reset-game-btn:hover {
-              box-shadow: 12px 12px 0 rgba(0,255,255,0.8), 16px 16px 0 rgba(138,43,226,0.6), inset 0 0 20px rgba(255,255,255,0.1);
-              transform: translate(-2px, -2px);
-            }
-            #reset-game-btn:active {
-              box-shadow: 2px 2px 0 rgba(0,255,255,0.6);
-              transform: translate(6px, 6px);
-            }
-          </style>
+          <div class="reset-btn-container">
+            <button id="reset-game-btn" class="reset-btn" onclick="confirmResetGame()">🔄 RESET GAME</button>
+            <p style="color:#FF1493;font-size:0.8rem;margin:12px 0 0 0;text-shadow:0 0 8px rgba(255,20,147,0.6);">Clears wallets, boards & pot</p>
+          </div>
         </div>
       </div>
     </div>`;
     checkAdminStatus();
   }
+
+  window.switchToTestingMode = function() {
+    testingModeActive = true;
+    state.testingMode = true;
+    localStorage.setItem('testingMode', 'true');
+    showToast('🧪 Testing Mode enabled - 1000 credit fake wallets');
+    renderFaq();
+  };
+
+  window.switchToRealMode = function() {
+    testingModeActive = false;
+    state.testingMode = false;
+    localStorage.removeItem('testingMode');
+    showToast('💰 Real Token Mode enabled');
+    renderFaq();
+  };
 
   // ═══════════════════════════════════════════════════════════════
   // INIT
@@ -2428,6 +2641,9 @@
   }
 
   async function init() {
+    // Initialize testing mode from localStorage
+    testingModeActive = localStorage.getItem('testingMode') === 'true';
+
     // Initialize i18n system
     try {
       await window.initI18n();
