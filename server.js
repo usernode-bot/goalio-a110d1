@@ -23,7 +23,7 @@ const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqc
 const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
@@ -1118,6 +1118,68 @@ app.get('/api/wallet', async (req, res) => {
   }
 });
 
+// Admin check endpoint
+async function isUserAdmin(client, userId) {
+  const { rows } = await client.query('SELECT user_id FROM admin_users WHERE user_id = $1', [userId]);
+  return rows.length > 0;
+}
+
+app.get('/api/admin/check', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const client = await pool.connect();
+  try {
+    const isAdmin = await isUserAdmin(client, req.user.id);
+    res.json({ isAdmin });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Admin reset game endpoint
+app.post('/api/admin/reset-game', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const client = await pool.connect();
+  try {
+    const isAdmin = await isUserAdmin(client, req.user.id);
+    if (!isAdmin) return res.status(403).json({ error: 'Not authorized' });
+
+    await client.query('BEGIN');
+    try {
+      // Delete all game-related data
+      await client.query('DELETE FROM guesses');
+      await client.query('DELETE FROM game_sessions');
+      await client.query('DELETE FROM games');
+      await client.query('DELETE FROM tournament_sessions');
+      await client.query('DELETE FROM player_stats');
+
+      // Reset player wallets to 2000
+      await client.query('UPDATE player_wallets SET balance = 2000');
+
+      // Reset captain pot
+      await client.query(`
+        UPDATE captain_pot
+        SET balance = 100, pot_floor_idx = 0, last_won_at = NULL, last_winner_id = NULL, last_winner_username = NULL
+        WHERE id = 1
+      `);
+
+      // Reset game stats
+      await client.query('UPDATE game_stats SET total_tokens_collected = 0 WHERE id = 1');
+
+      await client.query('COMMIT');
+      res.json({ success: true, message: 'Game reset complete' });
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/env', (req, res) => {
@@ -1282,6 +1344,13 @@ async function start() {
   )`);
   await pool.query(`COMMENT ON TABLE wallet_transactions IS 'staging:private'`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS admin_users (
+    user_id INTEGER PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    granted_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`COMMENT ON TABLE admin_users IS 'staging:private'`);
+
   // ── Seed reference data (unconditional) ───────────────────────────────────
   for (const t of THEMES_SEED) {
     await pool.query(`
@@ -1313,6 +1382,7 @@ async function start() {
     await pool.query(`DELETE FROM tournament_sessions`);
     await pool.query(`DELETE FROM player_stats`);
     await pool.query(`DELETE FROM player_wallets`);
+    await pool.query(`DELETE FROM admin_users`);
     await pool.query(`ALTER SEQUENCE IF EXISTS games_id_seq RESTART WITH 1`);
     console.log('[staging] Reset: all game/player rows cleared');
   }
@@ -1328,6 +1398,13 @@ async function start() {
       WHERE id = 1
     `);
     await pool.query(`UPDATE game_stats SET total_tokens_collected = 8420.00 WHERE id = 1`);
+
+    // Admin users for testing the reset button
+    await pool.query(`
+      INSERT INTO admin_users (user_id, username)
+      VALUES (-1, 'staging-admin'), (-2, 'flushthefashion')
+      ON CONFLICT (user_id) DO NOTHING
+    `);
 
     // Staging player wallets with generous starting balance
     for (let i = 1; i <= 5; i++) {
@@ -1347,21 +1424,19 @@ async function start() {
       ON CONFLICT (user_id) DO UPDATE SET balance = 0
     `);
 
-    // player_stats rows for league display
-    const stagingPlayers = [
-      { id: -1, username: 'Staging Player 1', display_name: 'Staging Player 1', won: 842, sessions: 3 },
-      { id: -2, username: 'Staging Player 2', display_name: 'Staging Player 2', won: 617, sessions: 2 },
-      { id: -3, username: 'Staging Player 3', display_name: 'Staging Player 3', won: 490, sessions: 1 },
-      { id: -4, username: 'Staging Kaiser',   display_name: 'Staging Kaiser',   won: 380, sessions: 1 },
-      { id: -5, username: 'Staging Demo',     display_name: 'Staging Demo',     won: 210, sessions: 0 },
-    ];
-    for (const p of stagingPlayers) {
-      await pool.query(`
-        INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
-        VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (user_id) DO NOTHING
-      `, [p.id, p.username, p.display_name, p.won, p.sessions]);
-    }
+    // Test user with standard starting balance for fresh game testing
+    await pool.query(`
+      INSERT INTO player_wallets (user_id, username, balance)
+      VALUES (-1, 'staging-test-user', 1000)
+      ON CONFLICT (user_id) DO UPDATE SET balance = 1000
+    `);
+
+    // Basic leaderboard entry for test user
+    await pool.query(`
+      INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
+      VALUES (-1, 'staging-test-user', 'staging-test-user', 0, 0)
+      ON CONFLICT (user_id) DO NOTHING
+    `);
 
     // 3 open staging game boards
     // We need theme IDs — fetch them
@@ -1410,17 +1485,6 @@ async function start() {
 
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 4))`);
 
-    // Tournament session for staging player -1
-    await pool.query(`
-      INSERT INTO tournament_sessions (user_id, my_team_slug, stage_idx, played_slugs, session_complete, current_game_id, next_opponent_slug)
-      VALUES (-1, 'england', 3, '{brazil,france,germany}', false, NULL, 'spain')
-      ON CONFLICT (user_id) DO NOTHING
-    `);
-    // Backfill existing staging rows that don't have next_opponent_slug set
-    await pool.query(`
-      UPDATE tournament_sessions SET next_opponent_slug = 'spain'
-      WHERE user_id = -1 AND next_opponent_slug IS NULL
-    `);
   }
 
   console.log('[init] Database migrations completed, starting server...');

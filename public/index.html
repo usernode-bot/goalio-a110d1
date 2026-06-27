@@ -71,6 +71,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1/dist/confetti.browser.min.js"></script>
+  <script src="/i18n.js"></script>
 
   <style>
     :root {
@@ -509,6 +510,13 @@
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; }
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
+    /* Language Selector */
+    .language-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .language-btn { padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; transition: all 0.15s; }
+    .language-btn:hover { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.2); color: white; }
+    .language-btn:active { transform: scale(0.95); }
+    .language-btn.active { background: linear-gradient(135deg, #ffce4a, #f59e0b); color: #0a0a0f; border-color: #fbbf24; font-weight: 700; }
+
     /* Lobby sections */
     .section-title { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.8rem !important; color: #f0f0f5; margin-bottom: 6px; }
     .or-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; color: #555; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; }
@@ -655,9 +663,9 @@
   function shotButtonsHtml() {
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
     return `<div style="display:flex;gap:4px;">
-        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">🎯 Quick Shot</span><span class="shot-cost">2 shots</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">⚡ Take A Shot</span><span class="shot-cost">8 shots</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
-        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">⭐ Best Value</span><span class="shot-cost">16 shots</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">${t('game.quick_shot')}</span><span class="shot-cost">${t('game.quick_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(8)"><span class="shot-count" style="font-size:0.62rem;white-space:nowrap;">${t('game.take_shot')}</span><span class="shot-cost">${t('game.take_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle8)} tokens</span></button>
+        <button class="shot-btn" onclick="buyBundle(16)"><span class="shot-count">${t('game.best_value')}</span><span class="shot-cost">${t('game.best_value_count')}</span><span class="shot-cost">${fmtTokens(p.bundle16)} tokens</span></button>
       </div>`;
   }
   function flagGradient(accent) {
@@ -704,12 +712,12 @@
     france:      'Did you know? Zidane scored two headers in the 1998 World Cup Final to win France\'s first World Cup.',
     brazil:      'Did you know? Ronaldo Nazário scored 15 World Cup goals across three tournaments, a record at the time.',
     england:     'Did you know? Beckham is the only England player to score in three separate World Cup tournaments.',
-    spain:       'Did you know? Iniesta scored the winning goal in the 2010 World Cup Final with just four minutes of extra time remaining.',
-    argentina:   'Did you know? Messi finally lifted the World Cup trophy in 2022, completing the greatest football career of his generation.',
+    spain:       'Did you know? Carles Puyol captained Spain to World Cup glory in 2010 and Euro 2012, becoming one of the greatest defenders and leaders in football history.',
+    argentina:   'Did you know? Maradona single-handedly led Argentina to World Cup glory in 1986, scoring the famous "Hand of God" goal and dribbling past the entire English team.',
     morocco:     'Did you know? Ziyech helped Morocco become the first African nation to reach a World Cup semi-final, in 2022.',
     usa:         'Did you know? Landon Donovan is the all-time leading scorer for the United States men\'s national team.',
     turkey:      'Did you know? Hakan Şükür scored after just 11 seconds against South Korea in 2002 — the fastest goal in World Cup history.',
-    belgium:     'Did you know? Eden Hazard captained Belgium\'s Golden Generation to their first World Cup semi-final in 32 years in 2018.',
+    belgium:     'Did you know? Romelu Lukaku scored 68 goals in 102 appearances for Belgium, making him the national team\'s all-time leading goalscorer.',
     egypt:       'Did you know? Salah\'s penalty in a World Cup qualifier against Congo sent Egypt to Russia 2018, their first appearance in 28 years.',
     portugal:    'Did you know? Cristiano Ronaldo holds the record for most international goals ever scored, surpassing 130 for Portugal.',
     netherlands: 'Did you know? Johan Cruyff won the Ballon d\'Or three times and popularised "Total Football" — the tactical revolution of the 1970s.',
@@ -933,6 +941,37 @@
   // ROUTING
   // ═══════════════════════════════════════════════════════════════
   function navigate(hash) { location.hash = hash; }
+
+  // Admin functions
+  async function checkAdminStatus() {
+    // For now, show reset button to all users for testing
+    const adminSection = document.getElementById('admin-reset-section');
+    if (adminSection) {
+      adminSection.style.display = 'block';
+    }
+  }
+
+  function confirmResetGame() {
+    const confirmed = confirm('This will clear all game data and reset all player balances to 2000 tokens. Continue?');
+    if (!confirmed) return;
+    resetGame();
+  }
+
+  async function resetGame() {
+    try {
+      const r = await api('POST', '/api/admin/reset-game');
+      if (r.ok) {
+        showToast('Game reset complete');
+        setTimeout(() => location.reload(), 500);
+      } else {
+        const err = await r.json();
+        showToast('Reset failed: ' + (err.error || 'Unknown error'));
+      }
+    } catch (err) {
+      showToast('Reset failed: ' + err.message);
+    }
+  }
+
   function route() {
     clearPolls();
     stopConfetti();
@@ -1025,7 +1064,7 @@
     const statsRow = `
       <div class="lobby-stats-row" style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
         <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-          <span style="font-size:0.7rem;color:#888;">Wallet</span>
+          <span style="font-size:0.7rem;color:#888;">${t('hud.wallet')}</span>
           <span class="val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${state.walletBalance !== undefined ? Math.round(state.walletBalance).toLocaleString() + ' t' : 'XXXXX'}</span>
         </div>
         ${(() => {
@@ -1093,7 +1132,7 @@
       // No tournament (or just completed) — flag-forward nation picker
       mainSection = `
         <h2 class="section-title">Choose your nation</h2>
-        <p class="hero-sub">${session && session.session_complete ? '🏆 Champions! Pick a nation to start a fresh tournament.' : 'Win seven matches — three group games, then the knockouts — to lift the cup.'}</p>
+        <p class="hero-sub">${session && session.session_complete ? '🏆 ' + t('lobby.return_hero') : t('lobby.instructions')}</p>
         <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
           ${state.themes.map(t => `
             <div class="nation-card" onclick="pickNation('${t.slug}')">
@@ -1104,9 +1143,24 @@
         </div>`;
     }
 
+    // Language selector
+    const languageSelector = `
+      <div style="margin-top:16px;padding:16px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#888;font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em;">Language</div>
+        <div class="language-grid">
+          ${window.SUPPORTED_LANGUAGES.map(lang => `
+            <button class="language-btn ${window.getLanguage() === lang ? 'active' : ''}" onclick="window.setLanguage('${lang}')" style="cursor:pointer;">
+              ${window.LANGUAGE_NAMES[lang]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
     body.innerHTML = `
       ${statsRow}
       ${mainSection}
+      ${languageSelector}
       `;
 
     maybeAutoShowInfo();
@@ -1292,10 +1346,10 @@
       : `/images/footballers/${theme.slug}.png`;
 
     const hud = `<div class="game-hud">
-      <div class="hud-chip"><span style="display:block;">Wallet</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
-      <div class="hud-chip"><span style="display:block;">Prize Pot</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">Shots</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${state.squaresRevealed}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1320,7 +1374,7 @@
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     let controls = '';
     if (credRemaining > 0) {
-      controls = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
+      controls = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
     } else {
       controls = shotButtonsHtml();
     }
@@ -1348,9 +1402,10 @@
       </div>`;
 
     // Match-start animation: fade in tiles sequentially with sparkle
-    // First, hide portrait initially
+    // First, hide portrait initially with transition ready
     const portraitEl = document.querySelector('.portrait');
     if (portraitEl) {
+      portraitEl.style.transition = 'opacity 0.6s ease';
       portraitEl.style.opacity = '0';
     }
 
@@ -1390,7 +1445,7 @@
     if (!row) return;
     const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     if (credRemaining > 0) {
-      row.innerHTML = `<div class="credits-chip">🎯 ${credRemaining} shot${credRemaining !== 1 ? 's' : ''} remaining</div>`;
+      row.innerHTML = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
     } else {
       row.innerHTML = shotButtonsHtml();
     }
@@ -1409,13 +1464,13 @@
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
       modal.innerHTML = `<div class="modal-box">
-        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">Out of Shots</div>
-        <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">You've used all your shots. Top up to keep playing!</p>
+        <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">${t('game.out_of_shots_title')}</div>
+        <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">${t('game.out_of_shots_desc')}</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">🎯 Buy 2 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">⚡ Buy 8 Shots</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">⭐ Buy 16 Shots</button>
-          <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">Close</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">${t('game.buy_2')}</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">${t('game.buy_8')}</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">${t('game.buy_16')}</button>
+          <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">${t('game.close')}</button>
         </div>
       </div>`;
       document.body.appendChild(modal);
@@ -1669,7 +1724,7 @@
 
     // Create name tag but don't append yet — will show after 5s portrait reveal
     const nameTag = document.createElement('div');
-    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;animation:toast-in 0.5s ease 0s, fadeout 4s ease 6s forwards;padding:0 8px;`;
+    nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:0.68rem;font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;">${fact}</div>` : '';
@@ -1763,7 +1818,8 @@
 
     if (skipWinSequence) { return showResult(); }
 
-    // Now show the name tag with trivia
+    // Now show the name tag with trivia — add animations when appending
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 4s ease 6s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
@@ -1826,7 +1882,7 @@
     state.walletBalance = d.wallet_balance;
     updateHud();
     updateCreditsDisplay();
-    showToast(`${size} shots loaded!`, 2000);
+    showToast(t('game.shots_loaded', {size: size}), 2000);
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -2197,8 +2253,19 @@
           </ul>
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
         </div>
+
+        <div id="admin-reset-section" style="display:none;">
+          <button id="reset-game-btn" onclick="confirmResetGame()"
+            style="background:rgba(200,50,50,0.2);border:1px solid rgba(200,50,50,0.5);
+                   border-radius:8px;padding:12px 16px;color:#ff6b6b;font-weight:700;
+                   font-family:'DM Sans',sans-serif;font-size:0.9rem;margin-top:16px;
+                   cursor:pointer;width:100%;transition:all 0.2s;">
+            🔄 Reset Game
+          </button>
+        </div>
       </div>
     </div>`;
+    checkAdminStatus();
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2216,6 +2283,13 @@
   }
 
   async function init() {
+    // Initialize i18n system
+    try {
+      await window.initI18n();
+    } catch (err) {
+      console.error('i18n init failed:', err);
+    }
+
     // Load themes globally for use across screens
     try {
       const r = await api('GET', '/api/themes');
