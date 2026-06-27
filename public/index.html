@@ -1434,7 +1434,7 @@
 
     body.innerHTML = `
       ${statsRow}
-      ${languageSelectorHtml()}
+      ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
       `;
 
