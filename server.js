@@ -2,13 +2,26 @@ const express = require('express');
 const path = require('path');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 const port = process.env.PORT || 3000;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  max: 20,
+});
 const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
+
+// Wallet integration constants
+const HOUSE_WALLET_PRIVATE_KEY = process.env.HOUSE_WALLET_PRIVATE_KEY || '';
+const HOUSE_WALLET_PUBLIC_KEY = process.env.HOUSE_WALLET_PUBLIC_KEY || 'utpk1rtpjdqwm53jv6t7ax6vxczlujv577nz33veskavdn48s6k3ljr8qmn798l';
+const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8';
+const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
+const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
 const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
@@ -121,13 +134,104 @@ async function runTimeoutCheck(client) {
   `);
 }
 
-// Local wallet helpers (platform wallet API not available in this environment)
+// ── Wallet transaction helpers (sidecar-based) ──────────────────────────────
+// Mock transaction signing for staging (no real sidecar calls)
+function generateMockTxHash() {
+  return 'tx_' + crypto.randomBytes(16).toString('hex');
+}
+
+async function sendTransactionViaSidecar(toAddress, amount, memo) {
+  // In staging with MOCK_WALLET_TXS, return a mock confirmed transaction immediately
+  if (MOCK_WALLET_TXS) {
+    return { tx_hash: generateMockTxHash(), status: 'confirmed' };
+  }
+
+  try {
+    const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/send`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        to: toAddress,
+        amount: amount,
+        memo: memo
+      }),
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      if (response.status === 402) {
+        throw { status: 402, message: 'Insufficient balance' };
+      }
+      throw new Error(`Sidecar error: ${response.status} ${JSON.stringify(err)}`);
+    }
+
+    const data = await response.json();
+    return { tx_hash: data.tx_hash, status: 'pending' };
+  } catch (err) {
+    if (err.status === 402) throw err;
+    throw new Error(`Failed to submit transaction to sidecar: ${err.message}`);
+  }
+}
+
+async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
+  // Poll for on-chain confirmation of the transaction
+  const startTime = Date.now();
+  const pollIntervalMs = 2000;
+
+  while (Date.now() - startTime < maxWaitMs) {
+    try {
+      // In mock mode, immediately return confirmed
+      if (MOCK_WALLET_TXS) {
+        return { status: 'confirmed' };
+      }
+
+      const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/status/${txHash}`, {
+        method: 'GET',
+        headers: { 'content-type': 'application/json' },
+        timeout: 5000
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.status === 'confirmed') {
+          return data;
+        }
+      }
+    } catch (err) {
+      // Continue polling on error, as the sidecar may be temporarily unavailable
+    }
+
+    // Wait before polling again
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+
+  throw new Error(`Transaction ${txHash} confirmation timeout after ${maxWaitMs}ms`);
+}
+
+async function recordTransaction(client, userId, txHash, direction, amount, reason, gameId = null, status = 'pending') {
+  await client.query(`
+    INSERT INTO wallet_transactions (user_id, tx_hash, direction, amount, reason, game_id, status, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+    ON CONFLICT (tx_hash) DO NOTHING
+  `, [userId, txHash, direction, amount, reason, gameId, status]);
+}
+
+async function updateTransactionStatus(client, txHash, status = 'confirmed') {
+  await client.query(`
+    UPDATE wallet_transactions
+    SET status = $2, confirmed_at = NOW()
+    WHERE tx_hash = $1
+  `, [txHash, status]);
+}
+
+// Local wallet helpers (now blockchain-backed with local cache)
 async function ensureWallet(client, userId, username) {
   await client.query(`
-    INSERT INTO player_wallets (user_id, username, balance)
-    VALUES ($1, $2, 1000)
+    INSERT INTO player_wallets (user_id, username, balance, wallet_address, last_synced_at)
+    VALUES ($1, $2, 1000, $3, NOW())
     ON CONFLICT (user_id) DO NOTHING
-  `, [userId, username]);
+  `, [userId, username, `wallet_${userId}`]);
 }
 
 async function getWalletBalance(client, userId) {
@@ -137,23 +241,76 @@ async function getWalletBalance(client, userId) {
   return rows.length > 0 ? parseFloat(rows[0].balance) : 1000;
 }
 
-async function debitWallet(client, userId, amount) {
-  const { rows } = await client.query(`
-    UPDATE player_wallets SET balance = balance - $2
-    WHERE user_id = $1 AND balance >= $2
-    RETURNING balance
-  `, [userId, amount]);
-  if (!rows.length) throw new Error('Insufficient balance');
-  return parseFloat(rows[0].balance);
+async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameId = null) {
+  try {
+    // Check local balance BEFORE calling sidecar, using pessimistic locking
+    const { rows: balanceRows } = await client.query(`
+      SELECT balance FROM player_wallets
+      WHERE user_id = $1 AND balance >= $2
+      FOR UPDATE
+    `, [userId, amount]);
+
+    if (!balanceRows.length) throw new Error('Insufficient balance');
+
+    // Submit transaction via sidecar (app to house transfer)
+    const txResult = await sendTransactionViaSidecar(HOUSE_WALLET_ADDRESS, amount, reason);
+    const txHash = txResult.tx_hash;
+
+    // Record transaction in audit log as pending
+    await recordTransaction(client, userId, txHash, 'debit', amount, reason, gameId, 'pending');
+
+    // Poll for on-chain confirmation
+    await pollTransactionConfirmation(txHash);
+
+    // Update transaction status to confirmed
+    await updateTransactionStatus(client, txHash, 'confirmed');
+
+    // Update local cache only after on-chain confirmation
+    const { rows } = await client.query(`
+      UPDATE player_wallets SET balance = balance - $2, last_transaction_id = $3, last_synced_at = NOW()
+      WHERE user_id = $1
+      RETURNING balance
+    `, [userId, amount, txHash]);
+
+    return parseFloat(rows[0].balance);
+  } catch (err) {
+    if (err.status === 402 || err.message === 'Insufficient balance') {
+      throw new Error('Insufficient balance');
+    }
+    throw err;
+  }
 }
 
-async function creditWallet(client, userId, amount) {
-  const { rows } = await client.query(`
-    UPDATE player_wallets SET balance = balance + $2
-    WHERE user_id = $1
-    RETURNING balance
-  `, [userId, amount]);
-  return rows.length ? parseFloat(rows[0].balance) : null;
+async function creditWallet(client, userId, amount, reason = 'prize_payout', gameId = null) {
+  try {
+    // Ensure wallet exists before crediting
+    await ensureWallet(client, userId, `user_${userId}`);
+
+    // Submit transaction via sidecar (house to app transfer)
+    const userWalletAddr = `wallet_${userId}`;
+    const txResult = await sendTransactionViaSidecar(userWalletAddr, amount, reason);
+    const txHash = txResult.tx_hash;
+
+    // Record transaction in audit log as pending
+    await recordTransaction(client, userId, txHash, 'credit', amount, reason, gameId, 'pending');
+
+    // Poll for on-chain confirmation
+    await pollTransactionConfirmation(txHash);
+
+    // Update transaction status to confirmed
+    await updateTransactionStatus(client, txHash, 'confirmed');
+
+    // Update local cache only after on-chain confirmation
+    const { rows } = await client.query(`
+      UPDATE player_wallets SET balance = balance + $2, last_transaction_id = $3, last_synced_at = NOW()
+      WHERE user_id = $1
+      RETURNING balance
+    `, [userId, amount, txHash]);
+
+    return rows.length ? parseFloat(rows[0].balance) : 0;
+  } catch (err) {
+    throw err;
+  }
 }
 
 async function pickNextOpponent(client, playedSlugs, myTeamSlug) {
@@ -562,7 +719,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
     const cost = perShot * bundle_size;
 
     await ensureWallet(client, req.user.id, req.user.username);
-    const newBalance = await debitWallet(client, req.user.id, cost);
+    const newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
 
     const { rows: sessRows } = await client.query(`
       INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
@@ -647,7 +804,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     if (!usedBundleId) {
       await ensureWallet(client, req.user.id, req.user.username);
       try {
-        await debitWallet(client, req.user.id, tokensCharged);
+        await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
       } catch {
         await client.query('ROLLBACK');
         return res.status(402).json({ error: 'Insufficient balance' });
@@ -729,7 +886,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
       // Credit prize + jackpot
       await ensureWallet(client, req.user.id, req.user.username);
-      await creditWallet(client, req.user.id, prizePaid + jackpotAmount);
+      let prizeWalletError = null;
+      try {
+        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+      } catch (err) {
+        prizeWalletError = err;
+        console.error('Prize payout wallet transaction failed:', err.message);
+      }
 
       // Remaining bundle credits are NOT refunded — they carry over to the next game
       // via the start-map handler which consolidates them into a new session.
@@ -748,9 +911,15 @@ app.post('/api/games/:id/guess', async (req, res) => {
         stageCompleted = true;
 
         let wonThisRound = prizePaid + jackpotAmount;
+        let bonusWalletError = null;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          await creditWallet(client, req.user.id, houseBonus);
+          try {
+            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+          } catch (err) {
+            bonusWalletError = err;
+            console.error('House bonus wallet transaction failed:', err.message);
+          }
           wonThisRound += houseBonus;
         }
 
@@ -823,14 +992,16 @@ app.post('/api/games/:id/guess', async (req, res) => {
       house_bonus: houseBonus,
       squares_revealed: game.total_guesses + 1,
       pot_balance: potBalance,
-      wallet_balance: walletBalance,
+      wallet_balance: walletBalance || 0,
       stage_completed: stageCompleted,
       new_stage_idx: newStageIdx,
       interstitial,
       pot_topup: potTopup,
       pot_topup_message: potTopupMessage,
       opponent_slug: game.theme_slug,
-      footballer_name: game.footballer_name
+      footballer_name: game.footballer_name,
+      prize_pending: prizeWalletError ? true : false,
+      bonus_pending: bonusWalletError ? true : false
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -923,9 +1094,23 @@ app.patch('/api/league/display-name', async (req, res) => {
 app.get('/api/wallet', async (req, res) => {
   const client = await pool.connect();
   try {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
     await ensureWallet(client, req.user.id, req.user.username);
     const balance = await getWalletBalance(client, req.user.id);
-    res.json({ balance });
+
+    const { rows } = await client.query(
+      'SELECT wallet_address, last_synced_at FROM player_wallets WHERE user_id = $1',
+      [req.user.id]
+    );
+
+    const walletData = rows[0] || { wallet_address: `wallet_${req.user.id}`, last_synced_at: null };
+
+    res.json({
+      balance,
+      address: walletData.wallet_address,
+      last_synced_at: walletData.last_synced_at
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   } finally {
@@ -1024,6 +1209,7 @@ const THEMES_SEED = [
 ];
 
 async function start() {
+  console.log('[init] Starting database migrations...');
   // ── Core tables ───────────────────────────────────────────────────────────
   await pool.query(`CREATE TABLE IF NOT EXISTS presses (
     id SERIAL PRIMARY KEY,
@@ -1132,8 +1318,31 @@ async function start() {
   await pool.query(`CREATE TABLE IF NOT EXISTS player_wallets (
     user_id INTEGER PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
-    balance NUMERIC(12,2) NOT NULL DEFAULT 1000
+    balance NUMERIC(12,2) NOT NULL DEFAULT 1000,
+    wallet_address VARCHAR(255),
+    last_synced_at TIMESTAMPTZ,
+    last_transaction_id VARCHAR(255)
   )`);
+  await pool.query(`COMMENT ON TABLE player_wallets IS 'staging:private'`);
+
+  // Add columns to existing player_wallets table (idempotent for staging)
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS wallet_address VARCHAR(255)`);
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMPTZ`);
+  await pool.query(`ALTER TABLE player_wallets ADD COLUMN IF NOT EXISTS last_transaction_id VARCHAR(255)`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS wallet_transactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    tx_hash VARCHAR(255) NOT NULL UNIQUE,
+    direction VARCHAR(20) NOT NULL,
+    amount NUMERIC(12,2) NOT NULL,
+    reason VARCHAR(255),
+    game_id INTEGER,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    confirmed_at TIMESTAMPTZ
+  )`);
+  await pool.query(`COMMENT ON TABLE wallet_transactions IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS admin_users (
     user_id INTEGER PRIMARY KEY,
@@ -1166,6 +1375,7 @@ async function start() {
   // Wipe all player/game rows on every staging boot so the seed below always
   // starts from a clean slate. Themes, captain_pot, and game_stats are kept.
   if (IS_STAGING) {
+    await pool.query(`DELETE FROM wallet_transactions`);
     await pool.query(`DELETE FROM guesses`);
     await pool.query(`DELETE FROM game_sessions`);
     await pool.query(`DELETE FROM games`);
@@ -1194,6 +1404,24 @@ async function start() {
       INSERT INTO admin_users (user_id, username)
       VALUES (-1, 'staging-admin'), (-2, 'flushthefashion')
       ON CONFLICT (user_id) DO NOTHING
+    `);
+
+    // Staging player wallets with generous starting balance
+    for (let i = 1; i <= 5; i++) {
+      await pool.query(`
+        INSERT INTO player_wallets (user_id, username, balance, wallet_address, last_synced_at)
+        VALUES ($1, $2, 5000, $3, NOW())
+        ON CONFLICT (user_id) DO NOTHING
+      `, [-i, `staging-player-${i}`, `staging_wallet_${i}`]);
+    }
+
+    // A broke staging player (zero balance) so the Flow 1 "out of shots —
+    // top up to play" notice and the insufficient-funds prompt are reachable
+    // without grinding a wallet down to zero by hand.
+    await pool.query(`
+      INSERT INTO player_wallets (user_id, username, balance, wallet_address, last_synced_at)
+      VALUES (-6, 'staging-broke-player', 0, 'staging_wallet_broke', NOW())
+      ON CONFLICT (user_id) DO UPDATE SET balance = 0
     `);
 
     // Test user with standard starting balance for fresh game testing
@@ -1259,6 +1487,7 @@ async function start() {
 
   }
 
+  console.log('[init] Database migrations completed, starting server...');
   app.listen(port, () => console.log(`Listening on :${port}`));
 }
 
