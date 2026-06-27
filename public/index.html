@@ -88,12 +88,15 @@
     .bg {
       position: fixed; inset: 0; z-index: -2;
       background-size: cover; background-position: center; background-repeat: no-repeat;
+      --overlay-opacity: 1;
     }
     .bg::after {
       content: ''; position: absolute; inset: 0;
       background:
         radial-gradient(ellipse at 50% 30%, rgba(8,9,20,0.0) 0%, rgba(8,9,20,0.35) 100%),
         linear-gradient(180deg, rgba(7,7,16,0.22) 0%, rgba(7,7,16,0.05) 50%, rgba(7,7,16,0.28) 100%);
+      opacity: var(--overlay-opacity);
+      transition: opacity 0.45s;
     }
     .font-dm { font-family: 'DM Sans', sans-serif; }
     .font-mono-stat { font-family: 'Space Mono', monospace; }
@@ -1165,7 +1168,10 @@
     stopConfetti();
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
-    if (flagBgEl) flagBgEl.style.backgroundImage = '';
+    if (flagBgEl) {
+      flagBgEl.style.backgroundImage = '';
+      flagBgEl.style.setProperty('--overlay-opacity', '1');
+    }
     document.documentElement.style.removeProperty('--accent');
     document.documentElement.style.removeProperty('--accent-soft');
     const hash = location.hash || '#lobby';
@@ -1982,6 +1988,11 @@
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
     dim.style.opacity = '0';
+    // Fade out flag overlay to reveal the flag background as the celebration backdrop
+    const flagBgEl = document.getElementById('flag-bg');
+    if (flagBgEl) {
+      flagBgEl.style.setProperty('--overlay-opacity', '0.15');
+    }
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
     // Step 3: Fade in portrait and hold for 5 seconds
