@@ -789,6 +789,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
 
+  let prizeWalletError = null;
+  let bonusWalletError = null;
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -982,7 +985,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
       // Credit prize + jackpot (skip in testing mode)
       if (req.gameMode !== 'testing') {
         await ensureWallet(client, req.user.id, req.user.username);
-        let prizeWalletError = null;
         try {
           await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
         } catch (err) {
@@ -1008,7 +1010,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
         stageCompleted = true;
 
         let wonThisRound = prizePaid + jackpotAmount;
-        let bonusWalletError = null;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
           if (req.gameMode !== 'testing') {
