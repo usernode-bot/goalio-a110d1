@@ -62,6 +62,7 @@
   "game.best_value": "⭐ En İyi Değer",
   "game.best_value_count": "16 şut",
   "game.shots_remaining": "🎯 {count} şut{plural} kaldı",
+  "game.shots_loaded": "⚽ {size} atış yüklendi!",
   "victory.you_won": "Kazandın!",
   "victory.total_tokens": "Kazanılan Toplam Jetireler",
   "victory.house_bonus": "Ev Bonusu: +50",

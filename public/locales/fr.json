@@ -62,6 +62,7 @@
   "game.best_value": "⭐ Meilleur Prix",
   "game.best_value_count": "16 coups",
   "game.shots_remaining": "🎯 {count} coup{plural} restant{plural}",
+  "game.shots_loaded": "⚽ {size} coups chargés!",
   "victory.you_won": "Vous avez gagné !",
   "victory.total_tokens": "Jetons Totaux Gagnés",
   "victory.house_bonus": "Bonus de la Maison : +50",

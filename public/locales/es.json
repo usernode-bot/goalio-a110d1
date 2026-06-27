@@ -62,6 +62,7 @@
   "game.best_value": "⭐ Mejor Valor",
   "game.best_value_count": "16 tiros",
   "game.shots_remaining": "🎯 {count} tiro{plural} restante{plural}",
+  "game.shots_loaded": "⚽ ¡{size} tiros cargados!",
   "victory.you_won": "¡Ganaste!",
   "victory.total_tokens": "Fichas Totales Ganadas",
   "victory.house_bonus": "Bono de la Casa: +50",
