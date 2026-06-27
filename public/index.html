@@ -1984,7 +1984,7 @@
       const bundleKey = `bundle${size}`;
       const cost = pricing[bundleKey] || 0;
       currentState.walletBalance = Math.max(0, currentState.walletBalance - cost);
-      currentState.credits = { credits_remaining: size, tokens_per_credit: 1 };
+      currentState.credits = { id: -1, credits_remaining: size, tokens_per_credit: 1 };
       updateHud();
       updateCreditsDisplay();
       showToast(t('game.shots_loaded', {size: size}), 2000);

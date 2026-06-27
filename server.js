@@ -824,6 +824,44 @@ app.post('/api/games/:id/guess', async (req, res) => {
       return res.status(409).json({ error: 'Square already revealed' });
     }
 
+    // In testing mode, return a mock response without persisting to database
+    if (req.gameMode === 'testing') {
+      await client.query('ROLLBACK');
+
+      const squaresRevealedBefore = (game.revealed || []).filter(Boolean).length;
+      const isHit = square_index === game.football_square;
+      const prizePaid = isHit ? prizeDecay(squaresRevealedBefore, gridSize) : 0;
+      const jackpotEligible = game.total_guesses === 0;
+      let jackpotPaid = 0;
+
+      if (isHit && jackpotEligible) {
+        // Mock jackpot from pot floor for testing
+        jackpotPaid = potFloorForStage(game.stage_idx);
+      }
+
+      return res.json({
+        hit: isHit,
+        square_index,
+        prize_paid: prizePaid,
+        jackpot_paid: jackpotPaid,
+        last_won_at: null,
+        credits_refunded: 0,
+        house_bonus: 0,
+        squares_revealed: squaresRevealedBefore + 1,
+        pot_balance: potFloorForStage(game.stage_idx),
+        wallet_balance: 1000,
+        stage_completed: false,
+        new_stage_idx: null,
+        interstitial: null,
+        pot_topup: 0,
+        pot_topup_message: null,
+        opponent_slug: game.theme_slug,
+        footballer_name: game.footballer_name,
+        prize_pending: false,
+        bonus_pending: false
+      });
+    }
+
     // Ensure wallet exists at the start of guess (prevents state pollution)
     if (req.gameMode !== 'testing') {
       try {
@@ -1041,7 +1079,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     const { rows: potRows } = await client.query('SELECT balance, last_won_at FROM captain_pot WHERE id = 1');
     const potBalance = potRows.length ? parseFloat(potRows[0].balance) : 100;
     const potLastWonAt = potRows.length ? potRows[0].last_won_at : null;
-    const walletBalance = await getWalletBalance(client, req.user.id);
+    const walletBalance = req.gameMode === 'testing' ? 1000 : await getWalletBalance(client, req.user.id);
 
     res.json({
       hit: isHit,
