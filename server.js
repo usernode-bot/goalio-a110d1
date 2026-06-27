@@ -1231,6 +1231,13 @@ app.get('/api/env', (req, res) => {
   res.json({ staging: IS_STAGING });
 });
 
+// Testing mode - allows skipping blockchain transactions
+app.get('/api/testing-mode', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  // In staging or with MOCK_WALLET_TXS enabled, testing mode is available
+  res.json({ available: IS_STAGING || MOCK_WALLET_TXS });
+});
+
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
