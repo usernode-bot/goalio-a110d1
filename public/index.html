@@ -753,15 +753,31 @@
   <div id="toast-container"></div>
 
   <script>
-  // Preload all footballer images on page load with retro loading popup
+  // Preload all footballer images on page load with retro loading popup & grid block
   (function() {
     const nations = ['france', 'brazil', 'england', 'spain', 'argentina', 'morocco', 'usa', 'turkey', 'belgium', 'egypt', 'portugal', 'netherlands', 'norway', 'germany', 'mexico'];
     let loadedCount = 0;
     let loadingPopup = null;
+    let loadingBlocker = null;
     let loadingTimeout = null;
 
     const showLoadingPopup = () => {
       if (loadingPopup) return;
+
+      // Create blocker overlay to prevent grid interaction
+      loadingBlocker = document.createElement('div');
+      loadingBlocker.id = 'loading-blocker';
+      loadingBlocker.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 9998;
+        background: rgba(0, 0, 0, 0);
+      `;
+      document.body.appendChild(loadingBlocker);
+
       loadingPopup = document.createElement('div');
       loadingPopup.id = 'loading-popup';
       loadingPopup.style.cssText = `
@@ -785,10 +801,10 @@
       loadingPopup.innerHTML = 'LOADING...';
       document.body.appendChild(loadingPopup);
 
-      // Auto-dismiss after 8 seconds
+      // Auto-dismiss after 4 seconds (timeout fallback)
       loadingTimeout = setTimeout(() => {
         dismissLoadingPopup();
-      }, 8000);
+      }, 4000);
     };
 
     const dismissLoadingPopup = () => {
@@ -796,16 +812,26 @@
       if (loadingTimeout) clearTimeout(loadingTimeout);
       loadingPopup.style.transition = 'opacity 0.35s ease-out';
       loadingPopup.style.opacity = '0';
+      if (loadingBlocker) {
+        loadingBlocker.style.transition = 'opacity 0.35s ease-out';
+        loadingBlocker.style.opacity = '0';
+      }
       setTimeout(() => {
         if (loadingPopup && loadingPopup.parentNode) {
           loadingPopup.parentNode.removeChild(loadingPopup);
         }
+        if (loadingBlocker && loadingBlocker.parentNode) {
+          loadingBlocker.parentNode.removeChild(loadingBlocker);
+        }
         loadingPopup = null;
+        loadingBlocker = null;
       }, 350);
     };
 
     const preloadImages = () => {
       showLoadingPopup();
+      let imagesStarted = 0;
+
       nations.forEach(nation => {
         const img = new Image();
         img.loading = 'eager';
@@ -822,10 +848,10 @@
           }
         };
         img.src = `/images/footballers/${nation}.png`;
-        img.style.display = 'none';
-        document.body.appendChild(img);
+        imagesStarted++;
       });
     };
+
     // Preload as soon as the DOM is ready
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', preloadImages);
