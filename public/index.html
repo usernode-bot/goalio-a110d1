@@ -1564,17 +1564,10 @@
         </div>`;
     }
 
-    const demoButtons = `
-      <div style="padding:16px;display:flex;gap:8px;">
-        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=final'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">📺 Demo Final</button>
-        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=topup'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">⚡ Demo Topup</button>
-      </div>`;
-
     body.innerHTML = `
       ${statsRow}
       ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
-      ${demoButtons}
       `;
 
     maybeAutoShowInfo();
