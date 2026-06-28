@@ -157,7 +157,7 @@
     .board-wrap {
       position: relative;
       border-radius: 14px;
-      overflow: hidden;
+      overflow: visible;
       aspect-ratio: 3/4;
       box-shadow:
         0 0 0 1px rgba(255,255,255,0.08),
@@ -181,6 +181,7 @@
     .board {
       position: absolute; inset: 0; z-index: 2;
       display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; padding: 2px;
+      perspective: 1000px;
     }
     .reveal {
       position: absolute; inset: 0; z-index: 6;
