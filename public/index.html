@@ -444,6 +444,31 @@
     .league-score { color: #fbbf24; text-align: right; }
     .my-row { background: rgba(251,191,36,0.05); }
 
+    /* Retro league table headers */
+    .league-table-retro thead th {
+      font-family: 'Press Start 2P', monospace !important;
+      font-size: 0.7rem !important;
+      color: #00FFFF !important;
+      text-transform: none !important;
+      letter-spacing: 1px !important;
+      text-shadow: 1px 1px 0 #FF1493, 2px 2px 0 #FFD700, 3px 3px 8px rgba(0,0,0,0.8) !important;
+      border-bottom: 2px solid #00FFFF !important;
+      padding: 12px 12px !important;
+    }
+    .league-table-retro tbody tr {
+      border-top: 2px solid #FF1493 !important;
+      border-bottom: 2px solid #00FFFF !important;
+    }
+    .league-table-retro tbody tr:last-child {
+      border-bottom: 2px solid #00FFFF !important;
+    }
+    .league-table-retro .league-rank {
+      color: #FFD700 !important;
+    }
+    .league-table-retro .league-name {
+      color: #00FFFF !important;
+    }
+
     /* Victory Stadium */
     #victory-bg { background: linear-gradient(180deg, #0d1b2a 0%, #0d1b2a 55%, #1a6b1a 55%, #1a6b1a 100%); min-height: 100vh; }
     @keyframes wave { 0%,100% { transform: skewX(-2deg); } 50% { transform: skewX(2deg); } }
@@ -728,6 +753,89 @@
   <div id="toast-container"></div>
 
   <script>
+  // Preload all footballer images on page load with retro loading popup
+  (function() {
+    const nations = ['france', 'brazil', 'england', 'spain', 'argentina', 'morocco', 'usa', 'turkey', 'belgium', 'egypt', 'portugal', 'netherlands', 'norway', 'germany', 'mexico'];
+    let loadedCount = 0;
+    let loadingPopup = null;
+    let loadingTimeout = null;
+
+    const showLoadingPopup = () => {
+      if (loadingPopup) return;
+      loadingPopup = document.createElement('div');
+      loadingPopup.id = 'loading-popup';
+      loadingPopup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        padding: 40px;
+        background: #000;
+        border: 4px solid #00FFFF;
+        clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);
+        box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.8);
+        text-align: center;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 1.5rem;
+        color: #00FFFF;
+        text-shadow: 0 0 10px #00FFFF, 0 0 20px #FF1493;
+        letter-spacing: 0.1em;
+      `;
+      loadingPopup.innerHTML = 'LOADING...';
+      document.body.appendChild(loadingPopup);
+
+      // Auto-dismiss after 8 seconds
+      loadingTimeout = setTimeout(() => {
+        dismissLoadingPopup();
+      }, 8000);
+    };
+
+    const dismissLoadingPopup = () => {
+      if (!loadingPopup) return;
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+      loadingPopup.style.transition = 'opacity 0.35s ease-out';
+      loadingPopup.style.opacity = '0';
+      setTimeout(() => {
+        if (loadingPopup && loadingPopup.parentNode) {
+          loadingPopup.parentNode.removeChild(loadingPopup);
+        }
+        loadingPopup = null;
+      }, 350);
+    };
+
+    const preloadImages = () => {
+      showLoadingPopup();
+      nations.forEach(nation => {
+        const img = new Image();
+        img.loading = 'eager';
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === nations.length) {
+            dismissLoadingPopup();
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          if (loadedCount === nations.length) {
+            dismissLoadingPopup();
+          }
+        };
+        img.src = `/images/footballers/${nation}.png`;
+        img.style.display = 'none';
+        document.body.appendChild(img);
+      });
+    };
+    // Preload as soon as the DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', preloadImages);
+    } else {
+      preloadImages();
+    }
+  })();
+  </script>
+
+  <script>
   // ═══════════════════════════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════════════════════════
@@ -976,6 +1084,81 @@
       const end = t + lead.length * beat;
       [60, 64, 67, 72].forEach((m, i) => this.tone(f(m), end + i * 0.05, 0.7, 'square', 0.14));
     },
+    nationPlayed: null,
+    nationCurrentSlug: null,
+    nationLoopTimer: null,
+    nationAnthem_data: {
+      brazil: { notes: [60,0,62,64, 65,0,64,62, 60,0,62,64, 65,67,69,0, 65,0,67,69, 71,0,69,67, 65,0,67,65, 62,0,60,0], beat: 0.22 },
+      argentina: { notes: [64,0,68,71, 75,0,73,71, 68,0,64,63, 60,0,63,0, 60,0,64,67, 71,0,69,67, 64,0,63,62, 60,0,59,0], beat: 0.28 },
+      france: { notes: [72,0,74,76, 77,0,76,74, 72,74,76,77, 79,0,81,0, 81,79,77,76, 74,72,74,76, 77,79,81,83, 84,0,83,0], beat: 0.20 },
+      portugal: { notes: [65,0,67,69, 70,0,69,67, 65,0,67,65, 63,0,62,0, 60,0,62,65, 67,0,65,62, 60,0,62,60, 59,0,58,0], beat: 0.30 },
+      morocco: { notes: [63,0,65,67, 68,0,67,65, 63,0,65,63, 61,0,60,0, 59,0,61,63, 65,0,63,61, 60,0,61,59, 58,0,57,0], beat: 0.26 },
+      spain: { notes: [72,76,79,83, 0,83,79,76, 72,76,79,83, 0,81,79,0, 76,72,76,79, 81,83,84,83, 79,76,72,76, 79,81,83,0], beat: 0.18 },
+      england: { notes: [70,72,74,76, 77,0,76,74, 72,70,72,74, 75,0,77,0, 79,77,76,74, 72,74,76,77, 79,81,82,81, 79,77,76,0], beat: 0.24 },
+      germany: { notes: [68,72,75,77, 80,0,77,75, 72,68,72,75, 76,0,78,0, 77,75,73,72, 70,72,75,77, 79,80,82,81, 80,78,77,0], beat: 0.24 },
+      mexico: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 },
+      belgium: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
+      egypt: { notes: [64,68,71,73, 76,0,73,71, 68,64,68,71, 72,0,74,0, 71,69,67,64, 63,67,71,73, 76,77,79,77, 75,73,71,0], beat: 0.26 },
+      netherlands: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,82,0, 79,77,76,74, 72,76,79,81, 83,84,85,84, 82,81,79,0], beat: 0.24 },
+      norway: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
+      turkey: { notes: [63,67,70,72, 75,0,72,70, 67,63,67,70, 71,0,73,0, 70,68,67,65, 63,67,70,72, 74,75,77,75, 73,72,70,0], beat: 0.26 },
+      usa: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 }
+    },
+    playNationAnthemOnce_internal(nationSlug) {
+      const ctx = this.ctx; if (!ctx || this.muted) return;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12);
+      const anthem = this.nationAnthem_data[nationSlug] || this.nationAnthem_data.brazil;
+      let t = ctx.currentTime + 0.06;
+      const beat = anthem.beat;
+      anthem.notes.forEach((m, i) => {
+        if (m) this.tone(f(m), t + i * beat, beat * 0.92, 'square', 0.12);
+      });
+      const bass = [48, 43, 45, 41];
+      for (let bar = 0; bar < Math.ceil(anthem.notes.length / 4); bar++) {
+        const root = bass[bar % bass.length];
+        const bt = t + bar * 4 * beat;
+        this.tone(f(root), bt, beat * 1.6, 'triangle', 0.10);
+        this.tone(f(root + 7), bt + 2 * beat, beat * 1.6, 'triangle', 0.08);
+      }
+    },
+    async nationAnthem(nationSlug) {
+      if (this.muted) return;
+      const ctx = await this.ensure(); if (!ctx) return;
+      if (this.nationCurrentSlug === nationSlug && this.nationLoopTimer) return;
+      if (this.nationLoopTimer) clearInterval(this.nationLoopTimer);
+      this.nationCurrentSlug = nationSlug;
+      const anthem = this.nationAnthem_data[nationSlug] || this.nationAnthem_data.brazil;
+      const duration = (anthem.notes.length * anthem.beat) + 0.1;
+      const playOnce = () => {
+        if (!this.muted) this.playNationAnthemOnce_internal(nationSlug);
+      };
+      playOnce();
+      this.nationLoopTimer = setInterval(playOnce, duration * 1000);
+    },
+    stopNationAnthem() {
+      if (this.nationLoopTimer) clearInterval(this.nationLoopTimer);
+      this.nationLoopTimer = null;
+      this.nationCurrentSlug = null;
+    },
+    async crowdCheer() {
+      if (this.muted) return;
+      const ctx = await this.ensure(); if (!ctx) return;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12);
+      const t = ctx.currentTime;
+      const notes = [48, 60, 72];
+      const durations = [0.15, 0.20, 0.25];
+      const delays = [0, 0.05, 0.10];
+      notes.forEach((m, i) => {
+        const startTime = t + delays[i];
+        const gain = 0.16 - (i * 0.03);
+        this.tone(f(m), startTime, durations[i], 'square', gain);
+      });
+      const hiChord = [67, 72, 79];
+      hiChord.forEach((m, i) => {
+        const startTime = t + 0.15 + (i * 0.04);
+        this.tone(f(m), startTime, 0.20, 'square', 0.12);
+      });
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
@@ -987,6 +1170,8 @@
   function playBlip() { Sound.blip(); }
   function playVictoryJingle() { Sound.victory(); }
   function playVictoryAnthem() { Sound.anthem(); }
+  function playNationAnthem(nationSlug) { return Sound.nationAnthem(nationSlug); }
+  function stopNationAnthem() { Sound.stopNationAnthem(); }
   window.toggleMute = function() { Sound.toggle(); };
   function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
   function updateMuteButtons() {
@@ -1192,6 +1377,8 @@
   function route() {
     clearPolls();
     stopConfetti();
+    const hash = location.hash || '#lobby';
+    if (hash !== '#lobby' && hash !== '#') stopNationAnthem();
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
@@ -1200,7 +1387,6 @@
     }
     document.documentElement.style.removeProperty('--accent');
     document.documentElement.style.removeProperty('--accent-soft');
-    const hash = location.hash || '#lobby';
     if (hash === '#lobby' || hash === '#') renderLobby();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') renderLeague();
@@ -1280,6 +1466,13 @@
   function renderLobbyBody(session) {
     const body = document.getElementById('lobby-body');
     if (!body) return;
+
+    // Play nation anthem if tournament is in progress
+    if (session && !session.session_complete && session.my_team_slug) {
+      stopNationAnthem();
+      setTimeout(() => playNationAnthem(session.my_team_slug), 10);
+    }
+
     const hasActiveSession = session && !session.session_complete && session.current_game_id;
     if (hasActiveSession) {
       // Resume — drop straight back into the active match
@@ -1394,7 +1587,7 @@
   function infoPanelHtml() {
     return `<div class="modal-box" style="text-align:left;max-width:360px;max-height:85vh;display:flex;flex-direction:column;padding:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex:0 0 auto;">
-        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.1rem;color:#fbbf24;">How GOAL! works</div>
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.9rem;color:#fbbf24;">How GOAL! works</div>
         <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;">×</button>
       </div>
       <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#cfcfe0;line-height:1.5;flex:1 1 auto;overflow-y:auto;min-height:0;">
@@ -1771,20 +1964,21 @@
   // ═══════════════════════════════════════════════════════════════
   function playGoalCelebration(accentColor, isFinal) {
     const stageIdx = state.session ? state.session.stage_idx : state.game.stage_idx;
+    const animationStart = performance.now();
 
-    // Screen shake
+    // Screen shake (0–600ms)
     const app = document.getElementById('app');
     if (app) app.classList.add('screen-shake');
     setTimeout(() => app && app.classList.remove('screen-shake'), 600);
 
-    // Shockwave pulse from center
+    // Shockwave pulse from center (0–800ms)
     const shockwave = document.createElement('div');
     shockwave.className = 'shockwave';
     shockwave.style.borderColor = accentColor || '#fbbf24';
     document.body.appendChild(shockwave);
     setTimeout(() => shockwave.remove(), 800);
 
-    // Confetti burst (15 particles)
+    // Confetti burst (15 particles, all removed at 2200ms)
     for (let i = 0; i < 15; i++) {
       const confetti = document.createElement('div');
       confetti.className = 'confetti';
@@ -1809,7 +2003,7 @@
       setTimeout(() => confetti.remove(), 2200);
     }
 
-    // Floating emojis (5 emojis floating upward)
+    // Floating emojis (5 emojis floating upward, staggered, all done by 2400ms + stagger)
     const emojiSet = ['⚽', '⭐', '🎊'];
     for (let i = 0; i < 5; i++) {
       const emoji = document.createElement('div');
@@ -1825,7 +2019,7 @@
       setTimeout(() => emoji.remove(), 2400 + i * 150);
     }
 
-    // GOAL text overlay
+    // GOAL text overlay (appears at 0, removed at 2600ms)
     const goalOverlay = document.createElement('div');
     goalOverlay.style.cssText = `
       position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -1879,6 +2073,7 @@
       flagBgEl.style.setProperty('--overlay-opacity', '0');
     }
 
+    await Sound.crowdCheer();
     playGoalCelebration(accentColor, isFinal);
 
     // Start tile exit animation immediately (at 0s) when celebration words appear
@@ -2313,15 +2508,17 @@
 
     body.innerHTML = `
       <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:16px;margin-bottom:20px;font-family:'DM Sans',sans-serif;">
-        <div style="font-size:0.8rem;color:#888;margin-bottom:4px;">League Prize</div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#FFD700;margin-bottom:4px;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #00FFFF,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:1px;">LEAGUE PRIZE</div>
         <div style="font-size:1rem;line-height:1.5;color:#f0f0f5;">The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong style="color:#fbbf24;font-family:'Space Mono',monospace;">${prizeAmt.toLocaleString()} tokens</strong> — 2% of all tokens ever collected by the game.</div>
         <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#888;margin-top:8px;">⏱ ${countdown} remaining</div>
       </div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:12px;">Top 20</div>
-      <table class="league-table">
-        <thead><tr><th style="text-align:left;">Rank</th><th style="text-align:left;">Player</th><th style="text-align:right;">Score</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:#555;padding:20px;">No scores yet</td></tr>'}${myRow}</tbody>
-      </table>`;
+      <div class="faq-retro-container" style="padding:20px;margin-bottom:20px;">
+        <div class="faq-retro-title" style="margin-bottom:16px;">Top 20</div>
+        <table class="league-table league-table-retro">
+          <thead><tr><th style="text-align:left;">Rank</th><th style="text-align:left;">Player</th><th style="text-align:right;">Score</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:#555;padding:20px;">No scores yet</td></tr>'}${myRow}</tbody>
+        </table>
+      </div>`;
   }
 
   function setupLeaguePolls(initialData) {
