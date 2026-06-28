@@ -910,6 +910,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, houseBonus = 0;
     let interstitial = null, newStageIdx = null, stageCompleted = false;
     let potTopup = 0, potTopupMessage = null;
+    let prizeWalletError = null, bonusWalletError = null;
 
     if (isHit) {
       prizePaid = prizeDecay(squaresRevealedBefore, gridSize);
@@ -942,7 +943,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
       // Credit prize + jackpot
       await ensureWallet(client, req.user.id, req.user.username);
-      let prizeWalletError = null;
       try {
         await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
       } catch (err) {
@@ -967,7 +967,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
         stageCompleted = true;
 
         let wonThisRound = prizePaid + jackpotAmount;
-        let bonusWalletError = null;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
           try {
