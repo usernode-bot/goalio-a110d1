@@ -291,6 +291,14 @@
 
     .reveal-fast { animation-duration: 0.31s !important; }
 
+    /* Tile exit animation for goal celebration */
+    @keyframes tile-exit-spin-fade {
+      0% { transform: scale(1) rotateZ(0deg); opacity: 1; filter: drop-shadow(0 0 8px gold); }
+      50% { transform: scale(1.1) rotateZ(180deg); opacity: 0.7; filter: drop-shadow(0 0 20px gold); }
+      100% { transform: scale(0) rotateZ(360deg); opacity: 0; filter: drop-shadow(0 0 0px gold); }
+    }
+    .tile-exit { animation: tile-exit-spin-fade 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
     /* Ensure reveal animations only apply within game board */
     #lobby-body .reveal-zoom-burst, #lobby-body .reveal-slide,
     #victory-bg .reveal-zoom-burst, #victory-bg .reveal-slide { animation: none !important; transform: none !important; }
@@ -1371,7 +1379,7 @@
 
     body.innerHTML = `
       ${statsRow}
-      ${languageSelectorHtml()}
+      ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
       ${demoButtons}
       `;
@@ -1860,7 +1868,27 @@
     // Play goal celebration with palette-aware colors
     const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
     const accentColor = palette ? palette.accent : '#fbbf24';
+
+    // Hide portrait and dim overlay at start so flag background is fully visible during celebration
+    const portraitEl = document.querySelector('.portrait');
+    if (portraitEl) {
+      portraitEl.style.opacity = '0';
+    }
+    const flagBgEl = document.getElementById('flag-bg');
+    if (flagBgEl) {
+      flagBgEl.style.setProperty('--overlay-opacity', '0');
+    }
+
     playGoalCelebration(accentColor, isFinal);
+
+    // Start tile exit animation immediately (at 0s) when celebration words appear
+    document.querySelectorAll('.tile').forEach((tile, idx) => {
+      tile.classList.add('tile-exit');
+      // Stagger the animation start with a random delay for visual interest
+      tile.style.animationDelay = (Math.random() * 0.3) + 'ms';
+      // After animation completes, mark as open for CSS transparency
+      setTimeout(() => { tile.classList.add('open'); }, 800);
+    });
 
     // Skip flag to allow touch/click to skip to result card
     let skipWinSequence = false;
@@ -1952,15 +1980,13 @@
 
     startConfetti();
 
+    // Stop confetti after 3 seconds
+    const confettiStopTimer = setTimeout(() => { stopConfetti(); }, 3000);
+
     await sleep(800);
-    if (skipWinSequence) { return showResult(); }
+    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
-    // Step 2: dim board and float football/trophy to centre — total 2s from start
-    const dim = document.createElement('div');
-    dim.className = 'board-dim';
-    dim.style.transition = 'opacity 0.45s';
-    boardZone && boardZone.appendChild(dim);
-
+    // Step 2: float football/trophy to centre — total 2s from start
     const icon = isFinal ? '🏆' : '⚽';
     const objEl = document.createElement('div');
     objEl.id = 'goal-ball';
@@ -2011,43 +2037,36 @@
 
     await sleep(Math.max(spinDuration, 1150) + 200); // 800 + 50 + spin duration = ~2500-3000ms total
 
-    if (skipWinSequence) { return showResult(); }
+    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
-    // Fade out icon and dim, then reveal portrait
+    // Fade out icon
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
-    dim.style.opacity = '0';
-    // Fade out flag overlay to reveal the flag background as the celebration backdrop
-    const flagBgEl = document.getElementById('flag-bg');
-    if (flagBgEl) {
-      flagBgEl.style.setProperty('--overlay-opacity', '0.15');
-    }
-    setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
+    // Flag overlay is already at 0 opacity (set at start of celebration)
+    setTimeout(() => { objEl.remove(); }, 500);
 
-    // Step 3: Fade in portrait and hold for 5 seconds
+    // Step 3: Fade in portrait at 2-3 seconds from start of sequence
+    // This happens while flag is visible, creating the effect of portrait briefly disappearing
     const portrait = document.querySelector('.portrait');
     if (portrait) {
       portrait.style.transition = 'opacity 0.6s ease';
       portrait.style.opacity = '1';
     }
-    // Hide all tiles by marking them as open so they're transparent
-    document.querySelectorAll('.tile').forEach(c => {
-      c.classList.add('open');
-    });
+    // Tiles are already animating from start of celebration (0s)
+    // Wait ~2-3 seconds before appending name tag at 4-5 second mark
+    // The portrait now fades in during this wait, overlaying the flag background
+    await sleep(2000);
 
-    // Wait 5 seconds while portrait is visible and unobstructed
-    await sleep(5000);
+    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
-    if (skipWinSequence) { return showResult(); }
-
-    // Now show the name tag with trivia — add animations when appending
-    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 4s ease 6s forwards';
+    // Confetti already stopped at 3s mark, now show the name tag with trivia
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 3.5s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
-    // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
-    await sleep(10000);
+    // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
+    await sleep(7000);
 
-    if (skipWinSequence) { return showResult(); }
+    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Step 5: Fade portrait to black
     const blackOverlay = document.createElement('div');
@@ -2056,6 +2075,7 @@
 
     await sleep(1500);
 
+    clearTimeout(confettiStopTimer);
     return showResult();
   }
 
