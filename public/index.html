@@ -759,7 +759,10 @@
     const preloadImages = () => {
       nations.forEach(nation => {
         const img = new Image();
+        img.loading = 'eager';
         img.src = `/images/footballers/${nation}.png`;
+        img.style.display = 'none';
+        document.body.appendChild(img);
       });
     };
     // Preload as soon as the DOM is ready
