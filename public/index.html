@@ -1061,20 +1061,23 @@
       if (this.muted) return;
       const ctx = await this.ensure(); if (!ctx) return;
       if (this.nationCurrentSlug === nationSlug && this.nationLoopTimer) return;
-      if (this.nationLoopTimer) clearTimeout(this.nationLoopTimer);
+      if (this.nationLoopTimer) clearInterval(this.nationLoopTimer);
       this.nationCurrentSlug = nationSlug;
       const anthem = this.nationAnthem_data[nationSlug] || this.nationAnthem_data.brazil;
       const duration = (anthem.notes.length * anthem.beat) + 0.1;
-      const playOnce = () => this.playNationAnthemOnce_internal(nationSlug);
+      const playOnce = () => {
+        if (!this.muted) this.playNationAnthemOnce_internal(nationSlug);
+      };
       playOnce();
       this.nationLoopTimer = setInterval(playOnce, duration * 1000);
     },
     stopNationAnthem() {
-      if (this.nationLoopTimer) clearTimeout(this.nationLoopTimer);
+      if (this.nationLoopTimer) clearInterval(this.nationLoopTimer);
       this.nationLoopTimer = null;
       this.nationCurrentSlug = null;
     },
     async crowdCheer() {
+      if (this.muted) return;
       const ctx = await this.ensure(); if (!ctx) return;
       const f = (m) => 440 * Math.pow(2, (m - 69) / 12);
       const t = ctx.currentTime;
@@ -1402,7 +1405,8 @@
 
     // Play nation anthem if tournament is in progress
     if (session && !session.session_complete && session.my_team_slug) {
-      playNationAnthem(session.my_team_slug);
+      stopNationAnthem();
+      setTimeout(() => playNationAnthem(session.my_team_slug), 10);
     }
 
     const hasActiveSession = session && !session.session_complete && session.current_game_id;
@@ -2005,7 +2009,7 @@
       flagBgEl.style.setProperty('--overlay-opacity', '0');
     }
 
-    Sound.crowdCheer();
+    await Sound.crowdCheer();
     playGoalCelebration(accentColor, isFinal);
 
     // Start tile exit animation immediately (at 0s) when celebration words appear
