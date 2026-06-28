@@ -753,13 +753,74 @@
   <div id="toast-container"></div>
 
   <script>
-  // Preload all footballer images on page load to prevent fade-in delays
+  // Preload all footballer images on page load with retro loading popup
   (function() {
     const nations = ['france', 'brazil', 'england', 'spain', 'argentina', 'morocco', 'usa', 'turkey', 'belgium', 'egypt', 'portugal', 'netherlands', 'norway', 'germany', 'mexico'];
+    let loadedCount = 0;
+    let loadingPopup = null;
+    let loadingTimeout = null;
+
+    const showLoadingPopup = () => {
+      if (loadingPopup) return;
+      loadingPopup = document.createElement('div');
+      loadingPopup.id = 'loading-popup';
+      loadingPopup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 9999;
+        padding: 40px;
+        background: #000;
+        border: 4px solid #00FFFF;
+        clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);
+        box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.8);
+        text-align: center;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 1.5rem;
+        color: #00FFFF;
+        text-shadow: 0 0 10px #00FFFF, 0 0 20px #FF1493;
+        letter-spacing: 0.1em;
+      `;
+      loadingPopup.innerHTML = 'LOADING...';
+      document.body.appendChild(loadingPopup);
+
+      // Auto-dismiss after 8 seconds
+      loadingTimeout = setTimeout(() => {
+        dismissLoadingPopup();
+      }, 8000);
+    };
+
+    const dismissLoadingPopup = () => {
+      if (!loadingPopup) return;
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+      loadingPopup.style.transition = 'opacity 0.35s ease-out';
+      loadingPopup.style.opacity = '0';
+      setTimeout(() => {
+        if (loadingPopup && loadingPopup.parentNode) {
+          loadingPopup.parentNode.removeChild(loadingPopup);
+        }
+        loadingPopup = null;
+      }, 350);
+    };
+
     const preloadImages = () => {
+      showLoadingPopup();
       nations.forEach(nation => {
         const img = new Image();
         img.loading = 'eager';
+        img.onload = () => {
+          loadedCount++;
+          if (loadedCount === nations.length) {
+            dismissLoadingPopup();
+          }
+        };
+        img.onerror = () => {
+          loadedCount++;
+          if (loadedCount === nations.length) {
+            dismissLoadingPopup();
+          }
+        };
         img.src = `/images/footballers/${nation}.png`;
         img.style.display = 'none';
         document.body.appendChild(img);
