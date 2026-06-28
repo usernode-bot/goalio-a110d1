@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
@@ -1231,6 +1232,7 @@ app.post('/api/admin/reset-game', async (req, res) => {
   }
 });
 
+app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/env', (req, res) => {
