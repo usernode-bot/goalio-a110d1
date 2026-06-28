@@ -1861,10 +1861,14 @@
     const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
     const accentColor = palette ? palette.accent : '#fbbf24';
 
-    // Hide portrait at start so flag background is fully visible during celebration
+    // Hide portrait and dim overlay at start so flag background is fully visible during celebration
     const portraitEl = document.querySelector('.portrait');
     if (portraitEl) {
       portraitEl.style.opacity = '0';
+    }
+    const flagBgEl = document.getElementById('flag-bg');
+    if (flagBgEl) {
+      flagBgEl.style.setProperty('--overlay-opacity', '0');
     }
 
     playGoalCelebration(accentColor, isFinal);
@@ -2020,15 +2024,11 @@
 
     if (skipWinSequence) { return showResult(); }
 
-    // Fade out icon and dim, then reveal portrait
+    // Fade out icon and dim
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
     dim.style.opacity = '0';
-    // Fade out flag overlay to reveal the flag background as the celebration backdrop
-    const flagBgEl = document.getElementById('flag-bg');
-    if (flagBgEl) {
-      flagBgEl.style.setProperty('--overlay-opacity', '0.15');
-    }
+    // Flag overlay is already at 0 opacity (set at start of celebration)
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
     // Step 3: Fade in portrait at 2-3 seconds from start of sequence
