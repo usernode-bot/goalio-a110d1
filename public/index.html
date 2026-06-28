@@ -782,8 +782,18 @@
         text-shadow: 0 0 10px #00FFFF, 0 0 20px #FF1493;
         letter-spacing: 0.1em;
       `;
-      loadingPopup.innerHTML = 'LOADING...';
+      loadingPopup.innerHTML = 'LOADING.';
       document.body.appendChild(loadingPopup);
+
+      // Animate pulsing dots
+      let dotCount = 1;
+      loadingPopup.animationInterval = setInterval(() => {
+        dotCount++;
+        if (dotCount > 4) {
+          dotCount = 1;
+        }
+        loadingPopup.innerHTML = 'LOADING' + '.'.repeat(dotCount);
+      }, 500);
 
       // Auto-dismiss after 8 seconds
       loadingTimeout = setTimeout(() => {
@@ -794,6 +804,7 @@
     const dismissLoadingPopup = () => {
       if (!loadingPopup) return;
       if (loadingTimeout) clearTimeout(loadingTimeout);
+      if (loadingPopup.animationInterval) clearInterval(loadingPopup.animationInterval);
       loadingPopup.style.transition = 'opacity 0.35s ease-out';
       loadingPopup.style.opacity = '0';
       setTimeout(() => {
