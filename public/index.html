@@ -1379,7 +1379,7 @@
 
     body.innerHTML = `
       ${statsRow}
-      ${languageSelectorHtml()}
+      ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
       ${demoButtons}
       `;
@@ -1881,6 +1881,15 @@
 
     playGoalCelebration(accentColor, isFinal);
 
+    // Start tile exit animation immediately (at 0s) when celebration words appear
+    document.querySelectorAll('.tile').forEach((tile, idx) => {
+      tile.classList.add('tile-exit');
+      // Stagger the animation start with a random delay for visual interest
+      tile.style.animationDelay = (Math.random() * 0.3) + 'ms';
+      // After animation completes, mark as open for CSS transparency
+      setTimeout(() => { tile.classList.add('open'); }, 800);
+    });
+
     // Skip flag to allow touch/click to skip to result card
     let skipWinSequence = false;
     let resultShown = false;
@@ -2043,15 +2052,7 @@
       portrait.style.transition = 'opacity 0.6s ease';
       portrait.style.opacity = '1';
     }
-    // Hide all tiles with interesting exit animation (spin, fade, scale)
-    document.querySelectorAll('.tile').forEach((tile, idx) => {
-      tile.classList.add('tile-exit');
-      // Stagger the animation start with a random delay for visual interest
-      tile.style.animationDelay = (Math.random() * 0.3) + 'ms';
-      // After animation completes, mark as open for CSS transparency
-      setTimeout(() => { tile.classList.add('open'); }, 800);
-    });
-
+    // Tiles are already animating from start of celebration (0s)
     // Wait ~2-3 seconds before appending name tag at 4-5 second mark
     // The portrait now fades in during this wait, overlaying the flag background
     await sleep(2000);
