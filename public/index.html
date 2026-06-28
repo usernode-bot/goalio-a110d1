@@ -745,6 +745,8 @@
     .shot-btn:active { background: rgba(109,123,255,0.28); transform: scale(0.97); }
     .shot-btn .shot-count { font-size: 0.68rem; color: #f0f0f5; font-weight: 800; letter-spacing: 0.01em; line-height: 1.2; }
     .shot-btn .shot-cost { font-size: 0.58rem; color: rgba(251,191,36,0.85); font-weight: 600; letter-spacing: 0.04em; font-family: 'Space Mono', monospace; line-height: 1.2; }
+    .loading-text { display: inline; }
+    .loading-dots { display: inline; min-width: 3.5ch; text-align: left; }
   </style>
 </head>
 <body>
@@ -765,13 +767,14 @@
     let currentDotCount = 0;
 
     const updateLoadingDots = () => {
-      if (!loadingPopup) return;
+      const dotsSpan = loadingPopup?.querySelector('.loading-dots');
+      if (!dotsSpan) return;
       currentDotCount = (currentDotCount + 1) % 5;
-      let text = 'Loading';
+      let text = '';
       for (let i = 0; i < currentDotCount; i++) {
         text += '.';
       }
-      loadingPopup.textContent = text;
+      dotsSpan.textContent = text;
     };
 
     const showLoadingPopup = () => {
@@ -817,7 +820,7 @@
         letter-spacing: 0.05em;
         white-space: nowrap;
       `;
-      loadingPopup.textContent = 'Loading';
+      loadingPopup.innerHTML = '<span class="loading-text">Loading</span><span class="loading-dots"></span>';
       document.body.appendChild(loadingPopup);
 
       // Start dot animation (100ms per step = 6 dots per second)
