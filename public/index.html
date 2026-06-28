@@ -1860,6 +1860,13 @@
     // Play goal celebration with palette-aware colors
     const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
     const accentColor = palette ? palette.accent : '#fbbf24';
+
+    // Hide portrait at start so flag background is fully visible during celebration
+    const portraitEl = document.querySelector('.portrait');
+    if (portraitEl) {
+      portraitEl.style.opacity = '0';
+    }
+
     playGoalCelebration(accentColor, isFinal);
 
     // Skip flag to allow touch/click to skip to result card
@@ -2024,7 +2031,8 @@
     }
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
-    // Step 3: Fade in portrait and hold for ~2-3 seconds
+    // Step 3: Fade in portrait at 2-3 seconds from start of sequence
+    // This happens while flag is visible, creating the effect of portrait briefly disappearing
     const portrait = document.querySelector('.portrait');
     if (portrait) {
       portrait.style.transition = 'opacity 0.6s ease';
@@ -2035,8 +2043,8 @@
       c.classList.add('open');
     });
 
-    // Wait ~2-3 seconds (timing calculated from start: 800 + 50 + spinDuration(~2300) + ~50 = ~3200ms)
-    // Before appending name tag at 4-5 second mark
+    // Wait ~2-3 seconds before appending name tag at 4-5 second mark
+    // The portrait now fades in during this wait, overlaying the flag background
     await sleep(2000);
 
     if (skipWinSequence) { return showResult(); }
