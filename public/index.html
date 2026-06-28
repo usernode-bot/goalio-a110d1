@@ -2338,7 +2338,7 @@
   // ═══════════════════════════════════════════════════════════════
   // FAQ PAGE
   // ═══════════════════════════════════════════════════════════════
-  let testingModeActive = false;
+  let testingModeActive = true;
   let testingModeAvailable = false;
 
   async function renderFaq() {
@@ -2556,8 +2556,8 @@
   }
 
   async function init() {
-    // Initialize testing mode from localStorage
-    testingModeActive = localStorage.getItem('testingMode') === 'true';
+    // Initialize testing mode from localStorage, default to true (demo/testing mode)
+    testingModeActive = localStorage.getItem('testingMode') !== 'false';
 
     // Initialize i18n system
     try {
