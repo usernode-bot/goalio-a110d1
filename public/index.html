@@ -753,13 +753,26 @@
   <div id="toast-container"></div>
 
   <script>
-  // Preload all footballer images on page load with retro loading popup & grid block
-  (function() {
+  // Preload footballer images with grid-page-only loading popup with animated dots
+  const FootballerPreloader = (() => {
     const nations = ['france', 'brazil', 'england', 'spain', 'argentina', 'morocco', 'usa', 'turkey', 'belgium', 'egypt', 'portugal', 'netherlands', 'norway', 'germany', 'mexico'];
     let loadedCount = 0;
+    let totalNeeded = 0;
     let loadingPopup = null;
     let loadingBlocker = null;
     let loadingTimeout = null;
+    let dotAnimationInterval = null;
+    let currentDotCount = 0;
+
+    const updateLoadingDots = () => {
+      if (!loadingPopup) return;
+      currentDotCount = (currentDotCount + 1) % 5;
+      let text = 'Loading';
+      for (let i = 0; i < currentDotCount; i++) {
+        text += '.';
+      }
+      loadingPopup.textContent = text;
+    };
 
     const showLoadingPopup = () => {
       if (loadingPopup) return;
@@ -786,20 +799,25 @@
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 9999;
-        padding: 40px;
+        padding: 20px 30px;
         background: #000;
-        border: 4px solid #00FFFF;
+        border: 3px solid #00FFFF;
         clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);
         box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 255, 0.8);
         text-align: center;
         font-family: 'Press Start 2P', cursive;
-        font-size: 1.5rem;
+        font-size: 0.9rem;
         color: #00FFFF;
         text-shadow: 0 0 10px #00FFFF, 0 0 20px #FF1493;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.05em;
+        white-space: nowrap;
       `;
-      loadingPopup.innerHTML = 'LOADING...';
+      loadingPopup.textContent = 'Loading';
       document.body.appendChild(loadingPopup);
+
+      // Start dot animation (400ms per step)
+      currentDotCount = 0;
+      dotAnimationInterval = setInterval(updateLoadingDots, 400);
 
       // Auto-dismiss after 4 seconds (timeout fallback)
       loadingTimeout = setTimeout(() => {
@@ -810,6 +828,7 @@
     const dismissLoadingPopup = () => {
       if (!loadingPopup) return;
       if (loadingTimeout) clearTimeout(loadingTimeout);
+      if (dotAnimationInterval) clearInterval(dotAnimationInterval);
       loadingPopup.style.transition = 'opacity 0.35s ease-out';
       loadingPopup.style.opacity = '0';
       if (loadingBlocker) {
@@ -828,36 +847,33 @@
       }, 350);
     };
 
-    const preloadImages = () => {
+    const preloadImagesForGrid = () => {
+      loadedCount = 0;
+      totalNeeded = nations.length;
       showLoadingPopup();
-      let imagesStarted = 0;
 
       nations.forEach(nation => {
         const img = new Image();
         img.loading = 'eager';
         img.onload = () => {
           loadedCount++;
-          if (loadedCount === nations.length) {
+          if (loadedCount === totalNeeded) {
             dismissLoadingPopup();
           }
         };
         img.onerror = () => {
           loadedCount++;
-          if (loadedCount === nations.length) {
+          if (loadedCount === totalNeeded) {
             dismissLoadingPopup();
           }
         };
         img.src = `/images/footballers/${nation}.png`;
-        imagesStarted++;
       });
     };
 
-    // Preload as soon as the DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', preloadImages);
-    } else {
-      preloadImages();
-    }
+    return {
+      preloadForGrid: preloadImagesForGrid
+    };
   })();
   </script>
 
@@ -1727,6 +1743,7 @@
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
       </div>
     </div>`;
+    FootballerPreloader.preloadForGrid();
     await loadGame(id);
   }
 
