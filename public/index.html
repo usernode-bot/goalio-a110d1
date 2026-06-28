@@ -2024,7 +2024,7 @@
     }
     setTimeout(() => { objEl.remove(); dim.remove(); }, 500);
 
-    // Step 3: Fade in portrait and hold for 5 seconds
+    // Step 3: Fade in portrait and hold for ~2-3 seconds
     const portrait = document.querySelector('.portrait');
     if (portrait) {
       portrait.style.transition = 'opacity 0.6s ease';
@@ -2035,17 +2035,21 @@
       c.classList.add('open');
     });
 
-    // Wait 5 seconds while portrait is visible and unobstructed
-    await sleep(5000);
+    // Wait ~2-3 seconds (timing calculated from start: 800 + 50 + spinDuration(~2300) + ~50 = ~3200ms)
+    // Before appending name tag at 4-5 second mark
+    await sleep(2000);
 
     if (skipWinSequence) { return showResult(); }
 
+    // Stop confetti when name tag appears (at ~4-5 second mark from goal scored)
+    stopConfetti();
+
     // Now show the name tag with trivia — add animations when appending
-    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 4s ease 6s forwards';
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 3.5s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
-    // Wait while name tag is visible and fading (6s visible + 4s fade = 10s total)
-    await sleep(10000);
+    // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
+    await sleep(7000);
 
     if (skipWinSequence) { return showResult(); }
 
