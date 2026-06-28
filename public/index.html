@@ -753,6 +753,25 @@
   <div id="toast-container"></div>
 
   <script>
+  // Preload all footballer images on page load to prevent fade-in delays
+  (function() {
+    const nations = ['france', 'brazil', 'england', 'spain', 'argentina', 'morocco', 'usa', 'turkey', 'belgium', 'egypt', 'portugal', 'netherlands', 'norway', 'germany', 'mexico'];
+    const preloadImages = () => {
+      nations.forEach(nation => {
+        const img = new Image();
+        img.src = `/images/footballers/${nation}.png`;
+      });
+    };
+    // Preload as soon as the DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', preloadImages);
+    } else {
+      preloadImages();
+    }
+  })();
+  </script>
+
+  <script>
   // ═══════════════════════════════════════════════════════════════
   // STATE
   // ═══════════════════════════════════════════════════════════════
@@ -2338,7 +2357,7 @@
 
     body.innerHTML = `
       <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:16px;margin-bottom:20px;font-family:'DM Sans',sans-serif;">
-        <div style="font-size:0.8rem;color:#888;margin-bottom:4px;">League Prize</div>
+        <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#FFD700;margin-bottom:4px;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #00FFFF,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:1px;">LEAGUE PRIZE</div>
         <div style="font-size:1rem;line-height:1.5;color:#f0f0f5;">The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong style="color:#fbbf24;font-family:'Space Mono',monospace;">${prizeAmt.toLocaleString()} tokens</strong> — 2% of all tokens ever collected by the game.</div>
         <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#888;margin-top:8px;">⏱ ${countdown} remaining</div>
       </div>
