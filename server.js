@@ -23,7 +23,7 @@ const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqc
 const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
@@ -1195,7 +1195,6 @@ app.get('/api/admin/check', async (req, res) => {
 
 // Admin reset game endpoint
 app.post('/api/admin/reset-game', async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1241,7 +1240,6 @@ app.get('/api/env', (req, res) => {
 
 // Testing mode - allows skipping blockchain transactions
 app.get('/api/testing-mode', (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   // In staging or with MOCK_WALLET_TXS enabled, testing mode is available
   res.json({ available: IS_STAGING || MOCK_WALLET_TXS });
 });

@@ -1096,13 +1096,15 @@
   }
 
   function backToGameBannerHtml() {
-    if (!state.game || state.game.status !== 'active' || !state.game.id) return '';
-    return `<a href="#game/${state.game.id}" onclick="navigate('#game/${state.game.id}');return false;"
+    const hasActiveGame = state.game && state.game.status === 'active' && state.game.id;
+    const gameLink = hasActiveGame ? `#game/${state.game.id}` : '#lobby';
+    const gameText = hasActiveGame ? 'Back to Game' : 'Back to Lobby';
+    return `<a href="${gameLink}" onclick="navigate('${gameLink}');return false;"
         style="display:flex;align-items:center;gap:8px;padding:10px 16px;min-height:44px;
                background:rgba(109,123,255,0.13);border-bottom:1px solid rgba(109,123,255,0.28);
                font-family:'DM Sans',sans-serif;font-size:0.88rem;font-weight:700;color:#a5b4fc;
                text-decoration:none;flex-shrink:0;">
-      ⚽ ← Back to Game
+      ⚽ ← ${gameText}
     </a>`;
   }
 
