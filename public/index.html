@@ -444,6 +444,31 @@
     .league-score { color: #fbbf24; text-align: right; }
     .my-row { background: rgba(251,191,36,0.05); }
 
+    /* Retro league table headers */
+    .league-table-retro thead th {
+      font-family: 'Press Start 2P', monospace !important;
+      font-size: 0.7rem !important;
+      color: #00FFFF !important;
+      text-transform: none !important;
+      letter-spacing: 1px !important;
+      text-shadow: 1px 1px 0 #FF1493, 2px 2px 0 #FFD700, 3px 3px 8px rgba(0,0,0,0.8) !important;
+      border-bottom: 2px solid #00FFFF !important;
+      padding: 12px 12px !important;
+    }
+    .league-table-retro tbody tr {
+      border-top: 2px solid #FF1493 !important;
+      border-bottom: 2px solid #00FFFF !important;
+    }
+    .league-table-retro tbody tr:last-child {
+      border-bottom: 2px solid #00FFFF !important;
+    }
+    .league-table-retro .league-rank {
+      color: #FFD700 !important;
+    }
+    .league-table-retro .league-name {
+      color: #00FFFF !important;
+    }
+
     /* Victory Stadium */
     #victory-bg { background: linear-gradient(180deg, #0d1b2a 0%, #0d1b2a 55%, #1a6b1a 55%, #1a6b1a 100%); min-height: 100vh; }
     @keyframes wave { 0%,100% { transform: skewX(-2deg); } 50% { transform: skewX(2deg); } }
@@ -1394,7 +1419,7 @@
   function infoPanelHtml() {
     return `<div class="modal-box" style="text-align:left;max-width:360px;max-height:85vh;display:flex;flex-direction:column;padding:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex:0 0 auto;">
-        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:1.1rem;color:#fbbf24;">How GOAL! works</div>
+        <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.9rem;color:#fbbf24;">How GOAL! works</div>
         <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;">×</button>
       </div>
       <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#cfcfe0;line-height:1.5;flex:1 1 auto;overflow-y:auto;min-height:0;">
@@ -2317,11 +2342,13 @@
         <div style="font-size:1rem;line-height:1.5;color:#f0f0f5;">The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong style="color:#fbbf24;font-family:'Space Mono',monospace;">${prizeAmt.toLocaleString()} tokens</strong> — 2% of all tokens ever collected by the game.</div>
         <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#888;margin-top:8px;">⏱ ${countdown} remaining</div>
       </div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:12px;">Top 20</div>
-      <table class="league-table">
-        <thead><tr><th style="text-align:left;">Rank</th><th style="text-align:left;">Player</th><th style="text-align:right;">Score</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:#555;padding:20px;">No scores yet</td></tr>'}${myRow}</tbody>
-      </table>`;
+      <div class="faq-retro-container" style="padding:20px;margin-bottom:20px;">
+        <div class="faq-retro-title" style="margin-bottom:16px;">Top 20</div>
+        <table class="league-table league-table-retro">
+          <thead><tr><th style="text-align:left;">Rank</th><th style="text-align:left;">Player</th><th style="text-align:right;">Score</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="3" style="text-align:center;color:#555;padding:20px;">No scores yet</td></tr>'}${myRow}</tbody>
+        </table>
+      </div>`;
   }
 
   function setupLeaguePolls(initialData) {
