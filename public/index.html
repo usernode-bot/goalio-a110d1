@@ -1966,12 +1966,7 @@
     await sleep(800);
     if (skipWinSequence) { return showResult(); }
 
-    // Step 2: dim board and float football/trophy to centre — total 2s from start
-    const dim = document.createElement('div');
-    dim.className = 'board-dim';
-    dim.style.transition = 'opacity 0.45s';
-    boardZone && boardZone.appendChild(dim);
-
+    // Step 2: float football/trophy to centre — total 2s from start
     const icon = isFinal ? '🏆' : '⚽';
     const objEl = document.createElement('div');
     objEl.id = 'goal-ball';
