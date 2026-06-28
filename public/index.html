@@ -1021,42 +1021,76 @@
       [60, 64, 67, 72].forEach((m, i) => this.tone(f(m), end + i * 0.05, 0.7, 'square', 0.14));
     },
     nationPlayed: null,
-    async nationAnthem(nationSlug) {
-      if (this.nationPlayed === nationSlug) return; // Don't replay same nation
-      const ctx = await this.ensure(); if (!ctx) return;
-      const f = (m) => 440 * Math.pow(2, (m - 69) / 12); // MIDI → Hz
-      const anthems = {
-        brazil: { notes: [60,0,62,64, 65,0,64,62, 60,0,62,64, 65,67,69,0, 65,0,67,69, 71,0,69,67, 65,0,67,65, 62,0,60,0], beat: 0.22 },
-        argentina: { notes: [64,0,68,71, 75,0,73,71, 68,0,64,63, 60,0,63,0, 60,0,64,67, 71,0,69,67, 64,0,63,62, 60,0,59,0], beat: 0.28 },
-        france: { notes: [72,0,74,76, 77,0,76,74, 72,74,76,77, 79,0,81,0, 81,79,77,76, 74,72,74,76, 77,79,81,83, 84,0,83,0], beat: 0.20 },
-        portugal: { notes: [65,0,67,69, 70,0,69,67, 65,0,67,65, 63,0,62,0, 60,0,62,65, 67,0,65,62, 60,0,62,60, 59,0,58,0], beat: 0.30 },
-        morocco: { notes: [63,0,65,67, 68,0,67,65, 63,0,65,63, 61,0,60,0, 59,0,61,63, 65,0,63,61, 60,0,61,59, 58,0,57,0], beat: 0.26 },
-        spain: { notes: [72,76,79,83, 0,83,79,76, 72,76,79,83, 0,81,79,0, 76,72,76,79, 81,83,84,83, 79,76,72,76, 79,81,83,0], beat: 0.18 },
-        england: { notes: [70,72,74,76, 77,0,76,74, 72,70,72,74, 75,0,77,0, 79,77,76,74, 72,74,76,77, 79,81,82,81, 79,77,76,0], beat: 0.24 },
-        germany: { notes: [68,72,75,77, 80,0,77,75, 72,68,72,75, 76,0,78,0, 77,75,73,72, 70,72,75,77, 79,80,82,81, 80,78,77,0], beat: 0.24 },
-        mexico: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 },
-        belgium: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
-        egypt: { notes: [64,68,71,73, 76,0,73,71, 68,64,68,71, 72,0,74,0, 71,69,67,64, 63,67,71,73, 76,77,79,77, 75,73,71,0], beat: 0.26 },
-        netherlands: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,82,0, 79,77,76,74, 72,76,79,81, 83,84,85,84, 82,81,79,0], beat: 0.24 },
-        norway: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
-        turkey: { notes: [63,67,70,72, 75,0,72,70, 67,63,67,70, 71,0,73,0, 70,68,67,65, 63,67,70,72, 74,75,77,75, 73,72,70,0], beat: 0.26 },
-        usa: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 }
-      };
-      const anthem = anthems[nationSlug] || anthems.brazil;
+    nationCurrentSlug: null,
+    nationLoopTimer: null,
+    nationAnthem_data: {
+      brazil: { notes: [60,0,62,64, 65,0,64,62, 60,0,62,64, 65,67,69,0, 65,0,67,69, 71,0,69,67, 65,0,67,65, 62,0,60,0], beat: 0.22 },
+      argentina: { notes: [64,0,68,71, 75,0,73,71, 68,0,64,63, 60,0,63,0, 60,0,64,67, 71,0,69,67, 64,0,63,62, 60,0,59,0], beat: 0.28 },
+      france: { notes: [72,0,74,76, 77,0,76,74, 72,74,76,77, 79,0,81,0, 81,79,77,76, 74,72,74,76, 77,79,81,83, 84,0,83,0], beat: 0.20 },
+      portugal: { notes: [65,0,67,69, 70,0,69,67, 65,0,67,65, 63,0,62,0, 60,0,62,65, 67,0,65,62, 60,0,62,60, 59,0,58,0], beat: 0.30 },
+      morocco: { notes: [63,0,65,67, 68,0,67,65, 63,0,65,63, 61,0,60,0, 59,0,61,63, 65,0,63,61, 60,0,61,59, 58,0,57,0], beat: 0.26 },
+      spain: { notes: [72,76,79,83, 0,83,79,76, 72,76,79,83, 0,81,79,0, 76,72,76,79, 81,83,84,83, 79,76,72,76, 79,81,83,0], beat: 0.18 },
+      england: { notes: [70,72,74,76, 77,0,76,74, 72,70,72,74, 75,0,77,0, 79,77,76,74, 72,74,76,77, 79,81,82,81, 79,77,76,0], beat: 0.24 },
+      germany: { notes: [68,72,75,77, 80,0,77,75, 72,68,72,75, 76,0,78,0, 77,75,73,72, 70,72,75,77, 79,80,82,81, 80,78,77,0], beat: 0.24 },
+      mexico: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 },
+      belgium: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
+      egypt: { notes: [64,68,71,73, 76,0,73,71, 68,64,68,71, 72,0,74,0, 71,69,67,64, 63,67,71,73, 76,77,79,77, 75,73,71,0], beat: 0.26 },
+      netherlands: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,82,0, 79,77,76,74, 72,76,79,81, 83,84,85,84, 82,81,79,0], beat: 0.24 },
+      norway: { notes: [70,74,77,79, 82,0,79,77, 74,70,74,77, 78,0,80,0, 77,75,74,72, 70,74,77,79, 81,82,84,82, 80,79,77,0], beat: 0.24 },
+      turkey: { notes: [63,67,70,72, 75,0,72,70, 67,63,67,70, 71,0,73,0, 70,68,67,65, 63,67,70,72, 74,75,77,75, 73,72,70,0], beat: 0.26 },
+      usa: { notes: [72,76,79,81, 84,0,81,79, 76,72,76,79, 80,0,84,0, 83,81,79,76, 72,76,79,81, 84,86,87,86, 84,81,79,0], beat: 0.22 }
+    },
+    playNationAnthemOnce_internal(nationSlug) {
+      const ctx = this.ctx; if (!ctx || this.muted) return;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12);
+      const anthem = this.nationAnthem_data[nationSlug] || this.nationAnthem_data.brazil;
       let t = ctx.currentTime + 0.06;
       const beat = anthem.beat;
       anthem.notes.forEach((m, i) => {
         if (m) this.tone(f(m), t + i * beat, beat * 0.92, 'square', 0.12);
       });
-      // Add bass line
-      const bass = [48, 43, 45, 41]; // C3 G2 A2 F2 (default)
+      const bass = [48, 43, 45, 41];
       for (let bar = 0; bar < Math.ceil(anthem.notes.length / 4); bar++) {
         const root = bass[bar % bass.length];
         const bt = t + bar * 4 * beat;
         this.tone(f(root), bt, beat * 1.6, 'triangle', 0.10);
         this.tone(f(root + 7), bt + 2 * beat, beat * 1.6, 'triangle', 0.08);
       }
-      this.nationPlayed = nationSlug;
+    },
+    async nationAnthem(nationSlug) {
+      if (this.muted) return;
+      const ctx = await this.ensure(); if (!ctx) return;
+      if (this.nationCurrentSlug === nationSlug && this.nationLoopTimer) return;
+      if (this.nationLoopTimer) clearTimeout(this.nationLoopTimer);
+      this.nationCurrentSlug = nationSlug;
+      const anthem = this.nationAnthem_data[nationSlug] || this.nationAnthem_data.brazil;
+      const duration = (anthem.notes.length * anthem.beat) + 0.1;
+      const playOnce = () => this.playNationAnthemOnce_internal(nationSlug);
+      playOnce();
+      this.nationLoopTimer = setInterval(playOnce, duration * 1000);
+    },
+    stopNationAnthem() {
+      if (this.nationLoopTimer) clearTimeout(this.nationLoopTimer);
+      this.nationLoopTimer = null;
+      this.nationCurrentSlug = null;
+    },
+    async crowdCheer() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const f = (m) => 440 * Math.pow(2, (m - 69) / 12);
+      const t = ctx.currentTime;
+      const notes = [48, 60, 72];
+      const durations = [0.15, 0.20, 0.25];
+      const delays = [0, 0.05, 0.10];
+      notes.forEach((m, i) => {
+        const startTime = t + delays[i];
+        const gain = 0.16 - (i * 0.03);
+        this.tone(f(m), startTime, durations[i], 'square', gain);
+      });
+      const hiChord = [67, 72, 79];
+      hiChord.forEach((m, i) => {
+        const startTime = t + 0.15 + (i * 0.04);
+        this.tone(f(m), startTime, 0.20, 'square', 0.12);
+      });
     },
     toggle() {
       this.muted = !this.muted;
@@ -1069,7 +1103,8 @@
   function playBlip() { Sound.blip(); }
   function playVictoryJingle() { Sound.victory(); }
   function playVictoryAnthem() { Sound.anthem(); }
-  function playNationAnthem(nationSlug) { Sound.nationAnthem(nationSlug); }
+  function playNationAnthem(nationSlug) { return Sound.nationAnthem(nationSlug); }
+  function stopNationAnthem() { Sound.stopNationAnthem(); }
   window.toggleMute = function() { Sound.toggle(); };
   function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
   function updateMuteButtons() {
@@ -1275,6 +1310,8 @@
   function route() {
     clearPolls();
     stopConfetti();
+    const hash = location.hash || '#lobby';
+    if (hash !== '#lobby' && hash !== '#') stopNationAnthem();
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
@@ -1283,7 +1320,6 @@
     }
     document.documentElement.style.removeProperty('--accent');
     document.documentElement.style.removeProperty('--accent-soft');
-    const hash = location.hash || '#lobby';
     if (hash === '#lobby' || hash === '#') renderLobby();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') renderLeague();
@@ -1969,6 +2005,7 @@
       flagBgEl.style.setProperty('--overlay-opacity', '0');
     }
 
+    Sound.crowdCheer();
     playGoalCelebration(accentColor, isFinal);
 
     // Start tile exit animation immediately (at 0s) when celebration words appear
