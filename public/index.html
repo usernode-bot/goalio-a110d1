@@ -1498,9 +1498,9 @@
 
           <!-- Match info bar -->
           <div style="width:100%;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-around;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.75rem;">
-            <div><span style="color:#888;">Odds</span><br><span style="color:${accentColor};font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
+            <div><span style="color:#888;">Number of Tiles</span><br><span style="color:${accentColor};font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
             <div><span style="color:#888;">Prize Range</span><br><span style="color:#10b981;font-weight:700;font-size:0.9rem;">${prizeDecay(0, gridSizeForStage(session.stage_idx))}–${prizeDecay(gridSizeForStage(session.stage_idx) - 1, gridSizeForStage(session.stage_idx))}</span></div>
-            <div><span style="color:#888;">Pot</span><br><span style="color:#fbbf24;font-weight:700;font-size:0.9rem;">${Math.round(state.potBalance)}</span></div>
+            <div><span style="color:#888;">Captain's Pot Odds</span><br><span style="color:#fbbf24;font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}-1</span></div>
           </div>
 
           <!-- CTA Button -->
@@ -1680,6 +1680,9 @@
       state.game = d.game;
       state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
       state.credits = d.credits;
+      if (state.credits && state.credits.credits_remaining !== undefined) {
+        state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
+      }
       state.walletBalance = d.wallet_balance;
       state.potBalance = d.captain_pot_balance;
       state.prevPotBalance = d.captain_pot_balance;
@@ -1835,10 +1838,10 @@
     }
     if ((game.revealed || [])[idx]) return;
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) || 0 : 0;
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
-    if (!sessId) {
+    if (credRemaining === 0) {
       const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
@@ -2270,6 +2273,18 @@
       showToast('Wallet not initialized — please reload', 3000);
       return;
     }
+
+    if (testingModeActive) {
+      const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+      const cost = p['bundle' + size];
+      state.walletBalance = Math.max(0, state.walletBalance - cost);
+      state.credits = { id: state.game.id, credits_remaining: size, tokens_per_credit: 1 };
+      updateHud();
+      updateCreditsDisplay();
+      showToast(t('game.shots_loaded', {size: size}), 2000);
+      return;
+    }
+
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
