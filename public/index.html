@@ -1683,7 +1683,10 @@
       if (state.credits && state.credits.credits_remaining !== undefined) {
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
       }
-      state.walletBalance = d.wallet_balance;
+      // In testing mode, preserve the frontend-managed balance; real mode syncs from server
+      if (!testingModeActive) {
+        state.walletBalance = d.wallet_balance;
+      }
       state.potBalance = d.captain_pot_balance;
       state.prevPotBalance = d.captain_pot_balance;
       state.squaresRevealed = d.squares_revealed;
