@@ -1206,8 +1206,8 @@ app.post('/api/admin/reset-game', async (req, res) => {
       await client.query('DELETE FROM tournament_sessions');
       await client.query('DELETE FROM player_stats');
 
-      // Reset player wallets to 2000
-      await client.query('UPDATE player_wallets SET balance = 2000');
+      // Reset player wallets to 1000
+      await client.query('UPDATE player_wallets SET balance = 1000');
 
       // Reset captain pot
       await client.query(`
