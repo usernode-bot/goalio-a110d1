@@ -2714,17 +2714,6 @@
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
-  function getQueryParam(name) {
-    try { return new URLSearchParams(location.search).get(name); } catch(_) { return null; }
-  }
-  async function handleDemoFinal() {
-    if (!state.themes.length) {
-      try { const r = await api('GET', '/api/themes'); if (r.ok) state.themes = (await r.json()).themes || []; } catch(_) {}
-    }
-    state.session = { my_team_slug: 'brazil', total_tokens_won: 420, session_complete: true };
-    renderVictoryStadium({ interstitial: 'final_win', jackpot_paid: 0, prize_paid: 96, new_stage_idx: 7 });
-  }
-
   async function init() {
     // Initialize testing mode from localStorage, default to true (demo/testing mode)
     testingModeActive = localStorage.getItem('testingMode') !== 'false';
@@ -2763,18 +2752,7 @@
       }
     } catch {}
 
-    // Demo triggers (staging review aids) — pure client-side UI states, so they
-    // work against an empty DB. Harmless no-op shells in prod if ever appended.
-    const demo = getQueryParam('demo');
-    if (demo === 'final') { await handleDemoFinal(); return; }
-
     route();
-
-    if (demo === 'topup') {
-      setTimeout(() => { showPotTopupPopup(3, potTopupEnteringStage(3)); }, 400);
-    } else if (demo === 'info') {
-      setTimeout(() => { showInfoPanel(); }, 400);
-    }
 
   }
 
