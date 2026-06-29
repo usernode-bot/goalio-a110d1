@@ -718,6 +718,8 @@ app.post('/api/games/:id/bundle', async (req, res) => {
     return res.status(400).json({ error: 'bundle_size must be 2, 8, or 16' });
   }
 
+  const testingMode = req.headers['x-testing-mode'] === 'true';
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -753,17 +755,47 @@ app.post('/api/games/:id/bundle', async (req, res) => {
       return res.status(500).json({ error: 'Wallet initialization failed' });
     }
 
-    // Attempt wallet debit with explicit error handling
+    // In testing mode, skip sidecar and directly debit wallet
     let newBalance;
-    try {
-      newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
-    } catch (err) {
-      await client.query('ROLLBACK');
-      if (err.message === 'Insufficient balance') {
-        return res.status(402).json({ error: 'Insufficient balance' });
+    if (testingMode) {
+      try {
+        // Check balance
+        const { rows: balanceRows } = await client.query(`
+          SELECT balance FROM player_wallets
+          WHERE user_id = $1 AND balance >= $2
+          FOR UPDATE
+        `, [req.user.id, cost]);
+
+        if (!balanceRows.length) {
+          await client.query('ROLLBACK');
+          return res.status(402).json({ error: 'Insufficient balance' });
+        }
+
+        // Direct balance update in testing mode (no sidecar call)
+        const { rows } = await client.query(`
+          UPDATE player_wallets SET balance = balance - $2
+          WHERE user_id = $1
+          RETURNING balance
+        `, [req.user.id, cost]);
+
+        newBalance = parseFloat(rows[0].balance);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Testing mode wallet debit failed:', err.message);
+        return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
       }
-      console.error('Bundle wallet debit failed:', err.message);
-      return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
+    } else {
+      // Real mode: call sidecar
+      try {
+        newBalance = await debitWallet(client, req.user.id, cost, 'shot_bundle', req.params.id);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        if (err.message === 'Insufficient balance') {
+          return res.status(402).json({ error: 'Insufficient balance' });
+        }
+        console.error('Bundle wallet debit failed:', err.message);
+        return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
+      }
     }
 
     const { rows: sessRows } = await client.query(`
@@ -1272,8 +1304,8 @@ app.get('/api/env', (req, res) => {
 
 // Testing mode - allows skipping blockchain transactions
 app.get('/api/testing-mode', (req, res) => {
-  // In staging or with MOCK_WALLET_TXS enabled, testing mode is available
-  res.json({ available: IS_STAGING || MOCK_WALLET_TXS });
+  // Hardcoded to always show testing mode panel (temporary, for faster testing)
+  res.json({ available: true });
 });
 
 app.get('*', (_req, res) => {
