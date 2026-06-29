@@ -1272,7 +1272,6 @@ app.get('/api/env', (req, res) => {
 
 // Testing mode - allows skipping blockchain transactions
 app.get('/api/testing-mode', (req, res) => {
-  // In staging or with MOCK_WALLET_TXS enabled, testing mode is available
   res.json({ available: IS_STAGING || MOCK_WALLET_TXS });
 });
 

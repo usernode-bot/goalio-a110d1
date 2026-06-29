@@ -2212,7 +2212,7 @@
     // Tiles are already animating from start of celebration (0s)
     // Wait ~2-3 seconds before appending name tag at 4-5 second mark
     // The portrait now fades in during this wait, overlaying the flag background
-    await sleep(2000);
+    await sleep(1000);
 
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
@@ -2221,7 +2221,7 @@
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
-    await sleep(7000);
+    await sleep(6000);
 
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
