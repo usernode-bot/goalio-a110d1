@@ -24,7 +24,7 @@ const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqc
 const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/admin/reset-player-tokens', '/api/testing-mode']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
@@ -1221,6 +1221,59 @@ app.post('/api/admin/reset-game', async (req, res) => {
 
       await client.query('COMMIT');
       res.json({ success: true, message: 'Game reset complete' });
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// Admin reset player tokens endpoint
+app.post('/api/admin/reset-player-tokens', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
+  const { username, token_amount } = req.body;
+  if (!username || token_amount === undefined) {
+    return res.status(400).json({ error: 'Missing username or token_amount' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const isAdmin = await isUserAdmin(client, req.user.id);
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    // Find user by username
+    const userResult = await client.query(
+      'SELECT user_id, username FROM player_wallets WHERE username = $1',
+      [username]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ error: `User "${username}" not found in player_wallets` });
+    }
+
+    const userId = userResult.rows[0].user_id;
+
+    // Update balance
+    await client.query('BEGIN');
+    try {
+      const updateResult = await client.query(
+        'UPDATE player_wallets SET balance = $1 WHERE user_id = $2 RETURNING user_id, username, balance',
+        [token_amount, userId]
+      );
+
+      await client.query('COMMIT');
+      res.json({
+        success: true,
+        message: `Reset ${username}'s tokens to ${token_amount}`,
+        updated: updateResult.rows[0]
+      });
     } catch (txErr) {
       await client.query('ROLLBACK');
       throw txErr;
