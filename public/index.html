@@ -1243,6 +1243,7 @@
         <span class="header-logo-sub">World Cup Edition</span>
       </a>
       <div class="header-btns font-dm">
+        <button class="header-btn" onclick="resetMyBalance()" title="Start new game">+</button>
         <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
         <button class="header-btn mute-btn" style="opacity:${Sound.muted ? '0.55' : '1'};" onclick="toggleMute()" title="Toggle sound">${muteIcon()}</button>
         <button class="header-btn" onclick="navigate('#faq')" title="FAQ">?</button>
@@ -2284,6 +2285,22 @@
     updateHud();
     updateCreditsDisplay();
     showToast(t('game.shots_loaded', {size: size}), 2000);
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // RESET PLAYER BALANCE
+  // ═══════════════════════════════════════════════════════════════
+  window.resetMyBalance = async function() {
+    const r = await api('POST', '/api/player/reset-balance');
+    if (!r.ok) {
+      const e = await r.json().catch(() => ({}));
+      showToast(e.error || 'Reset failed', 3000);
+      return;
+    }
+    const d = await r.json();
+    state.walletBalance = d.new_balance;
+    updateHud();
+    showToast('Balance reset to 1,000 tokens', 3000);
   };
 
   // ═══════════════════════════════════════════════════════════════
