@@ -1272,7 +1272,7 @@ app.get('/api/env', (req, res) => {
 
 // Testing mode - allows skipping blockchain transactions
 app.get('/api/testing-mode', (req, res) => {
-  res.json({ available: IS_STAGING || MOCK_WALLET_TXS });
+  res.json({ available: true });
 });
 
 app.get('*', (_req, res) => {
