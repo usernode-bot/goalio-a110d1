@@ -1680,6 +1680,9 @@
       state.game = d.game;
       state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
       state.credits = d.credits;
+      if (state.credits && state.credits.credits_remaining !== undefined) {
+        state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
+      }
       state.walletBalance = d.wallet_balance;
       state.potBalance = d.captain_pot_balance;
       state.prevPotBalance = d.captain_pot_balance;
@@ -1835,10 +1838,10 @@
     }
     if ((game.revealed || [])[idx]) return;
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) || 0 : 0;
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
-    if (!sessId) {
+    if (credRemaining === 0) {
       const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
