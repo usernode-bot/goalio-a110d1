@@ -1882,7 +1882,12 @@
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
       game.revealed[idx] = true;
       state.squaresRevealed = d.squares_revealed;
-      state.walletBalance = d.wallet_balance;
+      // In testing mode with active credits, preserve the frontend-managed balance.
+      // The server deducts tokens (unaware of testing mode), but testing mode balance
+      // is front-end only. Real mode or no active credits: sync from server.
+      if (!(testingModeActive && sessId)) {
+        state.walletBalance = d.wallet_balance;
+      }
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
       if (state.credits && sessId && state.credits.credits_remaining !== undefined) {
         const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
