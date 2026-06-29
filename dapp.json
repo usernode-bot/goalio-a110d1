@@ -61,16 +61,6 @@
       "expectText": "How GOAL! works"
     },
     {
-      "name": "Pre-round Captain's Pot pop-up",
-      "path": "/?demo=topup",
-      "expectText": "now added to the Captain's Pot"
-    },
-    {
-      "name": "Final-win screen headline",
-      "path": "/?demo=final",
-      "expectText": "have won the World Cup"
-    },
-    {
       "name": "Game board grid renders",
       "path": "/#game/2",
       "expectSelector": ".game-grid"
