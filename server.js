@@ -1251,7 +1251,7 @@ app.get('*', (_req, res) => {
 
 const THEMES_SEED = [
   { slug: 'france',      country_name: 'France',      accent_colour: '#3b6dff', footballer_name: 'Zinedine Zidane' },
-  { slug: 'brazil',      country_name: 'Brazil',      accent_colour: '#22c55e', footballer_name: 'Ronaldo Nazário' },
+  { slug: 'brazil',      country_name: 'Brazil',      accent_colour: '#22c55e', footballer_name: 'Neymar Jr' },
   { slug: 'england',     country_name: 'England',     accent_colour: '#e23b4e', footballer_name: 'David Beckham' },
   { slug: 'spain',       country_name: 'Spain',       accent_colour: '#f1bf00', footballer_name: 'Andrés Iniesta' },
   { slug: 'argentina',   country_name: 'Argentina',   accent_colour: '#74ACDF', footballer_name: 'Diego Maradona' },
