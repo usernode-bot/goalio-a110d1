@@ -40,32 +40,144 @@
     }
   ],
   "tests": [
-    { "name": "Lobby renders nation picker", "path": "/", "expectSelector": ".nation-picker" },
-    { "name": "Lobby shows Captain's Pot", "path": "/", "expectText": "Captain's Pot" },
-    { "name": "Lobby shows Choose your nation", "path": "/", "expectText": "Choose your nation" },
-    { "name": "Home info panel auto-shows", "path": "/", "expectText": "How GOAL! works" },
-    { "name": "Pre-round Captain's Pot pop-up", "path": "/?demo=topup", "expectText": "now added to the Captain's Pot" },
-    { "name": "Final-win screen headline", "path": "/?demo=final", "expectText": "have won the World Cup" },
-    { "name": "Game board grid renders", "path": "/#game/2", "expectSelector": ".game-grid" },
-    { "name": "Game board shows HUD", "path": "/#game/2", "expectSelector": ".hud-chip" },
-    { "name": "Game board shows header bar", "path": "/#game/2", "expectSelector": "header" },
-    { "name": "Game board shows nation strip", "path": "/#game/2", "expectSelector": ".nation-strip" },
-    { "name": "Game board shows hint bar", "path": "/#game/2", "expectSelector": "#hint-bar" },
-    { "name": "Game board shows bundle buttons", "path": "/#game/2", "expectText": "44 tokens" },
-    { "name": "Game board shows Mute control", "path": "/#game/2", "expectText": "Mute" },
-    { "name": "League page renders", "path": "/#league", "expectSelector": ".league-table" },
-    { "name": "League page shows prize deadline", "path": "/#league", "expectText": "19 July 2026" },
-    { "name": "FAQ page renders", "path": "/#faq", "expectText": "Captain's Pot" },
-    { "name": "FAQ shows house edge section", "path": "/#faq", "expectText": "Tech & Profitability" },
-    { "name": "FAQ displays reset button", "path": "/#faq", "expectText": "RESET GAME" },
-    { "name": "FAQ displays testing mode toggle", "path": "/#faq", "expectText": "TESTING MODE" },
-    { "name": "FAQ shows testing mode controls", "path": "/#faq", "expectText": "REAL TOKENS" },
-    { "name": "Themes API returns all nations", "path": "/api/themes", "expectText": "brazil" },
-    { "name": "Session API responds", "path": "/api/session", "expectText": "session" },
-    { "name": "Session API exposes pot last_won_at for load-seed", "path": "/api/session", "expectText": "last_won_at" },
-    { "name": "Captain-pot API names the last winner", "path": "/api/captain-pot", "expectText": "last_winner_username" },
-    { "name": "League API returns rankings", "path": "/api/league", "expectText": "rankings" },
-    { "name": "Wallet API returns balance", "path": "/api/wallet", "expectText": "balance" },
-    { "name": "Wallet balance displays in HUD", "path": "/#game/2", "expectText": "tokens" }
-  ]
+    {
+      "name": "Lobby renders nation picker",
+      "path": "/",
+      "expectSelector": ".nation-picker"
+    },
+    {
+      "name": "Lobby shows Captain's Pot",
+      "path": "/",
+      "expectText": "Captain's Pot"
+    },
+    {
+      "name": "Lobby shows Choose your nation",
+      "path": "/",
+      "expectText": "Choose your nation"
+    },
+    {
+      "name": "Home info panel auto-shows",
+      "path": "/",
+      "expectText": "How GOAL! works"
+    },
+    {
+      "name": "Pre-round Captain's Pot pop-up",
+      "path": "/?demo=topup",
+      "expectText": "now added to the Captain's Pot"
+    },
+    {
+      "name": "Final-win screen headline",
+      "path": "/?demo=final",
+      "expectText": "have won the World Cup"
+    },
+    {
+      "name": "Game board grid renders",
+      "path": "/#game/2",
+      "expectSelector": ".game-grid"
+    },
+    {
+      "name": "Game board shows HUD",
+      "path": "/#game/2",
+      "expectSelector": ".hud-chip"
+    },
+    {
+      "name": "Game board shows header bar",
+      "path": "/#game/2",
+      "expectSelector": "header"
+    },
+    {
+      "name": "Game board shows nation strip",
+      "path": "/#game/2",
+      "expectSelector": ".nation-strip"
+    },
+    {
+      "name": "Game board shows hint bar",
+      "path": "/#game/2",
+      "expectSelector": "#hint-bar"
+    },
+    {
+      "name": "Game board shows bundle buttons",
+      "path": "/#game/2",
+      "expectText": "44 tokens"
+    },
+    {
+      "name": "Game board shows Mute control",
+      "path": "/#game/2",
+      "expectText": "Mute"
+    },
+    {
+      "name": "League page renders",
+      "path": "/#league",
+      "expectSelector": ".league-table"
+    },
+    {
+      "name": "League page shows prize deadline",
+      "path": "/#league",
+      "expectText": "19 July 2026"
+    },
+    {
+      "name": "FAQ page renders",
+      "path": "/#faq",
+      "expectText": "Captain's Pot"
+    },
+    {
+      "name": "FAQ shows house edge section",
+      "path": "/#faq",
+      "expectText": "Tech & Profitability"
+    },
+    {
+      "name": "FAQ displays reset button",
+      "path": "/#faq",
+      "expectText": "RESET GAME"
+    },
+    {
+      "name": "FAQ displays testing mode toggle",
+      "path": "/#faq",
+      "expectText": "TESTING MODE"
+    },
+    {
+      "name": "FAQ shows testing mode controls",
+      "path": "/#faq",
+      "expectText": "REAL TOKENS"
+    },
+    {
+      "name": "Themes API returns all nations",
+      "path": "/api/themes",
+      "expectText": "brazil"
+    },
+    {
+      "name": "Session API responds",
+      "path": "/api/session",
+      "expectText": "session"
+    },
+    {
+      "name": "Session API exposes pot last_won_at for load-seed",
+      "path": "/api/session",
+      "expectText": "last_won_at"
+    },
+    {
+      "name": "Captain-pot API names the last winner",
+      "path": "/api/captain-pot",
+      "expectText": "last_winner_username"
+    },
+    {
+      "name": "League API returns rankings",
+      "path": "/api/league",
+      "expectText": "rankings"
+    },
+    {
+      "name": "Wallet API returns balance",
+      "path": "/api/wallet",
+      "expectText": "balance"
+    },
+    {
+      "name": "Wallet balance displays in HUD",
+      "path": "/#game/2",
+      "expectText": "tokens"
+    }
+  ],
+  "visibility": {
+    "build": "private",
+    "view": "public"
+  }
 }
