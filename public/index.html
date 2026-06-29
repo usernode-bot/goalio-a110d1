@@ -1842,7 +1842,7 @@
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
     if (credRemaining === 0) {
-      const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
+      const p = pricingForStage(state.game.stage_idx);
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
       modal.innerHTML = `<div class="modal-box">
@@ -1860,8 +1860,10 @@
     }
     playBlip();
 
+    // In testing mode with active credits, handle locally without session_id
+    // (the session_id was a frontend-only ID and won't exist in the DB)
     const body = { square_index: idx };
-    if (sessId) body.session_id = sessId;
+    if (sessId && !testingModeActive) body.session_id = sessId;
 
     // Disable board during request
     document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
@@ -2266,6 +2268,18 @@
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
   // ═══════════════════════════════════════════════════════════════
+  // PRICING HELPER — mirrors server-side pricingForStage logic
+  // ═══════════════════════════════════════════════════════════════
+  function pricingForStage(stageIdx) {
+    let perShot;
+    if (stageIdx <= 2) perShot = 13;
+    else if (stageIdx <= 4) perShot = 8;
+    else if (stageIdx === 5) perShot = 5.5;
+    else perShot = 4;
+    return { perShot, bundle2: perShot * 2, bundle8: perShot * 8, bundle16: perShot * 16 };
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // BUNDLE PURCHASE
   // ═══════════════════════════════════════════════════════════════
   window.buyBundle = async function(size) {
@@ -2275,10 +2289,23 @@
     }
 
     if (testingModeActive) {
-      const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
-      const cost = p['bundle' + size];
-      state.walletBalance = Math.max(0, state.walletBalance - cost);
-      state.credits = { id: state.game.id, credits_remaining: size, tokens_per_credit: 1 };
+      // In testing mode, compute the correct cost based on actual stage pricing
+      const pricing = pricingForStage(state.game.stage_idx);
+      const cost = pricing['bundle' + size];
+
+      // Check if user has enough balance
+      if (state.walletBalance < cost) {
+        showToast('Not enough tokens — try a smaller bundle below 👇', 3000);
+        return;
+      }
+
+      // Deduct the correct cost and set up credits with proper tokens_per_credit
+      state.walletBalance = state.walletBalance - cost;
+      state.credits = {
+        id: Math.random().toString(36).substr(2, 9), // Unique frontend-only ID
+        credits_remaining: size,
+        tokens_per_credit: pricing.perShot
+      };
       updateHud();
       updateCreditsDisplay();
       showToast(t('game.shots_loaded', {size: size}), 2000);
