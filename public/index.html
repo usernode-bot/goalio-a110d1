@@ -2270,22 +2270,7 @@
       showToast('Wallet not initialized — please reload', 3000);
       return;
     }
-    const tok = getToken();
-    let url = `/api/games/${state.game.id}/bundle`;
-    if (tok) {
-      const sep = url.includes('?') ? '&' : '?';
-      url = url + sep + 'token=' + encodeURIComponent(tok);
-    }
-    const opts = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(tok ? { 'x-usernode-token': tok } : {}),
-        'x-testing-mode': testingModeActive ? 'true' : 'false'
-      },
-      body: JSON.stringify({ bundle_size: size })
-    };
-    const r = await fetch(url, opts);
+    const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
       if (r.status === 402 || e.error === 'Insufficient balance') {
