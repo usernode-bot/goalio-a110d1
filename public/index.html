@@ -1529,17 +1529,11 @@
         <div style="display:inline-block;background:${testingModeActive ? 'rgba(0,255,255,0.15)' : 'rgba(251,191,36,0.15)'};color:${testingModeActive ? '#00ffff' : '#fbbf24'};font-family:'Space Mono',monospace;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:5px;border:1px solid ${testingModeActive ? 'rgba(0,255,255,0.4)' : 'rgba(251,191,36,0.4)'};letter-spacing:0.05em;text-shadow:${testingModeActive ? '0 0 6px rgba(0,255,255,0.4)' : 'none'};">${testingModeActive ? '🧪 Testing Mode' : '💰 Real Tokens'}</div>
       </div>`;
 
-    const demoButtons = inProgress ? '' : `
-      <div style="padding:12px 16px;display:flex;gap:8px;border-top:1px solid rgba(255,255,255,0.08);">
-        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=final'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">📺 Demo Final</button>
-        <button onclick="location.href = location.href.split('?')[0].split('#')[0] + '?demo=topup'" class="bundle-btn btn-ghost" style="flex:1;font-size:0.75rem;padding:8px;">⚡ Demo Topup</button>
-      </div>`;
-
     body.innerHTML = `
       ${statsRow}
       ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
-      ${demoButtons}
+      ${modeIndicator}
       `;
 
     Sound.startHomeLoop();
@@ -2695,17 +2689,8 @@
           </ul>
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
         </div>
-
-        <!-- Reset Game Section -->
-        <div id="admin-reset-section" style="display:none;">
-          <div class="reset-btn-container">
-            <button id="reset-game-btn" class="reset-btn" onclick="confirmResetGame()">🔄 RESET GAME</button>
-            <p style="color:#FF1493;font-size:0.8rem;margin:12px 0 0 0;text-shadow:0 0 8px rgba(255,20,147,0.6);">Clears wallets, boards & pot</p>
-          </div>
-        </div>
       </div>
     </div>`;
-    checkAdminStatus();
   }
 
   window.switchToTestingMode = function() {
