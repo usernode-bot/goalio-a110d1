@@ -752,6 +752,9 @@
   <div class="bg" id="flag-bg"></div>
   <div id="app"></div>
   <div id="toast-container"></div>
+  <audio id="home-bg-music" loop preload="auto">
+    <source src="/audio/home-loop.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
   </script>
@@ -1080,10 +1083,48 @@
         this.tone(f(m), startTime, 0.20, 'square', 0.12);
       });
     },
+    homeLoopElement: null,
+    homeLoopPlaying: false,
+    startHomeLoop() {
+      if (this.muted) {
+        if (this.homeLoopElement) this.homeLoopElement.pause();
+        this.homeLoopPlaying = false;
+        return;
+      }
+      if (!this.homeLoopElement) {
+        this.homeLoopElement = document.getElementById('home-bg-music');
+      }
+      if (!this.homeLoopElement) return;
+      this.homeLoopElement.volume = 0.18;
+      this.homeLoopElement.currentTime = 0;
+      this.homeLoopElement.play().catch(() => {});
+      this.homeLoopPlaying = true;
+    },
+    stopHomeLoop() {
+      if (this.homeLoopElement) {
+        this.homeLoopElement.pause();
+        this.homeLoopElement.currentTime = 0;
+      }
+      this.homeLoopPlaying = false;
+    },
+    muteHomeLoop(mute) {
+      if (!this.homeLoopElement) {
+        this.homeLoopElement = document.getElementById('home-bg-music');
+      }
+      if (!this.homeLoopElement) return;
+      if (mute) {
+        this.homeLoopElement.pause();
+        this.homeLoopPlaying = false;
+      } else if (!this.homeLoopPlaying && !this.muted) {
+        this.homeLoopElement.play().catch(() => {});
+        this.homeLoopPlaying = true;
+      }
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
       if (!this.muted) this.ensure();
+      this.muteHomeLoop(this.muted);
       updateMuteButtons();
       return this.muted;
     }
@@ -1299,7 +1340,10 @@
     clearPolls();
     stopConfetti();
     const hash = location.hash || '#lobby';
-    if (hash !== '#lobby' && hash !== '#') stopNationAnthem();
+    if (hash !== '#lobby' && hash !== '#') {
+      stopNationAnthem();
+      Sound.stopHomeLoop();
+    }
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
@@ -1499,6 +1543,7 @@
       ${demoButtons}
       `;
 
+    Sound.startHomeLoop();
     maybeAutoShowInfo();
   }
 
