@@ -1851,9 +1851,9 @@
         <div style="font-family:'DM Sans',sans-serif;font-weight:700;font-size:1.1rem;margin-bottom:12px;">${t('game.out_of_shots_title')}</div>
         <p style="font-size:0.85rem;color:#ccc;margin-bottom:16px;font-family:'DM Sans',sans-serif;">${t('game.out_of_shots_desc')}</p>
         <div style="display:flex;gap:10px;flex-direction:column;">
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">${t('game.buy_2')}</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">${t('game.buy_8')}</button>
-          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">${t('game.buy_16')}</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(2).then(() => {});">${t('game.buy_2')} — ${fmtTokens(p.bundle2)} tokens</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(8).then(() => {});">${t('game.buy_8')} — ${fmtTokens(p.bundle8)} tokens</button>
+          <button class="bundle-btn btn-gold" style="width:100%;" onclick="const m = this.closest('.modal-bg'); m.remove(); buyBundle(16).then(() => {});">${t('game.buy_16')} — ${fmtTokens(p.bundle16)} tokens</button>
           <button class="bundle-btn btn-ghost" style="width:100%;" onclick="this.closest('.modal-bg').remove()">${t('game.close')}</button>
         </div>
       </div>`;
