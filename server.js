@@ -1174,6 +1174,37 @@ app.get('/api/wallet', async (req, res) => {
   }
 });
 
+// Player reset balance endpoint
+app.post('/api/player/reset-balance', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    try {
+      // Ensure wallet exists
+      await ensureWallet(client, req.user.id, req.user.username);
+
+      // Reset balance to 1000
+      const { rows } = await client.query(`
+        UPDATE player_wallets SET balance = 1000, last_synced_at = NOW()
+        WHERE user_id = $1
+        RETURNING balance
+      `, [req.user.id]);
+
+      await client.query('COMMIT');
+      const newBalance = rows.length ? parseFloat(rows[0].balance) : 1000;
+      res.json({ success: true, new_balance: newBalance });
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // Admin check endpoint
 async function isUserAdmin(client, userId) {
   const { rows } = await client.query('SELECT user_id FROM admin_users WHERE user_id = $1', [userId]);
