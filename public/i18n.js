@@ -5,7 +5,7 @@ let currentLanguage = null;
 let translations = {};
 const SUPPORTED_LANGUAGES = ['en', 'fr', 'es', 'it', 'de', 'nl', 'zh', 'hi', 'tr'];
 const LANGUAGE_NAMES = {
-  en: 'England',
+  en: 'English',
   fr: 'Francia',
   es: 'España',
   it: 'Italia',
