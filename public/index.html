@@ -1707,7 +1707,7 @@
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
       <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('game.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1796,7 +1796,7 @@
     const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(state.walletBalance) + ' t';
     const lwv = document.querySelector('.lobby-wallet-val'); if (lwv) lwv.textContent = Math.round(state.walletBalance).toLocaleString() + ' t';
     const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
-    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = state.squaresRevealed;
+    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = (state.credits ? parseInt(state.credits.credits_remaining) : 0);
   }
 
   function updateCreditsDisplay() {
