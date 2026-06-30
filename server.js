@@ -288,7 +288,8 @@ async function syncWalletBalance(client, userId, playerInDemoMode = false) {
     // In staging with mocked wallet TXs (and not in demo mode), still use mock for real mode
     if (MOCK_WALLET_TXS) {
       const demoBalance = 500;
-      console.log(`[wallet-sync] MOCK_WALLET_TXS mode: returning demo balance ${demoBalance} instead of sidecar call`);
+      console.error(`[wallet-sync] MOCK_WALLET_TXS is enabled (IS_STAGING=${IS_STAGING}, HOUSE_WALLET_PRIVATE_KEY=${!!process.env.HOUSE_WALLET_PRIVATE_KEY})`);
+      console.error(`[wallet-sync] Returning mock balance ${demoBalance} instead of calling sidecar`);
       await client.query(
         'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
         [demoBalance, userId]
@@ -303,14 +304,24 @@ async function syncWalletBalance(client, userId, playerInDemoMode = false) {
     try {
       const requestUrl = `${USERNODE_SIDECAR_URL}/wallet/balance`;
       const requestBody = { address: walletAddress };
-      console.log(`[wallet-sync] Calling sidecar: POST ${requestUrl}`, `Body: ${JSON.stringify(requestBody)}`);
+
+      console.error(`[wallet-sync] Preparing sidecar request for user ${userId}`);
+      console.error(`[wallet-sync] Wallet address: ${walletAddress}`);
+      console.error(`[wallet-sync] Sidecar URL: ${requestUrl}`);
+      console.error(`[wallet-sync] Request body: ${JSON.stringify(requestBody)}`);
 
       const headers = { 'content-type': 'application/json' };
       // Add auth header if the sidecar requires it
       if (process.env.USERNODE_SIDECAR_TOKEN) {
+        console.error(`[wallet-sync] Including x-usernode-sidecar-token header (token set)`);
         headers['x-usernode-sidecar-token'] = process.env.USERNODE_SIDECAR_TOKEN;
+      } else {
+        console.error(`[wallet-sync] No USERNODE_SIDECAR_TOKEN env var set - sidecar call may fail if auth is required`);
       }
 
+      console.error(`[wallet-sync] Request headers: ${JSON.stringify(Object.keys(headers))}`);
+
+      console.error(`[wallet-sync] Calling sidecar...`);
       const response = await fetch(requestUrl, {
         method: 'POST',
         headers,
@@ -318,61 +329,75 @@ async function syncWalletBalance(client, userId, playerInDemoMode = false) {
         signal: controller.signal
       });
 
-      console.log(`[wallet-sync] Sidecar response status: ${response.status} ${response.statusText}`);
+      console.error(`[wallet-sync] Sidecar responded with status: ${response.status} ${response.statusText}`);
 
       if (!response.ok) {
         let errorBody = {};
+        let rawResponse = '';
         try {
           errorBody = await response.json();
+          console.error(`[wallet-sync] Sidecar error response (JSON): ${JSON.stringify(errorBody)}`);
         } catch (parseErr) {
-          console.warn(`[wallet-sync] Could not parse sidecar error response as JSON: ${parseErr.message}`);
-          errorBody = { rawText: await response.text() };
+          try {
+            rawResponse = await response.text();
+            console.error(`[wallet-sync] Sidecar error response (text): ${rawResponse}`);
+          } catch (_) {
+            console.error(`[wallet-sync] Could not parse sidecar error response as JSON or text`);
+          }
         }
-        const errorMsg = `Sidecar error: HTTP ${response.status} - ${JSON.stringify(errorBody)}`;
+        const errorMsg = `Sidecar error: HTTP ${response.status} - ${rawResponse || JSON.stringify(errorBody)}`;
         console.error(`[wallet-sync] ${errorMsg}`);
         throw new Error(errorMsg);
       }
 
       const data = await response.json();
-      console.log(`[wallet-sync] Sidecar response body:`, JSON.stringify(data));
+      console.error(`[wallet-sync] Sidecar response body: ${JSON.stringify(data)}`);
 
       const sidecarBalance = parseFloat(data.balance);
       if (isNaN(sidecarBalance)) {
-        console.warn(`[wallet-sync] Sidecar returned non-numeric balance: ${data.balance}`);
-        return { balance: await getWalletBalance(client, userId), synced: false, error: 'Invalid balance format from sidecar' };
+        console.error(`[wallet-sync] Sidecar returned non-numeric balance: ${data.balance}`);
+        const cachedBalance = await getWalletBalance(client, userId);
+        return { balance: cachedBalance, synced: false, error: 'Invalid balance format from sidecar' };
       }
 
-      console.log(`[wallet-sync] Sidecar balance for user ${userId}: ${sidecarBalance}`);
+      console.error(`[wallet-sync] Sidecar returned balance ${sidecarBalance} for user ${userId}`);
+      console.error(`[wallet-sync] Updating database with sidecar balance...`);
 
       // Update cached balance
       await client.query(
         'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
         [sidecarBalance, userId]
       );
-      console.log(`[wallet-sync] Updated cached balance to ${sidecarBalance} for user ${userId}`);
+      console.error(`[wallet-sync] ✓ Database updated successfully with balance ${sidecarBalance}`);
 
       return { balance: sidecarBalance, synced: true, source: 'sidecar' };
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.error(`[wallet-sync] Sidecar request timed out (5s) for user ${userId}`);
+        console.error(`[wallet-sync] ✗ Sidecar request timed out (5s) for user ${userId}`);
         const cachedBalance = await getWalletBalance(client, userId);
+        console.error(`[wallet-sync] Falling back to cached balance: ${cachedBalance}`);
         return { balance: cachedBalance, synced: false, error: 'Sidecar request timeout (5 seconds)' };
       }
       const errorMsg = err.message || String(err);
-      console.error(`[wallet-sync] Sidecar sync error for user ${userId}: ${errorMsg}`);
+      console.error(`[wallet-sync] ✗ Sidecar sync error for user ${userId}: ${errorMsg}`);
+      console.error(`[wallet-sync] Error stack: ${err.stack}`);
       const cachedBalance = await getWalletBalance(client, userId);
+      console.error(`[wallet-sync] Falling back to cached balance: ${cachedBalance}`);
       return { balance: cachedBalance, synced: false, error: errorMsg };
     } finally {
       clearTimeout(timeoutId);
     }
   } catch (err) {
     const errorMsg = err.message || String(err);
-    console.error(`[wallet-sync] Unexpected error during wallet sync for user ${userId}: ${errorMsg}`);
+    console.error(`[wallet-sync] ✗ Unexpected error during wallet sync for user ${userId}: ${errorMsg}`);
+    console.error(`[wallet-sync] Error stack: ${err.stack}`);
     try {
       const cachedBalance = await getWalletBalance(client, userId);
+      console.error(`[wallet-sync] Falling back to cached balance: ${cachedBalance}`);
       return { balance: cachedBalance, synced: false, error: errorMsg };
     } catch (fallbackErr) {
-      console.error(`[wallet-sync] Failed to get cached balance as fallback: ${fallbackErr.message}`);
+      console.error(`[wallet-sync] ✗ Failed to get cached balance as fallback: ${fallbackErr.message}`);
+      console.error(`[wallet-sync] Using default fallback balance: 1000`);
       return { balance: 1000, synced: false, error: errorMsg };
     }
   }
