@@ -2142,7 +2142,7 @@
     const nameTag = document.createElement('div');
     nameTag.id = 'nametag-box';
     nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
-    const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
+    const footballerText = `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:clamp(0.6rem, 1.5vw, 0.68rem);font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;max-width:90vw;word-wrap:break-word;overflow-wrap:break-word;">${fact}</div>` : '';
     nameTag.innerHTML = `<div style="display:inline-block;max-width:90vw;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
