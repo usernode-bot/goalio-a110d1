@@ -2318,6 +2318,8 @@
       const e = await r.json().catch(()=>({}));
       if (r.status === 402 || e.error === 'Insufficient balance') {
         showToast('Not enough tokens — try a smaller bundle below 👇', 3000);
+      } else if (r.status === 503) {
+        showToast('Wallet service unavailable — please try again', 3000);
       } else {
         showToast(e.error || 'Bundle purchase failed');
       }
