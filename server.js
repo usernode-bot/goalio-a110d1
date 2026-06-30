@@ -180,6 +180,12 @@ async function sendTransactionViaSidecar(toAddress, amount, memo) {
 }
 
 async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
+  // In mock mode, transactions are instantly confirmed (no real blockchain)
+  if (MOCK_WALLET_TXS) {
+    console.log(`[pollTransactionConfirmation] MOCK_WALLET_TXS enabled: returning instant confirmation for ${txHash}`);
+    return { status: 'confirmed' };
+  }
+
   // Poll for on-chain confirmation of the transaction
   const startTime = Date.now();
   const pollIntervalMs = 2000;
@@ -188,11 +194,6 @@ async function pollTransactionConfirmation(txHash, maxWaitMs = 30000) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
-      // In mock mode, immediately return confirmed
-      if (MOCK_WALLET_TXS) {
-        return { status: 'confirmed' };
-      }
-
       const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/status/${txHash}`, {
         method: 'GET',
         headers: { 'content-type': 'application/json' },
@@ -927,6 +928,11 @@ app.post('/api/games/:id/bundle', async (req, res) => {
       await client.query('ROLLBACK');
       if (err.message === 'Insufficient balance') {
         return res.status(402).json({ error: 'Insufficient balance' });
+      }
+      // Check for sidecar timeout or unavailable errors
+      if (err.message && (err.message.includes('timeout') || err.message.includes('Sidecar') || err.message.includes('ECONNREFUSED'))) {
+        console.error('Bundle wallet debit failed (sidecar unavailable):', err.message);
+        return res.status(503).json({ error: 'Wallet service temporarily unavailable' });
       }
       console.error('Bundle wallet debit failed:', err.message);
       return res.status(500).json({ error: 'Bundle purchase failed: ' + err.message });
