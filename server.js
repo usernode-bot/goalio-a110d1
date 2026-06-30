@@ -65,16 +65,17 @@ function gridColsForStage(stageIdx) {
   return 7;
 }
 
-// Per-stage shot pricing. Set so the house keeps ~12.5% (10-15% band) on a
+// Per-stage shot pricing. Set so the house keeps ~6% (app owner cut) on a
 // typical board regardless of grid size: smaller easy boards are found in
 // fewer shots, so they cost more per shot; big hard boards cost less.
-//   group 13 t/shot, knockout 8, semi 5.5, final 4
+//   group 6.5 t/shot, knockout 4, semi 2.75, final 2
+// Reduced by ~50% to match the reduced prizeDecay payouts
 function pricingForStage(stageIdx) {
   let perShot;
-  if (stageIdx <= 2) perShot = 13;
-  else if (stageIdx <= 4) perShot = 8;
-  else if (stageIdx === 5) perShot = 5.5;
-  else perShot = 4;
+  if (stageIdx <= 2) perShot = 6.5;
+  else if (stageIdx <= 4) perShot = 4;
+  else if (stageIdx === 5) perShot = 2.75;
+  else perShot = 2;
   return { perShot, bundle2: perShot * 2, bundle8: perShot * 8, bundle16: perShot * 16 };
 }
 
@@ -107,7 +108,9 @@ function potTierName(tier) {
 // 0.4444 = 16/36): ~148 on a fresh board, ~75 at 44% revealed, floor 8 late.
 function prizeDecay(n, gridSize) {
   const N = gridSize || 36;
-  return Math.max(8, Math.floor(150 / (1 + Math.exp(10.8 * (n / N - 0.4444)))));
+  // Adjusted payout formula to achieve ~6% app owner cut instead of ~12.5%
+  // Reduced base payout from 150 to 75 tokens, maintaining the same curve shape
+  return Math.max(4, Math.floor(75 / (1 + Math.exp(10.8 * (n / N - 0.4444)))));
 }
 
 // Lazy timeout check — called at start of GET /api/games and GET /api/session
