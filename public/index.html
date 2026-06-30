@@ -2706,6 +2706,19 @@
             <li><strong>Noir</strong> (by Aztec) is a Rust-like language for writing ZK circuits that compile to both native provers and browser-runnable WASM. It would be the natural fit here: write the "ball is at position P under commitment C" circuit in Noir, generate a proof server-side per game, verify client-side in the browser before the player makes their first guess.</li>
           </ul>
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
+
+          <h3>📋 To Do: Aztec Noir Proof Integration</h3>
+          <p><strong>Status: Not yet implemented</strong></p>
+          <p>Plan to record tournament game results on-chain via Aztec with Noir ZK proofs:</p>
+          <ul>
+            <li><strong>Proof generation:</strong> When a game is created, generate a Noir proof in the background that commits to the ball position (tournament_id, game_number, username, ball_position, stage_idx, client_timestamp). Proof stored locally with status 'generating' → 'pending'.</li>
+            <li><strong>Proof submission:</strong> On game win, submit the proof to Aztec testnet contract. Status updates to 'pending', then 'confirmed' once on-chain.</li>
+            <li><strong>Viewing proofs:</strong> New pages: <code>#player/games/:username</code> (player's tournament games with proof links) and <code>#on-chain-proofs</code> (global proof registry, linked from footer).</li>
+            <li><strong>Setup required:</strong> Aztec testnet account, private key, deployed contract address; Noir compiler integration in build; environment variables (AZTEC_RPC_URL, AZTEC_CONTRACT_ADDRESS, AZTEC_WALLET_PRIVATE_KEY, AZTEC_ACCOUNT_ADDRESS).</li>
+            <li><strong>Circuit:</strong> Noir circuit at <code>circuits/game_proof.nr</code> that verifies game fields and outputs a commitment hash.</li>
+            <li><strong>Database:</strong> New table <code>on_chain_records</code> (game_id, tournament_id, game_number, username, ball_position, stage_idx, proof_status, aztec_tx_hash, proof_commitment).</li>
+          </ul>
+          <p>Proof generation happens silently during gameplay; submission is non-blocking on win. Game IDs formatted as <code>000001-1</code> (tournament_id-game_number).</p>
         </div>
       </div>
     </div>`;
