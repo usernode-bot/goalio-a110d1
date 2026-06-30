@@ -1729,14 +1729,6 @@
       tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
-    let controls = '';
-    if (credRemaining > 0) {
-      controls = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
-    } else {
-      controls = shotButtonsHtml();
-    }
-
     const initialHint = `${stageName(stageIdx)} — find the ball to knock out ${theme.country_name}`;
 
     document.getElementById('game-body').innerHTML = `
@@ -1752,7 +1744,6 @@
         </div>
       </div>
       <div class="game-footer">
-        <div id="controls-row" style="margin-bottom:2px;">${controls}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
           <div id="hint-bar" class="font-dm" style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
           <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
@@ -1800,14 +1791,7 @@
   }
 
   function updateCreditsDisplay() {
-    const row = document.getElementById('controls-row');
-    if (!row) return;
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
-    if (credRemaining > 0) {
-      row.innerHTML = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
-    } else {
-      row.innerHTML = shotButtonsHtml();
-    }
+    updateHud();
   }
 
   window.onCellClick = async function(idx) {
