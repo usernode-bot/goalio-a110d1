@@ -177,7 +177,7 @@
     .portrait {
       position: absolute; inset: 0; z-index: 0;
       display: block; width: 100%; height: 100%;
-      background-size: cover; background-position: center top;
+      background-size: contain; background-position: center;
       background-repeat: no-repeat;
     }
     .board {
@@ -614,6 +614,106 @@
       text-shadow:
         0 0 8px rgba(0,255,0,0.8),
         1px 1px 0 #00FFFF;
+    }
+
+    /* Retro Quip Overlay */
+    #retro-quip-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 60;
+      pointer-events: none;
+      display: none;
+    }
+
+    .retro-quip-box {
+      background: linear-gradient(135deg, rgba(20,10,40,0.95) 0%, rgba(10,10,30,0.98) 100%);
+      border: 2px solid #FF1493;
+      border-right: 2px solid #FFD700;
+      border-bottom: 2px solid #FFD700;
+      box-shadow:
+        0 0 10px rgba(255,20,147,0.8),
+        0 0 20px rgba(0,255,255,0.4),
+        inset 0 0 10px rgba(0,255,255,0.15);
+      padding: clamp(8px, 2vw, 12px);
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px));
+      max-width: 90vw;
+      animation: quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes quip-scale-in {
+      0% { transform: scale(0.5); opacity: 0; filter: blur(4px); }
+      60% { transform: scale(1.08); opacity: 1; filter: blur(0); }
+      100% { transform: scale(1); opacity: 1; filter: blur(0); }
+    }
+
+    @keyframes quip-fade-out {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* Explode/scatter exit animation */
+    @keyframes quip-explode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.1) rotate(360deg); opacity: 0; }
+    }
+
+    /* Dissolve with pixelated effect */
+    @keyframes quip-dissolve {
+      0% { opacity: 1; filter: blur(0px) brightness(1); }
+      40% { filter: blur(2px) brightness(1.1); }
+      100% { opacity: 0; filter: blur(8px) brightness(0.5); }
+    }
+
+    /* Slide out with spin */
+    @keyframes quip-slide-spin {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-120px) rotate(-720deg); opacity: 0; }
+    }
+
+    /* Bounce out with bounce effect */
+    @keyframes quip-bounce-out {
+      0% { transform: scale(1); opacity: 1; }
+      20% { transform: scale(1.08); }
+      50% { transform: translateY(-40px) scale(0.95); opacity: 1; }
+      100% { transform: translateY(120px) scale(0.3); opacity: 0; }
+    }
+
+    .retro-quip-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.3rem, 1.5vw, 0.5rem);
+      color: #00FFFF;
+      text-shadow:
+        0.5px 0.5px 0 #FF1493,
+        1px 1px 0 #FFD700,
+        2px 2px 4px rgba(0,0,0,0.8);
+      letter-spacing: 0.5px;
+      margin: 0;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .retro-quip-box.fade-out {
+      animation: quip-fade-out 0.6s ease-out forwards;
+    }
+
+    .retro-quip-box.explode {
+      animation: quip-explode 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .retro-quip-box.dissolve {
+      animation: quip-dissolve 0.8s ease-out forwards;
+    }
+
+    .retro-quip-box.slide-spin {
+      animation: quip-slide-spin 0.9s ease-in forwards;
+    }
+
+    .retro-quip-box.bounce-out {
+      animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
     /* Reset Game Button - 80's style */
@@ -1745,6 +1845,7 @@
     document.getElementById('game-body').innerHTML = `
       ${hud}
       ${nationStrip}
+      <div id="retro-quip-overlay"></div>
       <div class="board-zone" id="board-zone">
         <div class="board-wrap">
           <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
@@ -1803,6 +1904,71 @@
 
   function updateCreditsDisplay() {
     updateHud();
+  }
+
+  function showRetroQuip(quipText, row) {
+    const overlay = document.getElementById('retro-quip-overlay');
+    if (!overlay) return;
+
+    overlay.innerHTML = `<div class="retro-quip-box">
+      <p class="retro-quip-text">${quipText}</p>
+    </div>`;
+    overlay.style.display = 'block';
+
+    const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
+    const gridSize = state.gridSize || gridSizeForStage(state.game.stage_idx);
+    const tilesPerRow = gridCols;
+    const totalRows = Math.ceil(gridSize / tilesPerRow);
+    const thirdHeight = Math.ceil(totalRows / 3);
+
+    let verticalPosition;
+    if (row !== undefined && row !== null) {
+      if (row < thirdHeight) {
+        verticalPosition = 'bottom';
+      } else if (row >= 2 * thirdHeight) {
+        verticalPosition = 'top';
+      } else {
+        verticalPosition = 'top';
+      }
+    } else {
+      verticalPosition = 'top';
+    }
+
+    if (verticalPosition === 'top') {
+      overlay.style.top = '25%';
+    } else {
+      overlay.style.top = '75%';
+    }
+    overlay.style.left = '50%';
+    overlay.style.transform = 'translate(-50%, -50%)';
+
+    const quipBox = overlay.querySelector('.retro-quip-box');
+
+    // Randomly select an exit animation
+    const exitAnimations = ['fade-out', 'explode', 'dissolve', 'slide-spin', 'bounce-out'];
+    const selectedAnimation = exitAnimations[Math.floor(Math.random() * exitAnimations.length)];
+
+    // Determine animation duration based on selected animation
+    const animationDurations = {
+      'fade-out': 600,
+      'explode': 700,
+      'dissolve': 800,
+      'slide-spin': 900,
+      'bounce-out': 800
+    };
+    const animationDuration = animationDurations[selectedAnimation];
+
+    setTimeout(() => {
+      if (quipBox) {
+        quipBox.classList.add(selectedAnimation);
+      }
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        if (quipBox) {
+          quipBox.classList.remove(selectedAnimation);
+        }
+      }, animationDuration);
+    }, 1500);
   }
 
   window.onCellClick = async function(idx) {
@@ -1903,9 +2069,11 @@
           const cleanupTime = Math.round(actualDuration * 1000);
           setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
-        // Update hint bar
-        const hint = document.getElementById('hint-bar');
-        if (hint) hint.textContent = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+        // Show retro quip overlay with smart positioning based on tile row
+        const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
+        const tileRow = Math.floor(idx / gridCols);
+        const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+        showRetroQuip(quip, tileRow);
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       }
     } catch(e) {
@@ -1983,7 +2151,7 @@
 
     const goalText = isFinal ? t('celebration.champions') : t('celebration.goal');
     const subtitleText = isFinal ? t('celebration.won_cup') : t('celebration.scored');
-    const fontSize = isFinal ? '4.5rem' : '5.5rem';
+    const fontSize = isFinal ? 'clamp(1.8rem, 4.5vw, 4.5rem)' : 'clamp(2rem, 5vw, 5.5rem)';
 
     goalOverlay.innerHTML = `
       <div class="goal-text" style="
@@ -1991,7 +2159,7 @@
         color:${accentColor || '#fbbf24'};
         text-shadow:0 0 20px ${accentColor || '#fbbf24'}77,
                     0 4px 12px rgba(0,0,0,0.8);
-        line-height:1;margin:0;
+        line-height:1;margin:0;white-space:nowrap;
       ">${goalText}</div>
       <div class="goal-subtitle" style="
         font-family:'DM Sans',sans-serif;font-size:1rem;
@@ -2001,7 +2169,7 @@
     `;
 
     document.body.appendChild(goalOverlay);
-    setTimeout(() => goalOverlay.remove(), 1200);
+    setTimeout(() => goalOverlay.remove(), 900);
   }
 
   // ═══════════════════════════════════════════════════════════════
