@@ -373,6 +373,10 @@
       #display-name-input { font-size: 0.82rem !important; padding: 6px 10px !important; }
       .bundle-btn { font-size: 0.78rem !important; padding: 8px 12px !important; }
       #victory-bg > .result-card > div:nth-child(2) { font-size: clamp(0.95rem, 4vw, 1.3rem) !important; word-break: break-word; overflow-wrap: break-word; }
+      /* League table on mobile */
+      .league-table td { padding: clamp(6px, 1.5vw, 10px) clamp(8px, 2vw, 12px); }
+      .league-rank { text-align: center; }
+      .league-name { word-break: break-word; overflow-wrap: break-word; }
     }
 
     /* Controls */
@@ -437,28 +441,29 @@
 
     /* League table */
     .league-table { width: 100%; border-collapse: collapse; }
-    .league-table th { font-family: 'DM Sans', sans-serif; font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .league-table td { font-family: 'Space Mono', monospace; font-size: 0.85rem; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .league-table th { font-family: 'DM Sans', sans-serif; font-size: clamp(0.65rem, 2vw, 0.75rem); color: #888; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .league-table td { font-family: 'Space Mono', monospace; font-size: clamp(0.7rem, 2vw, 0.85rem); padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
     .league-table tr:last-child td { border-bottom: none; }
-    .league-rank { color: #888; font-size: 0.75rem; }
-    .league-name { font-family: 'DM Sans', sans-serif; color: #f0f0f5; font-size: 0.9rem; }
+    .league-rank { color: #888; font-size: clamp(0.65rem, 1.8vw, 0.75rem); }
+    .league-name { font-family: 'DM Sans', sans-serif; color: #f0f0f5; font-size: clamp(0.75rem, 2.5vw, 0.9rem); }
     .league-score { color: #fbbf24; text-align: right; }
     .my-row { background: rgba(251,191,36,0.05); }
 
     /* Retro league table headers */
     .league-table-retro thead th {
       font-family: 'Press Start 2P', monospace !important;
-      font-size: 0.7rem !important;
+      font-size: clamp(0.55rem, 1.8vw, 0.7rem) !important;
       color: #00FFFF !important;
       text-transform: none !important;
       letter-spacing: 1px !important;
       text-shadow: 1px 1px 0 #FF1493, 2px 2px 0 #FFD700, 3px 3px 8px rgba(0,0,0,0.8) !important;
       border-bottom: 2px solid #00FFFF !important;
-      padding: 12px 12px !important;
+      padding: clamp(8px, 1.5vw, 12px) clamp(8px, 2vw, 12px) !important;
     }
     .league-table-retro tbody tr {
       border-top: 2px solid #FF1493 !important;
       border-bottom: 2px solid #00FFFF !important;
+      min-height: 40px;
     }
     .league-table-retro tbody tr:last-child {
       border-bottom: 2px solid #00FFFF !important;
@@ -2528,7 +2533,7 @@
     body.innerHTML = `
       <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:16px;margin-bottom:20px;font-family:'DM Sans',sans-serif;">
         <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#FFD700;margin-bottom:4px;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #00FFFF,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:1px;">LEAGUE PRIZE</div>
-        <div style="font-size:1rem;line-height:1.5;color:#f0f0f5;">The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong style="color:#fbbf24;font-family:'Space Mono',monospace;">${prizeAmt.toLocaleString()} tokens</strong> — 2% of all tokens ever collected by the game.</div>
+        <div style="font-size:clamp(0.85rem, 2.5vw, 1rem);line-height:clamp(1.4, 2vw, 1.5);color:#f0f0f5;">The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong style="color:#fbbf24;font-family:'Space Mono',monospace;">${prizeAmt.toLocaleString()} tokens</strong> — 2% of all tokens ever collected by the game.</div>
         <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#888;margin-top:8px;">⏱ ${countdown} remaining</div>
       </div>
       <div class="faq-retro-container" style="padding:20px;margin-bottom:20px;">
