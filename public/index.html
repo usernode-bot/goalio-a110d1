@@ -436,7 +436,8 @@
     .board-dim { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 40; }
 
     /* Result card */
-    .result-card { background: rgba(15,15,25,0.97); border: 1px solid rgba(251,191,36,0.5); border-radius: 16px; padding: 28px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 0 40px rgba(251,191,36,0.2); max-height: 85vh; overflow-y: auto; }
+    .result-card { background: rgba(15,15,25,0.97); border: 1px solid rgba(251,191,36,0.5); border-radius: 16px; padding: 28px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 0 40px rgba(251,191,36,0.2); max-height: 85vh; overflow-y: auto; position: relative; }
+    .result-card .portrait-display { width: 140px; height: 140px; margin: 0 auto 12px; border-radius: 12px; background-size: cover; background-position: center; border: 2px solid rgba(251,191,36,0.4); box-shadow: 0 0 20px rgba(251,191,36,0.2); }
     @media (max-width: 480px) {
       .result-card { padding: 20px; width: 95%; max-width: 100%; }
     }
@@ -2091,8 +2092,10 @@
       resultCard.className = 'result-overlay';
       resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
       const icon = isFinal ? '🏆' : '⚽';
+      const portraitUrl = isFinal ? `/images/trophy.svg` : `/images/footballers/${theme.slug}.png`;
       resultCard.innerHTML = `
         <div class="result-card">
+          <div class="portrait-display" style="background-image:url('${portraitUrl}');"></div>
           <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
           <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
           ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
