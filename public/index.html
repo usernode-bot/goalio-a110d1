@@ -890,6 +890,14 @@
   function fmtTokens(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+
+    // If player has shots remaining, show count badge instead of purchase buttons
+    if (credRemaining > 0) {
+      return `<div class="credits-chip">${t('game.shots_left', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
+    }
+
+    // Otherwise show purchase options
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
     return `<div style="display:flex;gap:4px;">
         <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">${t('game.quick_shot')}</span><span class="shot-cost">${t('game.quick_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
@@ -1699,7 +1707,7 @@
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
       <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">${t('game.shots_label')}</span><span class="val shots-val">${state.squaresRevealed}</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1721,14 +1729,6 @@
       tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
-    let controls = '';
-    if (credRemaining > 0) {
-      controls = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
-    } else {
-      controls = shotButtonsHtml();
-    }
-
     const initialHint = `${stageName(stageIdx)} — find the ball to knock out ${theme.country_name}`;
 
     document.getElementById('game-body').innerHTML = `
@@ -1744,7 +1744,6 @@
         </div>
       </div>
       <div class="game-footer">
-        <div id="controls-row" style="margin-bottom:2px;">${controls}</div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
           <div id="hint-bar" class="font-dm" style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
           <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
@@ -1788,18 +1787,11 @@
     const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(state.walletBalance) + ' t';
     const lwv = document.querySelector('.lobby-wallet-val'); if (lwv) lwv.textContent = Math.round(state.walletBalance).toLocaleString() + ' t';
     const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
-    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = state.squaresRevealed;
+    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = (state.credits ? parseInt(state.credits.credits_remaining) : 0);
   }
 
   function updateCreditsDisplay() {
-    const row = document.getElementById('controls-row');
-    if (!row) return;
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
-    if (credRemaining > 0) {
-      row.innerHTML = `<div class="credits-chip">${t('game.shots_remaining', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
-    } else {
-      row.innerHTML = shotButtonsHtml();
-    }
+    updateHud();
   }
 
   window.onCellClick = async function(idx) {
@@ -1994,7 +1986,7 @@
     `;
 
     document.body.appendChild(goalOverlay);
-    setTimeout(() => goalOverlay.remove(), 2600);
+    setTimeout(() => goalOverlay.remove(), 1200);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2272,6 +2264,13 @@
   window.buyBundle = async function(size) {
     if (state.walletBalance === undefined || state.walletBalance === null) {
       showToast('Wallet not initialized — please reload', 3000);
+      return;
+    }
+
+    // Prevent purchasing if player has shots remaining
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    if (credRemaining > 0) {
+      showToast('You must use your remaining shots first', 3000);
       return;
     }
 
@@ -2595,14 +2594,14 @@
     const testingModeHtml = testingModeAvailable ? `
         <!-- Testing Mode Toggle Section -->
         <div class="testing-mode-section">
-          <div class="testing-mode-title">🧪 TESTING MODE</div>
+          <div class="testing-mode-title">${t('testing.mode.label')}</div>
           <p style="color:#00FF00;font-size:0.85rem;margin:0 0 12px 0;">Toggle between Testing (fake wallets) and Real Token Mode</p>
           <div class="testing-mode-toggle">
             <button class="toggle-btn ${testingModeActive ? '' : 'active'}" onclick="switchToRealMode()">🎮 REAL TOKENS</button>
             <button class="toggle-btn ${testingModeActive ? 'active' : ''}" onclick="switchToTestingMode()">🧪 TEST MODE</button>
           </div>
           <p style="color:#00FFFF;font-size:0.8rem;margin:8px 0 0 0;text-shadow:0 0 4px rgba(0,255,255,0.6);">
-            ${testingModeActive ? '⚡ Testing Mode: 1000 credit wallets, no blockchain' : '💰 Real Token Mode: Play with real tokens'}
+            ${testingModeActive ? t('testing.mode.description.testing') : t('testing.mode.description.real')}
           </p>
         </div>
     ` : '';
@@ -2611,116 +2610,116 @@
       ${renderHeader()}
       ${backToGameBannerHtml()}
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
-        <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">How to Play</h1>
+        <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">${t('faq.title')}</h1>
         ${languageSelectorHtml()}
 
         ${testingModeHtml}
 
         <div class="faq-section">
-          <h2>The Game</h2>
-          <p>GOAL! World Cup Edition is a 7-stage tournament. Pick your nation, then face 7 opponents across the Group Stage, the Knockouts, the Semi-Final, and the Final.</p>
-          <p>The board <strong>grows as you advance</strong>, just like a real World Cup gets harder round by round:</p>
+          <h2>${t('faq.the_game')}</h2>
+          <p>${t('faq.the_game.desc')}</p>
+          <p>${t('faq.board_grows')}</p>
           <ul>
-            <li><strong>Group Stage</strong> (Matches 1–3): 4×4 — 16 tiles</li>
-            <li><strong>Knockouts</strong> (Round of 16, Quarter-Final): 5×5 — 25 tiles</li>
-            <li><strong>Semi-Final</strong>: 6×6 — 36 tiles</li>
-            <li><strong>Final</strong>: 7×7 — 49 tiles (find the World Cup Trophy)</li>
+            <li><strong>Group Stage</strong> (Matches 1–3): ${t('faq.group')}</li>
+            <li><strong>Knockouts</strong> (Round of 16, Quarter-Final): ${t('faq.knockout')}</li>
+            <li><strong>Semi-Final</strong>: ${t('faq.semi')}</li>
+            <li><strong>Final</strong>: ${t('faq.final')}</li>
           </ul>
-          <p>Each tile hides a secret object — a football for stages 1–6, or the Trophy in the Final. Because a small board is found in only a few shots and a big board takes many, the <strong>price per shot is set per stage</strong> so a typical board costs about the same everywhere:</p>
+          <p>${t('faq.pricing_intro')}</p>
           <ul>
-            <li><strong>Group Stage:</strong> 13 t/shot — 8 shots = 104, 16 shots = 208</li>
-            <li><strong>Knockouts:</strong> 8 t/shot — 8 shots = 64, 16 shots = 128</li>
-            <li><strong>Semi-Final:</strong> 5.5 t/shot — 8 shots = 44, 16 shots = 88</li>
-            <li><strong>Final:</strong> 4 t/shot — 8 shots = 32, 16 shots = 64</li>
+            <li>${t('faq.group_pricing')}</li>
+            <li>${t('faq.knockout_pricing')}</li>
+            <li>${t('faq.semi_pricing')}</li>
+            <li>${t('faq.final_pricing')}</li>
           </ul>
-          <p>Find the hidden object to win the Prize Pot for that board and advance to the next stage. The prize decays as more of the board is revealed — find it early for a bigger reward. Winning all 7 stages earns a 50-token House Bonus.</p>
-          <p>The game features 15 nations: France, Brazil, England, Spain, Argentina, Morocco, USA, Turkey, Belgium, Egypt, Portugal, Netherlands, Norway, Germany, Mexico.</p>
+          <p>${t('faq.win_condition')}</p>
+          <p>${t('faq.nations')}</p>
         </div>
 
         <div class="faq-section">
-          <h2>Between-Match Lobby</h2>
-          <p>After you win a match (except the Final), you return to the lobby to prepare for your next opponent. Here you'll see your next opponent's flag and nation name displayed prominently, along with the current stage and difficulty info.</p>
-          <p>The <strong>"KICK OFF ▶" button</strong> starts the next match. If you're entering a new stage tier (Knockouts, Semi-Final, or Final), you'll see a pop-up announcing the Captain's Pot top-up before you kick off — this tells you exactly how much the jackpot has grown as the odds get longer.</p>
-          <p>New to the game? Tap <strong>"How it works ⓘ"</strong> in the lobby to open a quick info panel that explains the core mechanics any time you need a refresher.</p>
+          <h2>${t('faq.lobby')}</h2>
+          <p>${t('faq.lobby.desc')}</p>
+          <p>${t('faq.lobby.button')}</p>
+          <p>${t('faq.lobby.help')}</p>
         </div>
 
         <div class="faq-section">
-          <h2>Wallet & Shots</h2>
-          <p>Your <strong>wallet balance</strong> is your total tokens. You start with <strong>1,000 tokens</strong> and it persists across all your tournaments and sessions — you don't lose it when you start a new game or a new tournament.</p>
-          <p>To take shots on the board, you must purchase a <strong>bundle of credits</strong> (temporary shots valid for one game only). Three bundle sizes are available, priced per stage so the cost stays roughly constant:</p>
+          <h2>${t('faq.wallet')}</h2>
+          <p>${t('faq.wallet.desc')}</p>
+          <p>${t('faq.wallet.bundles')}</p>
           <ul>
-            <li><strong>Quick Shot:</strong> 2 shots</li>
-            <li><strong>Take A Shot:</strong> 8 shots</li>
-            <li><strong>Best Value:</strong> 16 shots</li>
+            <li>${t('faq.wallet.quick')}</li>
+            <li>${t('faq.wallet.take')}</li>
+            <li>${t('faq.wallet.best')}</li>
           </ul>
-          <p>When you tap a tile with no shots remaining, a pop-up appears letting you instantly buy one of these bundles. <strong>Unused shots are carried over to your next match at no extra cost.</strong> On the Grand Final, any remaining shots are refunded to your wallet at their purchase price. Your wallet balance is deducted immediately when you purchase.</p>
+          <p>${t('faq.wallet.usage')}</p>
         </div>
 
         <div class="faq-section">
-          <h2>The Captain's Pot</h2>
-          <p>The Captain's Pot is a global jackpot shared across all boards and all players. Every token spent anywhere — single shot or bundle credit — contributes <strong>20%</strong> to the pot instantly.</p>
-          <p><strong>The only way to win it:</strong></p>
+          <h2>${t('faq.pot')}</h2>
+          <p>${t('faq.pot.desc')}</p>
+          <p><strong>${t('faq.pot.how_to_win')}</strong></p>
           <ul>
-            <li>You start a brand-new map (no one has guessed on it yet)</li>
-            <li>Your very first shot on that board finds the hidden object</li>
+            <li>${t('faq.pot.rule1')}</li>
+            <li>${t('faq.pot.rule2')}</li>
           </ul>
-          <p>Both conditions must be true. Joining an existing map (which has prior guesses) makes the jackpot impossible on that board. Missing your first guess on a fresh map also makes it impossible for the rest of that board.</p>
-          <p>Because a blind first shot is far easier on a small group board (1 in 16) than in the Final (1 in 49), the pot is <strong>anchored low during the easy group stage and topped up as play reaches harder stages</strong>. Floors: group <strong>100</strong>, knockout <strong>160</strong>, semi <strong>230</strong>, final <strong>320</strong>. Each top-up (+60 into the knockouts, +70 into the semi, +90 into the final) is announced on-screen — the longer the odds, the bigger the top-up.</p>
-          <p>You'll see a pop-up with the top-up amount <strong>before you start</strong> the first round of each new tier, so you know how big the jackpot has grown going in. New to the game? Tap <strong>ⓘ How it works</strong> on the home screen for a quick recap any time.</p>
-          <p>On a jackpot win: you receive the standard Prize Pot plus the entire Captain's Pot balance. The pot then reseeds to the floor of the stage where it was won, so an easy early win never leaves an inflated pot behind.</p>
+          <p>${t('faq.pot.conditions')}</p>
+          <p>${t('faq.pot.anchored')}</p>
+          <p>${t('faq.pot.popup')}</p>
+          <p>${t('faq.pot.win')}</p>
         </div>
 
         <div class="faq-section">
-          <h2>The League</h2>
-          <p>The League tracks total tokens won across all tournaments, forever. Every prize, jackpot, and house bonus you earn adds to your League score.</p>
-          <p>The player leading the League when the World Cup Final whistle blows on <strong>19 July 2026</strong> wins <strong>2% of all tokens ever collected by the game</strong>. The live prize amount is shown at the top of the League page and updates in real time as players spend tokens.</p>
-          <p>You set your League display name from the Victory Stadium screen after winning all 7 stages. The League page shows the Top 20 and your own rank, updated every few seconds.</p>
-          <p><strong>Real-time updates:</strong> The League leaderboard refreshes automatically every few seconds — you'll see scores climb as other players earn tokens. The countdown timer to the deadline and the live prize pool amount update in real time too, so you can watch the competition unfold. You'll also see a toast notification whenever a new player takes the lead.</p>
+          <h2>${t('faq.leaderboard')}</h2>
+          <p>${t('faq.leaderboard.desc')}</p>
+          <p>${t('faq.leaderboard.prize')}</p>
+          <p>${t('faq.leaderboard.name')}</p>
+          <p><strong>${t('faq.leaderboard.updates')}</strong></p>
         </div>
 
         <div class="faq-section">
-          <h2>The Victory Stadium</h2>
-          <p>After winning all 7 matches and lifting the World Cup, you're taken to the <strong>Victory Stadium</strong> — a celebration screen showing your champion status.</p>
-          <p>On this screen you'll see:</p>
+          <h2>${t('faq.stadium')}</h2>
+          <p>${t('faq.stadium.desc')}</p>
+          <p>${t('faq.stadium.shows')}</p>
           <ul>
-            <li><strong>Your champion nation</strong> — the country you led to victory</li>
-            <li><strong>Total tokens won</strong> — your earnings from all 7 stages combined</li>
-            <li><strong>House Bonus:</strong> +50 tokens (automatic reward for completing the tournament)</li>
-            <li><strong>Captain's Jackpot wins</strong> — if you hit the jackpot during your run, that amount is shown separately</li>
-            <li><strong>Your League rank and score</strong> — where you stand against all other players</li>
+            <li><strong>${t('faq.stadium.nation')}</strong></li>
+            <li><strong>${t('faq.stadium.tokens')}</strong></li>
+            <li><strong>${t('faq.stadium.bonus')}</strong></li>
+            <li><strong>${t('faq.stadium.jackpot')}</strong></li>
+            <li><strong>${t('faq.stadium.rank')}</strong></li>
           </ul>
-          <p>You can <strong>set or update your League display name</strong> via a text input — this is how you appear on the leaderboard. It's optional, but recommended if you want to claim your spot in the rankings.</p>
-          <p>Two buttons appear at the bottom:</p>
+          <p>${t('faq.stadium.name_input')}</p>
+          <p>${t('faq.stadium.buttons')}</p>
           <ul>
-            <li><strong>🏆 Leaderboard</strong> — jump to the live League page to see where you rank and watch the competition</li>
-            <li><strong>▶ Play Again</strong> — start a fresh tournament (you'll pick a new nation and reset, but your wallet and League score are preserved)</li>
+            <li><strong>${t('faq.stadium.btn_league')}</strong></li>
+            <li><strong>${t('faq.stadium.btn_play')}</strong></li>
           </ul>
         </div>
 
         <div class="faq-section">
-          <h2>Sounds & Settings</h2>
-          <p>GOAL! features a retro 8-bit sound design that enhances the World Cup atmosphere. Use the <strong>mute icon (🔊 or 🔇)</strong> in the top-right header to toggle sound on and off. Your mute preference is saved in your browser, so it persists across sessions.</p>
-          <p>Three types of sounds play during your tournament:</p>
+          <h2>${t('faq.sounds')}</h2>
+          <p>${t('faq.sounds.desc')}</p>
+          <p>${t('faq.sounds.types')}</p>
           <ul>
-            <li><strong>Tile click blips</strong> — a quick NES-style beep every time you tap a tile</li>
-            <li><strong>Victory jingle</strong> — a triumphant fanfare plays when you find the ball and win a match</li>
-            <li><strong>Goal anthem</strong> — an epic 32-bar orchestral victory tune plays when you win all 7 stages and lift the World Cup in the Final</li>
+            <li><strong>${t('faq.sounds.blips')}</strong></li>
+            <li><strong>${t('faq.sounds.victory')}</strong></li>
+            <li><strong>${t('faq.sounds.anthem')}</strong></li>
           </ul>
-          <p>The audio system uses the Web Audio API with synthesized square and triangle waves — no audio files are needed, so sounds load instantly. If you prefer silent play, just tap the mute icon in the header and all sound effects will be disabled.</p>
+          <p>${t('faq.sounds.api')}</p>
         </div>
 
         <div class="faq-section">
-          <h2>Future Updates</h2>
-          <p>GOAL! is evolving. Here's what's coming next:</p>
+          <h2>${t('faq.future_updates')}</h2>
+          <p>${t('faq.future_updates.intro')}</p>
 
-          <h3>2-Player 1v1 Mode</h3>
-          <p>Challenge your friends to simultaneous head-to-head tournaments. Both players will compete on identical 7-stage World Cup tournaments at the same time, playing against the same boards with the same opponents. Track who reaches each milestone first and who scores the most tokens overall. Your 1v1 match results count toward your League score, so competition drives both glory and rankings.</p>
+          <h3>${t('faq.future_updates.1v1_title')}</h3>
+          <p>${t('faq.future_updates.1v1_desc')}</p>
 
-          <h3>Push Notification Matchmaking</h3>
-          <p>No one to play against? Post a matchmaking request and other Usernode players will receive push notifications that someone is looking for a 2-player opponent. Browse active matchmaking requests from other players seeking opponents. This solves the "cold start" problem that plagues early multiplayer games — instead of waiting for random players to appear, you can actively find someone to play with through the platform's notification system.</p>
+          <h3>${t('faq.future_updates.matchmaking_title')}</h3>
+          <p>${t('faq.future_updates.matchmaking_desc')}</p>
 
-          <h3>Adventure & Treasure Hunt Evolution</h3>
-          <p>GOAL! World Cup Edition is our launch theme, but the game engine's true identity is treasure hunting and exploration. Future updates will evolve the game into an Indiana Jones-style adventure where you travel searching for treasures and relics, discover hidden clues along the way, and solve environmental puzzles to unlock the next level. Instead of finding footballs and trophies, you'll uncover ancient artifacts and unravel mysteries. The 7-stage tournament structure remains; the theme changes. Each adventure will bring a fresh setting, new hazards, and fresh challenges to discover.</p>
+          <h3>${t('faq.future_updates.adventure_title')}</h3>
+          <p>${t('faq.future_updates.adventure_desc')}</p>
         </div>
 
         <div class="faq-hackathon">
@@ -2825,9 +2824,7 @@
       showToast('Wallet sync failed — please retry', 3000);
     }
 
-    renderFaq();
-    renderLobby();
-    updateHud();
+    navigate('#lobby');
   };
 
   // ═══════════════════════════════════════════════════════════════

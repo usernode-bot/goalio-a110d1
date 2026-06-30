@@ -86,11 +86,6 @@
       "expectSelector": "#hint-bar"
     },
     {
-      "name": "Game board shows bundle buttons",
-      "path": "/#game/2",
-      "expectText": "44 tokens"
-    },
-    {
       "name": "Game board shows mute icon",
       "path": "/#game/2",
       "expectSelector": ".mute-btn"
