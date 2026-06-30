@@ -1410,7 +1410,9 @@
 
       state.session = session;
       state.next_opponent_theme = next_opponent_theme;
-      state.walletBalance = wallet_balance || 1000;
+      if (!testingModeActive) {
+        state.walletBalance = wallet_balance || 1000;
+      }
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
       // Seed the last-won marker from the server so the first poll doesn't
@@ -1867,6 +1869,7 @@
     // (the session_id was a frontend-only ID and won't exist in the DB)
     const body = { square_index: idx };
     if (sessId && !testingModeActive) body.session_id = sessId;
+    if (testingModeActive) body.testing_mode = true;
 
     // Disable board during request
     document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
@@ -1885,10 +1888,8 @@
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
       game.revealed[idx] = true;
       state.squaresRevealed = d.squares_revealed;
-      // In testing mode with active credits, preserve the frontend-managed balance.
-      // The server deducts tokens (unaware of testing mode), but testing mode balance
-      // is front-end only. Real mode or no active credits: sync from server.
-      if (!(testingModeActive && sessId)) {
+      // In testing mode, balance is frontend-managed — never overwrite from server.
+      if (!testingModeActive) {
         state.walletBalance = d.wallet_balance;
       }
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
@@ -1896,6 +1897,18 @@
         const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
         if (currentRemaining > 0) {
           state.credits.credits_remaining = currentRemaining - 1;
+        }
+      }
+      // In testing mode on a win: add prize + jackpot + house bonus to local balance,
+      // and refund the token value of any remaining unused bundle credits.
+      if (testingModeActive && d.hit) {
+        state.walletBalance += (d.prize_paid || 0) + (d.jackpot_paid || 0) + (d.house_bonus || 0);
+        if (state.credits) {
+          const remaining = parseInt(state.credits.credits_remaining) || 0;
+          if (remaining > 0) {
+            state.walletBalance += remaining * parseFloat(state.credits.tokens_per_credit || 0);
+          }
+          state.credits = null;
         }
       }
 
@@ -2373,6 +2386,10 @@
 
   window.confirmLeave = async function(id, modal) {
     if (modal) modal.remove();
+    if (testingModeActive) {
+      state.walletBalance = 1000;
+      state.credits = null;
+    }
     await api('POST', `/api/games/${id}/leave`);
     navigate('#lobby');
   };
@@ -2411,7 +2428,7 @@
     if (r.ok) {
       const d = await r.json();
       totalWon = d.session ? d.session.total_tokens_won : 0;
-      state.walletBalance = d.wallet_balance;
+      if (!testingModeActive) state.walletBalance = d.wallet_balance;
     }
     const leagueR = await api('GET', '/api/league');
     let myRank = '?', myScore = 0, username = '';
@@ -2473,6 +2490,10 @@
   };
   window.playAgain = async function() {
     stopConfetti();
+    if (testingModeActive) {
+      state.walletBalance = 1000;
+      state.credits = null;
+    }
     if (state.session) {
       await api('POST', '/api/session', { my_team_slug: state.session.my_team_slug });
       state.session = null;
@@ -2805,7 +2826,11 @@
       if (r.ok) {
         const d = await r.json();
         state.session = d.session;
-        state.walletBalance = d.wallet_balance || 1000;
+        if (testingModeActive) {
+          state.walletBalance = 1000;
+        } else {
+          state.walletBalance = d.wallet_balance || 1000;
+        }
         state.potBalance = d.captain_pot_balance || 100;
         state.prevPotBalance = state.potBalance;
         // Seed from the server's most recent win so a fresh page load doesn't
