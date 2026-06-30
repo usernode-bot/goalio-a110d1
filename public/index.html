@@ -1095,6 +1095,13 @@
       this.stopSuccesspurchase();
       updateMuteButtons();
       return this.muted;
+    },
+    stopAllAudio() {
+      this.stopIntro();
+      this.stopLeaderboard();
+      this.stopWinthecup();
+      this.stopFindball();
+      this.stopSuccesspurchase();
     }
   };
   function playBlip() { Sound.blip(); }
@@ -1303,12 +1310,8 @@
   function route() {
     clearPolls();
     stopConfetti();
+    Sound.stopAllAudio();
     const hash = location.hash || '#lobby';
-    if (hash !== '#lobby' && hash !== '#') {
-      Sound.stopIntro();
-      Sound.stopLeaderboard();
-      Sound.stopWinthecup();
-    }
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
