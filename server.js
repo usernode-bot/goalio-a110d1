@@ -264,17 +264,7 @@ async function syncWalletBalance(client, userId) {
       return { balance: 1000, synced: false, error: 'Wallet not initialized' };
     }
 
-    // In staging/mock mode, return seeded mock balance
-    if (MOCK_WALLET_TXS) {
-      const mockBalance = userId % 2 === 0 ? 5000 : 2500;
-      await client.query(
-        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
-        [mockBalance, userId]
-      );
-      return { balance: mockBalance, synced: true, source: 'mock' };
-    }
-
-    // Query sidecar for actual balance (in production, this would fetch from real sidecar)
+    // Query sidecar for actual balance
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
@@ -1596,6 +1586,15 @@ async function start() {
     INSERT INTO game_stats (id, total_tokens_collected) VALUES (1, 0)
     ON CONFLICT (id) DO NOTHING
   `);
+
+  // Auto-seed house wallet with 5,000 tokens (for prize payouts)
+  // House wallet uses a reserved user_id (999999) and the HOUSE_WALLET_ADDRESS
+  await pool.query(`
+    INSERT INTO player_wallets (user_id, username, balance, wallet_address, last_synced_at)
+    VALUES (999999, 'house', 5000, $1, NOW())
+    ON CONFLICT (user_id) DO NOTHING
+  `, [HOUSE_WALLET_ADDRESS]);
+  console.log('[init] House wallet auto-seeded with 5000 tokens');
 
   // ── Staging boot reset ────────────────────────────────────────────────────
   // Wipe all player/game rows on every staging boot so the seed below always
