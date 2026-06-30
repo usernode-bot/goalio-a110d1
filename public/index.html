@@ -2301,13 +2301,16 @@
       }
       return;
     }
-    const d = await r.json();
-    state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
-    state.walletBalance = d.wallet_balance;
-    updateHud();
-    updateCreditsDisplay();
-    Sound.playSuccesspurchase();
-    showToast(t('game.shots_loaded', {size: size}), 2000);
+    try {
+      const d = await r.json();
+      state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
+      state.walletBalance = d.wallet_balance;
+      updateHud();
+      updateCreditsDisplay();
+      showToast(t('game.shots_loaded', {size: size}), 2000);
+    } finally {
+      Sound.playSuccesspurchase();
+    }
   };
 
   // ═══════════════════════════════════════════════════════════════
