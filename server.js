@@ -76,7 +76,10 @@ function pricingForStage(stageIdx) {
   else if (stageIdx <= 4) perShot = 4;
   else if (stageIdx === 5) perShot = 2.75;
   else perShot = 2;
-  return { perShot, bundle2: perShot * 2, bundle8: perShot * 8, bundle16: perShot * 16 };
+  const bundle2Cost = Math.round(perShot * 2 * 0.97);
+  const bundle8Cost = Math.round(perShot * 8 * 0.85);
+  const bundle16Cost = Math.round(perShot * 16 * 0.80);
+  return { perShot, bundle2: bundle2Cost, bundle8: bundle8Cost, bundle16: bundle16Cost };
 }
 
 // Captain's Pot floor per stage tier — rounded UP to tidy figures (per the
