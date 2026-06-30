@@ -129,7 +129,7 @@
       border-radius: 8px; padding: 6px 12px; font-family: 'DM Sans', sans-serif;
       font-size: 0.75rem; color: #aaa; text-align: center; flex: 1;
     }
-    .hud-chip .val { font-family: 'Space Mono', monospace; font-size: 1rem; color: #f0f0f5; font-weight: 700; display: block; }
+    .hud-chip .val { font-family: 'Space Mono', monospace; font-size: clamp(0.65rem, 4vw, 1rem); color: #f0f0f5; font-weight: 700; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .pot-chip {
       border-color: rgba(251,191,36,0.5) !important;
       box-shadow: 0 0 8px rgba(251,191,36,0.2);
@@ -342,9 +342,9 @@
     /* Game HUD — ultra compact 4-chip row (scoped to game screen) */
     .game-hud { display: flex; gap: 4px; padding: 2px 8px; background: rgba(0,0,0,0.48); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
     .game-hud .hud-chip { padding: 2px 5px !important; border-radius: 6px !important; font-size: 7.5px !important; line-height: 1.1; }
-    .game-hud .hud-chip .val { font-size: 12px !important; }
+    .game-hud .hud-chip .val { font-size: clamp(9px, 2.5vw, 12px) !important; }
     .game-hud .pot-chip { box-shadow: 0 0 8px rgba(251,191,36,0.18) !important; }
-    .game-hud .pot-chip .val { font-size: 12px !important; color: #fbbf24 !important; }
+    .game-hud .pot-chip .val { font-size: clamp(9px, 2.5vw, 12px) !important; color: #fbbf24 !important; }
 
     /* Nation strip — single tight row */
     .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 1px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 22px; }
@@ -1383,8 +1383,10 @@
 
       state.session = session;
       state.next_opponent_theme = next_opponent_theme;
+      // In real token mode, use the synced balance from the sidecar (via /api/session which calls getWalletBalance)
+      // In demo/testing mode, use the frontend-managed 1000 tokens
       if (!testingModeActive) {
-        state.walletBalance = wallet_balance || 1000;
+        state.walletBalance = wallet_balance || state.walletBalance || 1000;
       }
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
@@ -2806,34 +2808,45 @@
     testingModeActive = false;
     state.testingMode = false;
     localStorage.removeItem('testingMode');
-    showToast('💰 Real Token Mode enabled');
+    showToast('💰 Real Token Mode enabled - syncing your blockchain balance...');
 
     // Fetch real wallet balance from sidecar via sync endpoint
+    // Pass testingMode=0 to indicate we're in real mode now
     try {
-      const r = await api('GET', '/api/wallet/sync');
+      const r = await api('GET', '/api/wallet/sync?testingMode=0');
       if (r.ok) {
         const d = await r.json();
-        state.walletBalance = d.balance || 1000;
+        const syncedBalance = d.balance || 1000;
+        state.walletBalance = syncedBalance;
+        console.log('[switchToRealMode] Synced real balance from sidecar:', syncedBalance);
+
+        // Update HUD display immediately with the synced balance
+        updateHud();
+
         if (!d.synced) {
           console.warn('Wallet sync warning:', d.error);
           if (d.error && d.error.includes('timeout')) {
-            showToast('Wallet sync timed out — blockchain unavailable', 3000);
+            showToast('Wallet sync timed out — using cached balance', 3000);
           } else if (d.error && d.error.includes('not initialized')) {
             showToast('Wallet not found — ensure wallet is connected', 3000);
           }
+        } else {
+          showToast('Real wallet balance synced: ' + Math.round(syncedBalance) + ' tokens');
         }
       } else {
         const e = await r.json().catch(() => ({}));
         console.error('Wallet sync failed:', e);
+        state.walletBalance = 1000; // Fallback
         if (e.error && e.error.includes('timeout')) {
-          showToast('Wallet sync failed — blockchain unavailable', 3000);
+          showToast('Wallet sync timed out — using default balance', 3000);
         } else {
-          showToast('Wallet sync failed — please retry', 3000);
+          showToast('Wallet sync failed — using default balance', 3000);
         }
       }
     } catch (err) {
       console.error('Failed to fetch wallet balance:', err);
-      showToast('Wallet sync failed — please retry', 3000);
+      state.walletBalance = 1000; // Fallback
+      showToast('Wallet sync failed — using default balance', 3000);
     }
 
     navigate('#lobby');
