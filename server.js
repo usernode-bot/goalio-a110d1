@@ -1547,7 +1547,7 @@ const THEMES_SEED = [
   { slug: 'portugal',    country_name: 'Portugal',    accent_colour: '#e23b3b', footballer_name: 'Cristiano Ronaldo' },
   { slug: 'netherlands', country_name: 'Netherlands', accent_colour: '#ff7a18', footballer_name: 'Johan Cruyff' },
   { slug: 'norway',      country_name: 'Norway',      accent_colour: '#4f7bff', footballer_name: 'Erling Haaland' },
-  { slug: 'germany',     country_name: 'Germany',     accent_colour: '#ffce00', footballer_name: 'Franz Beckenbauer' },
+  { slug: 'germany',     country_name: 'Germany',     accent_colour: '#ffce00', footballer_name: 'Miroslav Klose' },
   { slug: 'mexico',      country_name: 'Mexico',      accent_colour: '#006847', footballer_name: 'Hugo Sánchez' },
 ];
 
