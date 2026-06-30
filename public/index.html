@@ -1765,11 +1765,12 @@
       </div>`;
 
     // Match-start animation: fade in tiles sequentially with sparkle
-    // First, hide portrait initially with transition ready
+    // First, hide portrait initially with transition ready (unless it's the final stage)
     const portraitEl = document.querySelector('.portrait');
     if (portraitEl) {
       portraitEl.style.transition = 'opacity 0.6s ease';
-      portraitEl.style.opacity = '0';
+      // For final stage (6), show portrait immediately; for others, hide it
+      portraitEl.style.opacity = stageIdx >= 6 ? '1' : '0';
     }
 
     // Apply random fade-in animation to tiles (spread over ~2.5 seconds with sparkles)
@@ -1788,13 +1789,15 @@
       });
     }, 2500);
 
-    // After all tiles finish animating and sparkle flash, fade in the portrait
-    setTimeout(() => {
-      if (portraitEl) {
-        portraitEl.style.transition = 'opacity 0.5s ease';
-        portraitEl.style.opacity = '1';
-      }
-    }, 3000);
+    // After all tiles finish animating and sparkle flash, fade in the portrait (skip for final stage)
+    if (stageIdx < 6) {
+      setTimeout(() => {
+        if (portraitEl) {
+          portraitEl.style.transition = 'opacity 0.5s ease';
+          portraitEl.style.opacity = '1';
+        }
+      }, 3000);
+    }
   }
 
   function updateHud() {
@@ -2422,7 +2425,6 @@
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
     startConfetti();
-    setTimeout(() => { Sound.playWinthecup(); }, 50);
     const r = await api('GET', '/api/session');
     let totalWon = 0, displayName = '';
     if (r.ok) {
@@ -2470,6 +2472,7 @@
           </div>
         </div>
       </div>`;
+    setTimeout(() => { Sound.playWinthecup(); }, 100);
   }
 
   window.submitLeague = async function() {
