@@ -91,7 +91,7 @@
       "expectText": "44 tokens"
     },
     {
-      "name": "Game board shows Mute control",
+      "name": "Game board shows mute icon",
       "path": "/#game/2",
       "expectSelector": ".mute-btn"
     },
