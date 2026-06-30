@@ -93,7 +93,7 @@
     {
       "name": "Game board shows Mute control",
       "path": "/#game/2",
-      "expectText": "Mute"
+      "expectSelector": ".mute-btn"
     },
     {
       "name": "League page renders",

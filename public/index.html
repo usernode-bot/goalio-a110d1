@@ -1135,7 +1135,7 @@
   function playNationAnthem(nationSlug) { return Sound.nationAnthem(nationSlug); }
   function stopNationAnthem() { Sound.stopNationAnthem(); }
   window.toggleMute = function() { Sound.toggle(); };
-  function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
+  function muteIcon() { return Sound.muted ? '🔇' : '🔊'; }
   function updateMuteButtons() {
     document.querySelectorAll('.mute-btn').forEach(b => {
       b.innerHTML = muteIcon();
@@ -1243,7 +1243,6 @@
         <span class="header-logo-sub">World Cup Edition</span>
       </a>
       <div class="header-btns font-dm">
-        <button class="header-btn" onclick="resetMyBalance()" title="Start new game">+</button>
         <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
         <button class="header-btn mute-btn" style="opacity:${Sound.muted ? '0.55' : '1'};" onclick="toggleMute()" title="Toggle sound">${muteIcon()}</button>
         <button class="header-btn" onclick="navigate('#faq')" title="FAQ">?</button>
