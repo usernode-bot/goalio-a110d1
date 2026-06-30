@@ -2691,14 +2691,28 @@
 
         <div class="faq-section">
           <h2>Sounds & Settings</h2>
-          <p>GOAL! features a retro 8-bit sound design that enhances the World Cup atmosphere. Use the <strong>mute button (🔊/🔇)</strong> in the top-right header to toggle sound on and off. Your mute preference is saved in your browser, so it persists across sessions.</p>
+          <p>GOAL! features a retro 8-bit sound design that enhances the World Cup atmosphere. Use the <strong>mute icon (🔊 or 🔇)</strong> in the top-right header to toggle sound on and off. Your mute preference is saved in your browser, so it persists across sessions.</p>
           <p>Three types of sounds play during your tournament:</p>
           <ul>
             <li><strong>Tile click blips</strong> — a quick NES-style beep every time you tap a tile</li>
             <li><strong>Victory jingle</strong> — a triumphant fanfare plays when you find the ball and win a match</li>
             <li><strong>Goal anthem</strong> — an epic 32-bar orchestral victory tune plays when you win all 7 stages and lift the World Cup in the Final</li>
           </ul>
-          <p>The audio system uses the Web Audio API with synthesized square and triangle waves — no audio files are needed, so sounds load instantly. If you prefer silent play, just tap the mute button and all sound effects will be disabled.</p>
+          <p>The audio system uses the Web Audio API with synthesized square and triangle waves — no audio files are needed, so sounds load instantly. If you prefer silent play, just tap the mute icon in the header and all sound effects will be disabled.</p>
+        </div>
+
+        <div class="faq-section">
+          <h2>Future Updates</h2>
+          <p>GOAL! is evolving. Here's what's coming next:</p>
+
+          <h3>2-Player 1v1 Mode</h3>
+          <p>Challenge your friends to simultaneous head-to-head tournaments. Both players will compete on identical 7-stage World Cup tournaments at the same time, playing against the same boards with the same opponents. Track who reaches each milestone first and who scores the most tokens overall. Your 1v1 match results count toward your League score, so competition drives both glory and rankings.</p>
+
+          <h3>Push Notification Matchmaking</h3>
+          <p>No one to play against? Post a matchmaking request and other Usernode players will receive push notifications that someone is looking for a 2-player opponent. Browse active matchmaking requests from other players seeking opponents. This solves the "cold start" problem that plagues early multiplayer games — instead of waiting for random players to appear, you can actively find someone to play with through the platform's notification system.</p>
+
+          <h3>Adventure & Treasure Hunt Evolution</h3>
+          <p>GOAL! World Cup Edition is our launch theme, but the game engine's true identity is treasure hunting and exploration. Future updates will evolve the game into an Indiana Jones-style adventure where you travel searching for treasures and relics, discover hidden clues along the way, and solve environmental puzzles to unlock the next level. Instead of finding footballs and trophies, you'll uncover ancient artifacts and unravel mysteries. The 7-stage tournament structure remains; the theme changes. Each adventure will bring a fresh setting, new hazards, and fresh challenges to discover.</p>
         </div>
 
         <div class="faq-hackathon">
@@ -2740,6 +2754,19 @@
             <li><strong>Noir</strong> (by Aztec) is a Rust-like language for writing ZK circuits that compile to both native provers and browser-runnable WASM. It would be the natural fit here: write the "ball is at position P under commitment C" circuit in Noir, generate a proof server-side per game, verify client-side in the browser before the player makes their first guess.</li>
           </ul>
           <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
+
+          <h3>📋 To Do: Aztec Noir Proof Integration</h3>
+          <p><strong>Status: Not yet implemented</strong></p>
+          <p>Plan to record tournament game results on-chain via Aztec with Noir ZK proofs:</p>
+          <ul>
+            <li><strong>Proof generation:</strong> When a game is created, generate a Noir proof in the background that commits to the ball position (tournament_id, game_number, username, ball_position, stage_idx, client_timestamp). Proof stored locally with status 'generating' → 'pending'.</li>
+            <li><strong>Proof submission:</strong> On game win, submit the proof to Aztec testnet contract. Status updates to 'pending', then 'confirmed' once on-chain.</li>
+            <li><strong>Viewing proofs:</strong> New pages: <code>#player/games/:username</code> (player's tournament games with proof links) and <code>#on-chain-proofs</code> (global proof registry, linked from footer).</li>
+            <li><strong>Setup required:</strong> Aztec testnet account, private key, deployed contract address; Noir compiler integration in build; environment variables (AZTEC_RPC_URL, AZTEC_CONTRACT_ADDRESS, AZTEC_WALLET_PRIVATE_KEY, AZTEC_ACCOUNT_ADDRESS).</li>
+            <li><strong>Circuit:</strong> Noir circuit at <code>circuits/game_proof.nr</code> that verifies game fields and outputs a commitment hash.</li>
+            <li><strong>Database:</strong> New table <code>on_chain_records</code> (game_id, tournament_id, game_number, username, ball_position, stage_idx, proof_status, aztec_tx_hash, proof_commitment).</li>
+          </ul>
+          <p>Proof generation happens silently during gameplay; submission is non-blocking on win. Game IDs formatted as <code>000001-1</code> (tournament_id-game_number).</p>
         </div>
       </div>
     </div>`;
