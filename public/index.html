@@ -176,7 +176,9 @@
     .game-screen { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; position: relative; }
     .portrait {
       position: absolute; inset: 0; z-index: 0;
+      display: block; width: 100%; height: 100%;
       background-size: cover; background-position: center top;
+      background-repeat: no-repeat;
     }
     .board {
       position: absolute; inset: 0; z-index: 2;
@@ -2075,6 +2077,8 @@
       if (nameTagEl) {
         nameTagEl.style.opacity = '1';
         nameTagEl.style.animation = 'none';
+        nameTagEl.style.display = 'block';
+        nameTagEl.style.visibility = 'visible';
       }
 
       let resultTitle = 'You found the net!';
@@ -2225,7 +2229,8 @@
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Confetti already stopped at 3s mark, now show the name tag with trivia
-    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 3.5s forwards';
+    // Keep nameTag visible until after showResult() can restore it (extends fadeout timing)
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 5.5s forwards';
     boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
