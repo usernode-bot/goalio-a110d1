@@ -272,7 +272,7 @@ async function syncWalletBalance(client, userId) {
     // In staging with mocked wallet TXs, return a demo balance for demonstration
     if (MOCK_WALLET_TXS) {
       // Generate a demo real token balance (different from the 1000 demo to show it's working)
-      const demoBalance = 2500;
+      const demoBalance = 500;
       console.log(`[wallet-sync] MOCK_WALLET_TXS mode: returning demo balance ${demoBalance} instead of sidecar call`);
       // Update the database with the demo balance so it persists
       await client.query(
