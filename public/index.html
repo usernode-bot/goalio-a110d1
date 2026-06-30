@@ -2057,7 +2057,7 @@
       }
 
       // Ensure nameTag (factbox) is visible before displaying result card
-      const nameTagEl = document.querySelector('[style*="bottom:12px"]');
+      const nameTagEl = document.getElementById('nametag-box');
       if (nameTagEl) {
         nameTagEl.style.opacity = '1';
         nameTagEl.style.animation = 'none';
@@ -2114,8 +2114,12 @@
     }
     boardZone && boardZone.appendChild(bannerEl);
 
+    // Clean up any stale nameTag from a previous game
+    document.querySelectorAll('#nametag-box').forEach(el => el.remove());
+
     // Create name tag but don't append yet — will show after 5s portrait reveal
     const nameTag = document.createElement('div');
+    nameTag.id = 'nametag-box';
     nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
     const footballerText = isFinal ? 'World Cup Trophy 🏆' : `${theme.footballer_name} — ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
