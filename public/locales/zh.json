@@ -29,6 +29,7 @@
   "game.wallet_label": "钱包",
   "game.prize_label": "奖金池",
   "game.shots_label": "射击",
+  "hud.shots_left": "剩余射击",
   "game.stage_label": "阶段",
   "game.you": "你",
   "game.opponent": "对手",

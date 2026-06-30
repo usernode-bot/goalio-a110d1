@@ -1707,7 +1707,7 @@
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
       <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">${t('game.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
+      <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';

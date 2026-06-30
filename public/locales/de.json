@@ -29,6 +29,7 @@
   "game.wallet_label": "Brieftasche",
   "game.prize_label": "Preistopf",
   "game.shots_label": "Schüsse",
+  "hud.shots_left": "Verbleibende Schüsse",
   "game.stage_label": "Phase",
   "game.you": "Du",
   "game.opponent": "Gegner",

@@ -29,6 +29,7 @@
   "game.wallet_label": "Portefeuille",
   "game.prize_label": "Pot de Prix",
   "game.shots_label": "Coups",
+  "hud.shots_left": "Coups Restants",
   "game.stage_label": "Étape",
   "game.you": "Vous",
   "game.opponent": "Adversaire",

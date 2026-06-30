@@ -29,6 +29,7 @@
   "game.wallet_label": "Wallet",
   "game.prize_label": "Prize Pot",
   "game.shots_label": "Shots",
+  "hud.shots_left": "Shots Left",
   "game.stage_label": "Stage",
   "game.you": "You",
   "game.opponent": "Opponent",

@@ -29,6 +29,7 @@
   "game.wallet_label": "Cüzdan",
   "game.prize_label": "Ödül Pot",
   "game.shots_label": "Şutlar",
+  "hud.shots_left": "Kalan Şutlar",
   "game.stage_label": "Etap",
   "game.you": "Sen",
   "game.opponent": "Rakip",
