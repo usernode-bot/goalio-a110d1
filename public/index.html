@@ -1868,6 +1868,10 @@
           state.credits.credits_remaining = currentRemaining - 1;
         }
       }
+      // Apply testing-mode prize and jackpot winnings to wallet
+      if (testingModeActive && d.hit) {
+        state.walletBalance = (state.walletBalance || 0) + (d.prize_paid || 0) + (d.jackpot_paid || 0);
+      }
       // Apply testing-mode final-game refund to wallet
       if (testingModeActive && d.credits_refunded > 0) {
         state.walletBalance = (state.walletBalance || 0) + d.credits_refunded;
