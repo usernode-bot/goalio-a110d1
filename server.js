@@ -21,7 +21,7 @@ const HOUSE_BONUS_TOKENS = 50;
 const HOUSE_WALLET_PRIVATE_KEY = process.env.HOUSE_WALLET_PRIVATE_KEY || '';
 const HOUSE_WALLET_PUBLIC_KEY = process.env.HOUSE_WALLET_PUBLIC_KEY || 'utpk1rtpjdqwm53jv6t7ax6vxczlujv577nz33veskavdn48s6k3ljr8qmn798l';
 const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqcaj2prwjln6z87ewa5mclhfyz7vjagr0xqqlms420qlvz7s8';
-const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://localhost:3001' : 'http://usernode:3000');
+const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://usernode:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
 const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode']);
@@ -235,12 +235,14 @@ async function updateTransactionStatus(client, txHash, status = 'confirmed') {
 }
 
 // Local wallet helpers (now blockchain-backed with local cache)
-async function ensureWallet(client, userId, username) {
+async function ensureWallet(client, userId, username, userNodePubkey = null) {
+  // Use actual linked Usernode wallet address if available, otherwise fall back to fake address
+  const walletAddress = userNodePubkey || `wallet_${userId}`;
   await client.query(`
     INSERT INTO player_wallets (user_id, username, balance, wallet_address, last_synced_at)
     VALUES ($1, $2, 1000, $3, NOW())
     ON CONFLICT (user_id) DO NOTHING
-  `, [userId, username, `wallet_${userId}`]);
+  `, [userId, username, walletAddress]);
 }
 
 async function getWalletBalance(client, userId) {
@@ -303,9 +305,15 @@ async function syncWalletBalance(client, userId, playerInDemoMode = false) {
       const requestBody = { address: walletAddress };
       console.log(`[wallet-sync] Calling sidecar: POST ${requestUrl}`, `Body: ${JSON.stringify(requestBody)}`);
 
+      const headers = { 'content-type': 'application/json' };
+      // Add auth header if the sidecar requires it
+      if (process.env.USERNODE_SIDECAR_TOKEN) {
+        headers['x-usernode-sidecar-token'] = process.env.USERNODE_SIDECAR_TOKEN;
+      }
+
       const response = await fetch(requestUrl, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers,
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });
@@ -498,7 +506,7 @@ app.get('/api/session', async (req, res) => {
       const pot = potRows[0] || { balance: 100, last_won_at: null, last_winner_username: null };
       return res.json({ session: null, captain_pot_balance: parseFloat(pot.balance), last_won_at: pot.last_won_at, last_winner_username: pot.last_winner_username, wallet_balance: 1000 });
     }
-    await ensureWallet(client, req.user.id, req.user.username);
+    await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
 
     const { rows } = await client.query(
       'SELECT * FROM tournament_sessions WHERE user_id = $1', [req.user.id]
@@ -769,7 +777,7 @@ app.get('/api/games/:id', async (req, res) => {
         ORDER BY created_at DESC LIMIT 1
       `, [game.id, req.user.id]);
       credRows = rows;
-      await ensureWallet(client, req.user.id, req.user.username);
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
       walletBalance = await getWalletBalance(client, req.user.id);
     }
 
@@ -879,7 +887,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 
     // Ensure wallet exists before attempting debit
     try {
-      await ensureWallet(client, req.user.id, req.user.username);
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Wallet initialization failed:', err.message);
@@ -961,7 +969,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
     // Ensure wallet exists at the start of guess (prevents state pollution)
     try {
-      await ensureWallet(client, req.user.id, req.user.username);
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
     } catch (err) {
       await client.query('ROLLBACK');
       console.error('Wallet initialization failed in guess:', err.message);
@@ -992,7 +1000,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
     // Debit wallet for single guess (bundles pre-paid); skip in testing mode.
     if (!usedBundleId && !testing_mode) {
-      await ensureWallet(client, req.user.id, req.user.username);
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
       try {
         await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
       } catch {
@@ -1077,7 +1085,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
       // Credit prize + jackpot (skip in testing mode — balance is frontend-managed)
       if (!testing_mode) {
-        await ensureWallet(client, req.user.id, req.user.username);
+        await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
         try {
           await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
         } catch (err) {
@@ -1321,7 +1329,7 @@ app.get('/api/wallet', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
-    await ensureWallet(client, req.user.id, req.user.username);
+    await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
     const balance = await getWalletBalance(client, req.user.id);
 
     const { rows } = await client.query(
@@ -1355,7 +1363,7 @@ app.get('/api/wallet/sync', async (req, res) => {
     const playerInDemoMode = req.query.testingMode === '1' || req.query.testingMode === 'true';
     console.log(`[wallet-sync-endpoint] Player testing mode: ${playerInDemoMode}`);
 
-    await ensureWallet(client, req.user.id, req.user.username);
+    await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
     const syncResult = await syncWalletBalance(client, req.user.id, playerInDemoMode);
 
     console.log(`[wallet-sync-endpoint] Sync result for user ${req.user.id}:`, JSON.stringify({
@@ -1403,7 +1411,7 @@ app.post('/api/player/reset-balance', async (req, res) => {
     await client.query('BEGIN');
     try {
       // Ensure wallet exists
-      await ensureWallet(client, req.user.id, req.user.username);
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
 
       // Reset balance to 1000
       const { rows } = await client.query(`
