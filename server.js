@@ -345,6 +345,18 @@ async function syncWalletBalance(client, userId) {
   }
 }
 
+async function getHouseWalletBalance(client) {
+  const { rows } = await client.query('SELECT balance FROM house_wallet WHERE id = 1');
+  return rows.length > 0 ? parseFloat(rows[0].balance) : 0;
+}
+
+async function updateHouseWalletBalance(client, amount) {
+  await client.query(
+    'UPDATE house_wallet SET balance = balance - $1, last_synced_at = NOW() WHERE id = 1',
+    [amount]
+  );
+}
+
 async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameId = null) {
   try {
     // Check local balance BEFORE calling sidecar, using pessimistic locking
@@ -393,9 +405,25 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
     // Ensure wallet exists before crediting
     await ensureWallet(client, userId, `user_${userId}`);
 
-    // In real token mode (testing_mode false), credit the player directly without requiring house funds
-    // This is a temporary hybrid approach until the house wallet can be funded on-chain
-    // Generate a mock tx_hash for audit trail purposes
+    // For prize payouts, check if the house wallet has sufficient balance
+    // to debit. If not, the credit is marked as pending and not applied.
+    if (reason === 'prize_payout' || reason === 'house_bonus') {
+      const houseBalance = await getHouseWalletBalance(client);
+      if (houseBalance < amount) {
+        console.error(`[creditWallet] House wallet insufficient balance: ${houseBalance} < ${amount} for ${reason}`);
+        // Signal that the prize payout is pending (house wallet needs funding)
+        // Return a special error that the caller can detect
+        const err = new Error('House wallet insufficient balance');
+        err.isPending = true;
+        throw err;
+      }
+
+      // House has sufficient balance; debit the house account
+      await updateHouseWalletBalance(client, amount);
+      console.log(`[creditWallet] Debited house wallet ${amount} for ${reason} to user ${userId}`);
+    }
+
+    // Generate a tx_hash for audit trail purposes
     const txHash = generateMockTxHash();
 
     // Record transaction in audit log
@@ -1605,6 +1633,14 @@ async function start() {
   )`);
   await pool.query(`COMMENT ON TABLE admin_users IS 'staging:private'`);
 
+  await pool.query(`CREATE TABLE IF NOT EXISTS house_wallet (
+    id INTEGER PRIMARY KEY DEFAULT 1,
+    wallet_address VARCHAR(255) NOT NULL,
+    balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+    last_synced_at TIMESTAMPTZ DEFAULT NOW()
+  )`);
+  await pool.query(`COMMENT ON TABLE house_wallet IS 'staging:private'`);
+
   // ── Seed reference data (unconditional) ───────────────────────────────────
   for (const t of THEMES_SEED) {
     await pool.query(`
@@ -1624,6 +1660,13 @@ async function start() {
     INSERT INTO game_stats (id, total_tokens_collected) VALUES (1, 0)
     ON CONFLICT (id) DO NOTHING
   `);
+
+  // Initialize house_wallet with placeholder row
+  await pool.query(`
+    INSERT INTO house_wallet (id, wallet_address, balance, last_synced_at)
+    VALUES (1, $1, 0, NOW())
+    ON CONFLICT (id) DO NOTHING
+  `, [HOUSE_WALLET_ADDRESS]);
 
   // ── Staging boot reset ────────────────────────────────────────────────────
   // Wipe all player/game rows on every staging boot so the seed below always
@@ -1752,6 +1795,11 @@ async function start() {
     `);
 
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 5))`);
+
+    // Seed house wallet with 500 tokens for testing prize payouts in real token mode
+    await pool.query(`
+      UPDATE house_wallet SET balance = 500, last_synced_at = NOW() WHERE id = 1
+    `);
 
   }
 
