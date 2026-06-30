@@ -2399,9 +2399,9 @@
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Confetti already stopped at 3s mark, now show the name tag with trivia
-    // Keep nameTag visible until after showResult() can restore it (extends fadeout timing)
-    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 5.5s forwards';
-    (boardZone || document.body).appendChild(nameTag);
+    // Keep nameTag visible for 4 seconds (fade in 0.5s, visible 4s, then fade out)
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 4.5s forwards';
+    boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
     await sleep(6000);
