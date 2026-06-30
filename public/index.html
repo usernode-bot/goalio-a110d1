@@ -629,16 +629,16 @@
 
     .retro-quip-box {
       background: linear-gradient(135deg, rgba(20,10,40,0.95) 0%, rgba(10,10,30,0.98) 100%);
-      border: 3px solid #FF1493;
-      border-right: 3px solid #FFD700;
-      border-bottom: 3px solid #FFD700;
+      border: 1px solid #FF1493;
+      border-right: 1px solid #FFD700;
+      border-bottom: 1px solid #FFD700;
       box-shadow:
-        0 0 20px rgba(255,20,147,0.8),
-        0 0 40px rgba(0,255,255,0.4),
-        inset 0 0 20px rgba(0,255,255,0.15);
-      padding: clamp(16px, 4vw, 24px);
+        0 0 5px rgba(255,20,147,0.8),
+        0 0 10px rgba(0,255,255,0.4),
+        inset 0 0 5px rgba(0,255,255,0.15);
+      padding: clamp(4px, 1vw, 6px);
       position: relative;
-      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+      clip-path: polygon(0 0, calc(100% - 2px) 0, 100% 2px, 100% 100%, 2px 100%, 0 calc(100% - 2px));
       max-width: 90vw;
       animation: quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
@@ -656,13 +656,13 @@
 
     .retro-quip-text {
       font-family: 'Press Start 2P', monospace;
-      font-size: clamp(0.6rem, 3vw, 1rem);
+      font-size: clamp(0.15rem, 0.75vw, 0.25rem);
       color: #00FFFF;
       text-shadow:
-        1px 1px 0 #FF1493,
-        2px 2px 0 #FFD700,
-        3px 3px 8px rgba(0,0,0,0.8);
-      letter-spacing: 1px;
+        0.25px 0.25px 0 #FF1493,
+        0.5px 0.5px 0 #FFD700,
+        1px 1px 2px rgba(0,0,0,0.8);
+      letter-spacing: 0.25px;
       margin: 0;
       text-align: center;
       white-space: nowrap;
