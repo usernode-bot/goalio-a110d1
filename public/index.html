@@ -1710,7 +1710,7 @@
 
     // Portrait behind tiles — footballer image or trophy for final
     const portraitUrl = stageIdx >= 6
-      ? '/images/trophy-reveal.jpg'
+      ? '/images/trophy.svg'
       : `/images/footballers/${theme.slug}.png`;
 
     const hud = `<div class="game-hud">
@@ -1867,6 +1867,10 @@
         if (currentRemaining > 0) {
           state.credits.credits_remaining = currentRemaining - 1;
         }
+      }
+      // Apply testing-mode prize and jackpot winnings to wallet
+      if (testingModeActive && d.hit) {
+        state.walletBalance = (state.walletBalance || 0) + (d.prize_paid || 0) + (d.jackpot_paid || 0);
       }
       // Apply testing-mode final-game refund to wallet
       if (testingModeActive && d.credits_refunded > 0) {
