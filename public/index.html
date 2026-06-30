@@ -2057,6 +2057,20 @@
       document.getElementById('goal-ball')?.remove();
       document.querySelectorAll('.tile').forEach(c => { c.classList.add('open'); });
 
+      // Ensure portrait is visible before displaying result card
+      const portraitEl = document.querySelector('.portrait');
+      if (portraitEl) {
+        portraitEl.style.opacity = '1';
+        portraitEl.style.transition = 'none';
+      }
+
+      // Ensure nameTag (factbox) is visible before displaying result card
+      const nameTagEl = document.querySelector('[style*="bottom:12px"]');
+      if (nameTagEl) {
+        nameTagEl.style.opacity = '1';
+        nameTagEl.style.animation = 'none';
+      }
+
       let resultTitle = 'You found the net!';
       if (result.jackpot_paid > 0) resultTitle = "Captain's Jackpot!";
       else if (isFinal) resultTitle = 'Champions of the World!';
@@ -2209,13 +2223,7 @@
 
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
-    // Step 5: Fade portrait to black
-    const blackOverlay = document.createElement('div');
-    blackOverlay.style.cssText = `position:absolute;inset:0;z-index:50;background:rgba(0,0,0,0.9);animation:blackfade 1s ease forwards;pointer-events:none;`;
-    boardZone && boardZone.appendChild(blackOverlay);
-
-    await sleep(1500);
-
+    // Show result card directly without fade-to-black transition
     clearTimeout(confettiStopTimer);
     return showResult();
   }
