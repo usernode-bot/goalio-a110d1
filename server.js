@@ -250,6 +250,73 @@ async function getWalletBalance(client, userId) {
   return rows.length > 0 ? parseFloat(rows[0].balance) : 1000;
 }
 
+async function syncWalletBalance(client, userId) {
+  // Sync wallet balance from sidecar and update cached player_wallets
+  try {
+    // Ensure wallet exists first
+    const { rows: walletRows } = await client.query(
+      'SELECT wallet_address FROM player_wallets WHERE user_id = $1',
+      [userId]
+    );
+
+    if (!walletRows.length) {
+      // Wallet doesn't exist yet, return default
+      return { balance: 1000, synced: false, error: 'Wallet not initialized' };
+    }
+
+    // In staging/mock mode, return seeded mock balance
+    if (MOCK_WALLET_TXS) {
+      const mockBalance = userId % 2 === 0 ? 5000 : 2500;
+      await client.query(
+        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
+        [mockBalance, userId]
+      );
+      return { balance: mockBalance, synced: true, source: 'mock' };
+    }
+
+    // Query sidecar for actual balance (in production, this would fetch from real sidecar)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+    try {
+      const walletAddress = walletRows[0].wallet_address;
+      const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/balance`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ address: walletAddress }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(`Sidecar error: ${response.status} ${JSON.stringify(err)}`);
+      }
+
+      const data = await response.json();
+      const sidecarBalance = parseFloat(data.balance) || 1000;
+
+      // Update cached balance
+      await client.query(
+        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
+        [sidecarBalance, userId]
+      );
+
+      return { balance: sidecarBalance, synced: true, source: 'sidecar' };
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return { balance: await getWalletBalance(client, userId), synced: false, error: 'Sidecar timeout' };
+      }
+      console.error(`Sidecar sync error for user ${userId}:`, err.message);
+      return { balance: await getWalletBalance(client, userId), synced: false, error: err.message };
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  } catch (err) {
+    console.error(`Failed to sync wallet for user ${userId}:`, err.message);
+    return { balance: await getWalletBalance(client, userId), synced: false, error: err.message };
+  }
+}
+
 async function debitWallet(client, userId, amount, reason = 'shot_bundle', gameId = null) {
   try {
     // Check local balance BEFORE calling sidecar, using pessimistic locking
@@ -1199,6 +1266,45 @@ app.get('/api/wallet', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// GET /api/wallet/sync — Sync wallet balance from sidecar
+app.get('/api/wallet/sync', async (req, res) => {
+  const client = await pool.connect();
+  try {
+    if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+
+    await ensureWallet(client, req.user.id, req.user.username);
+    const syncResult = await syncWalletBalance(client, req.user.id);
+
+    if (!syncResult.synced && syncResult.error) {
+      return res.status(500).json({
+        error: syncResult.error,
+        balance: syncResult.balance,
+        synced: false
+      });
+    }
+
+    const { rows } = await client.query(
+      'SELECT wallet_address, last_synced_at FROM player_wallets WHERE user_id = $1',
+      [req.user.id]
+    );
+
+    const walletData = rows[0] || { wallet_address: `wallet_${req.user.id}`, last_synced_at: null };
+
+    res.json({
+      balance: syncResult.balance,
+      address: walletData.wallet_address,
+      last_synced_at: walletData.last_synced_at,
+      synced: syncResult.synced,
+      source: syncResult.source
+    });
+  } catch (err) {
+    console.error('Wallet sync endpoint error:', err);
+    res.status(500).json({ error: err.message, synced: false });
   } finally {
     client.release();
   }

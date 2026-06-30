@@ -2762,14 +2762,28 @@
     localStorage.removeItem('testingMode');
     showToast('💰 Real Token Mode enabled');
 
-    // Fetch real wallet balance from the server
+    // Fetch real wallet balance from sidecar via sync endpoint
     try {
-      const r = await api('GET', '/api/wallet');
+      const r = await api('GET', '/api/wallet/sync');
       if (r.ok) {
         const d = await r.json();
         state.walletBalance = d.balance || 1000;
+        if (!d.synced) {
+          console.warn('Wallet sync warning:', d.error);
+          if (d.error && d.error.includes('timeout')) {
+            showToast('Wallet sync timed out — blockchain unavailable', 3000);
+          } else if (d.error && d.error.includes('not initialized')) {
+            showToast('Wallet not found — ensure wallet is connected', 3000);
+          }
+        }
       } else {
-        showToast('Could not fetch wallet balance — using cached value', 3000);
+        const e = await r.json().catch(() => ({}));
+        console.error('Wallet sync failed:', e);
+        if (e.error && e.error.includes('timeout')) {
+          showToast('Wallet sync failed — blockchain unavailable', 3000);
+        } else {
+          showToast('Wallet sync failed — please retry', 3000);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch wallet balance:', err);
@@ -2811,15 +2825,15 @@
           state.walletBalance = 1000;
         } else {
           state.walletBalance = d.wallet_balance || 1000;
-          // In real mode, fetch the freshest wallet balance from the sidecar
+          // In real mode, fetch the freshest wallet balance from sidecar
           try {
-            const walletR = await api('GET', '/api/wallet');
+            const walletR = await api('GET', '/api/wallet/sync');
             if (walletR.ok) {
               const walletD = await walletR.json();
               state.walletBalance = walletD.balance || state.walletBalance;
             }
           } catch (err) {
-            console.error('Failed to fetch wallet balance on init:', err);
+            console.error('Failed to sync wallet balance on init:', err);
           }
         }
         state.potBalance = d.captain_pot_balance || 100;
