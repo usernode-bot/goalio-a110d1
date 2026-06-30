@@ -2091,10 +2091,11 @@
       resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
       const icon = isFinal ? '🏆' : '⚽';
       const portraitUrl = isFinal ? `/images/trophy.svg` : `/images/footballers/${theme.slug}.png`;
+      const iconHtml = isFinal ? '' : `<div style="font-size:2rem;margin-bottom:8px;">${icon}</div>`;
       resultCard.innerHTML = `
         <div class="result-card">
           <div class="portrait-display" style="background-image:url('${portraitUrl}');"></div>
-          <div style="font-size:2rem;margin-bottom:8px;">${icon}</div>
+          ${iconHtml}
           <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
           ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
           <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
@@ -2232,7 +2233,7 @@
     // Confetti already stopped at 3s mark, now show the name tag with trivia
     // Keep nameTag visible until after showResult() can restore it (extends fadeout timing)
     nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 5.5s forwards';
-    boardZone && boardZone.appendChild(nameTag);
+    (boardZone || document.body).appendChild(nameTag);
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
     await sleep(6000);
