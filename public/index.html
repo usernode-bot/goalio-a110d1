@@ -1602,6 +1602,10 @@
   };
 
   async function doStartNewMap() {
+    // Save testing-mode carry-over credits before starting new map
+    if (testingModeActive && state.credits && state.credits.credits_remaining > 0) {
+      state._pendingTestingCarryover = { ...state.credits };
+    }
     const r = await api('POST', '/api/session/start-map');
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -1683,6 +1687,18 @@
       if (state.credits && state.credits.credits_remaining !== undefined) {
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
       }
+
+      // Restore testing-mode carry-over credits if available
+      if (state._pendingTestingCarryover && testingModeActive) {
+        if (!state.credits) {
+          state.credits = state._pendingTestingCarryover;
+        } else {
+          state.credits.credits_remaining = (parseInt(state.credits.credits_remaining) || 0) +
+                                            (state._pendingTestingCarryover.credits_remaining || 0);
+        }
+        state._pendingTestingCarryover = null;
+      }
+
       state.walletBalance = d.wallet_balance;
       state.potBalance = d.captain_pot_balance;
       state.prevPotBalance = d.captain_pot_balance;
@@ -1889,6 +1905,11 @@
         if (currentRemaining > 0) {
           state.credits.credits_remaining = currentRemaining - 1;
         }
+      }
+
+      // Apply testing-mode final-game refund to wallet
+      if (testingModeActive && d.credits_refunded > 0) {
+        state.walletBalance = (state.walletBalance || 0) + d.credits_refunded;
       }
 
       // If THIS player just won the jackpot, record their win timestamp so the
@@ -2653,7 +2674,7 @@
             <li><strong>Take A Shot:</strong> 8 shots</li>
             <li><strong>Best Value:</strong> 16 shots</li>
           </ul>
-          <p>When you tap a tile with no shots remaining, a pop-up appears letting you instantly buy one of these bundles. <strong>Unused shots don't carry over</strong> — they expire when that board ends, so plan accordingly. Your wallet balance is deducted immediately when you purchase.</p>
+          <p>When you tap a tile with no shots remaining, a pop-up appears letting you instantly buy one of these bundles. <strong>Unused shots are carried over to your next match at no extra cost.</strong> On the Grand Final, any remaining shots are refunded to your wallet at their purchase price. Your wallet balance is deducted immediately when you purchase.</p>
         </div>
 
         <div class="faq-section">
