@@ -1711,10 +1711,8 @@
     const myTeam = state.themes.find(t => t.slug === (state.session ? state.session.my_team_slug : ''));
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
 
-    // Portrait behind tiles — footballer image or trophy for final
-    const portraitUrl = stageIdx >= 6
-      ? '/images/trophy.svg'
-      : `/images/footballers/${theme.slug}.png`;
+    // Portrait behind tiles — always show footballer image; trophy shown in result card for final
+    const portraitUrl = `/images/footballers/${theme.slug}.png`;
 
     const hud = `<div class="game-hud">
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
