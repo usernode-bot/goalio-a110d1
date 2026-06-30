@@ -269,6 +269,19 @@ async function syncWalletBalance(client, userId) {
     const walletAddress = walletRows[0].wallet_address;
     console.log(`[wallet-sync] User ${userId} wallet address: ${walletAddress}`);
 
+    // In staging with mocked wallet TXs, return a demo balance for demonstration
+    if (MOCK_WALLET_TXS) {
+      // Generate a demo real token balance (different from the 1000 demo to show it's working)
+      const demoBalance = 2500;
+      console.log(`[wallet-sync] MOCK_WALLET_TXS mode: returning demo balance ${demoBalance} instead of sidecar call`);
+      // Update the database with the demo balance so it persists
+      await client.query(
+        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
+        [demoBalance, userId]
+      );
+      return { balance: demoBalance, synced: true, source: 'mock' };
+    }
+
     // Query sidecar for actual balance
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
