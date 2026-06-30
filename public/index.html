@@ -654,6 +654,34 @@
       100% { opacity: 0; }
     }
 
+    /* Explode/scatter exit animation */
+    @keyframes quip-explode {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 1; }
+      100% { transform: scale(0.1) rotate(360deg); opacity: 0; }
+    }
+
+    /* Dissolve with pixelated effect */
+    @keyframes quip-dissolve {
+      0% { opacity: 1; filter: blur(0px) brightness(1); }
+      40% { filter: blur(2px) brightness(1.1); }
+      100% { opacity: 0; filter: blur(8px) brightness(0.5); }
+    }
+
+    /* Slide out with spin */
+    @keyframes quip-slide-spin {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-120px) rotate(-720deg); opacity: 0; }
+    }
+
+    /* Bounce out with bounce effect */
+    @keyframes quip-bounce-out {
+      0% { transform: scale(1); opacity: 1; }
+      20% { transform: scale(1.08); }
+      50% { transform: translateY(-40px) scale(0.95); opacity: 1; }
+      100% { transform: translateY(120px) scale(0.3); opacity: 0; }
+    }
+
     .retro-quip-text {
       font-family: 'Press Start 2P', monospace;
       font-size: clamp(0.3rem, 1.5vw, 0.5rem);
@@ -670,6 +698,22 @@
 
     .retro-quip-box.fade-out {
       animation: quip-fade-out 0.6s ease-out forwards;
+    }
+
+    .retro-quip-box.explode {
+      animation: quip-explode 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    .retro-quip-box.dissolve {
+      animation: quip-dissolve 0.8s ease-out forwards;
+    }
+
+    .retro-quip-box.slide-spin {
+      animation: quip-slide-spin 0.9s ease-in forwards;
+    }
+
+    .retro-quip-box.bounce-out {
+      animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
     /* Reset Game Button - 80's style */
@@ -1901,12 +1945,31 @@
     overlay.style.transform = 'translate(-50%, -50%)';
 
     const quipBox = overlay.querySelector('.retro-quip-box');
+
+    // Randomly select an exit animation
+    const exitAnimations = ['fade-out', 'explode', 'dissolve', 'slide-spin', 'bounce-out'];
+    const selectedAnimation = exitAnimations[Math.floor(Math.random() * exitAnimations.length)];
+
+    // Determine animation duration based on selected animation
+    const animationDurations = {
+      'fade-out': 600,
+      'explode': 700,
+      'dissolve': 800,
+      'slide-spin': 900,
+      'bounce-out': 800
+    };
+    const animationDuration = animationDurations[selectedAnimation];
+
     setTimeout(() => {
-      if (quipBox) quipBox.classList.add('fade-out');
+      if (quipBox) {
+        quipBox.classList.add(selectedAnimation);
+      }
       setTimeout(() => {
         overlay.style.display = 'none';
-        if (quipBox) quipBox.classList.remove('fade-out');
-      }, 600);
+        if (quipBox) {
+          quipBox.classList.remove(selectedAnimation);
+        }
+      }, animationDuration);
     }, 1500);
   }
 
