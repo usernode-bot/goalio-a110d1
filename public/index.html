@@ -2799,8 +2799,9 @@
     showToast('💰 Real Token Mode enabled - syncing your blockchain balance...');
 
     // Fetch real wallet balance from sidecar via sync endpoint
+    // Pass testingMode=0 to indicate we're in real mode now
     try {
-      const r = await api('GET', '/api/wallet/sync');
+      const r = await api('GET', '/api/wallet/sync?testingMode=0');
       if (r.ok) {
         const d = await r.json();
         const syncedBalance = d.balance || 1000;

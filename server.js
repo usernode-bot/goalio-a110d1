@@ -250,10 +250,11 @@ async function getWalletBalance(client, userId) {
   return rows.length > 0 ? parseFloat(rows[0].balance) : 1000;
 }
 
-async function syncWalletBalance(client, userId) {
+async function syncWalletBalance(client, userId, playerInDemoMode = false) {
   // Sync wallet balance from sidecar and update cached player_wallets
+  // playerInDemoMode: if true, return mock demo balance; if false, call sidecar
   try {
-    console.log(`[wallet-sync] Starting wallet sync for user ${userId}`);
+    console.log(`[wallet-sync] Starting wallet sync for user ${userId}, demo mode: ${playerInDemoMode}`);
 
     // Ensure wallet exists first
     const { rows: walletRows } = await client.query(
@@ -269,12 +270,23 @@ async function syncWalletBalance(client, userId) {
     const walletAddress = walletRows[0].wallet_address;
     console.log(`[wallet-sync] User ${userId} wallet address: ${walletAddress}`);
 
-    // In staging with mocked wallet TXs, return a demo balance for demonstration
+    // If player is in demo mode, return mock demo balance
+    if (playerInDemoMode) {
+      // Return demo balance (different from the 1000 demo to show it's working)
+      const demoBalance = 500;
+      console.log(`[wallet-sync] Player in demo mode: returning demo balance ${demoBalance}`);
+      // Update the database with the demo balance so it persists
+      await client.query(
+        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
+        [demoBalance, userId]
+      );
+      return { balance: demoBalance, synced: true, source: 'mock' };
+    }
+
+    // In staging with mocked wallet TXs (and not in demo mode), still use mock for real mode
     if (MOCK_WALLET_TXS) {
-      // Generate a demo real token balance (different from the 1000 demo to show it's working)
       const demoBalance = 500;
       console.log(`[wallet-sync] MOCK_WALLET_TXS mode: returning demo balance ${demoBalance} instead of sidecar call`);
-      // Update the database with the demo balance so it persists
       await client.query(
         'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
         [demoBalance, userId]
@@ -1339,8 +1351,12 @@ app.get('/api/wallet/sync', async (req, res) => {
 
     console.log(`[wallet-sync-endpoint] GET /api/wallet/sync for user ${req.user.id} (${req.user.username})`);
 
+    // Get the player's current mode from query param (testingMode=1 means demo mode)
+    const playerInDemoMode = req.query.testingMode === '1' || req.query.testingMode === 'true';
+    console.log(`[wallet-sync-endpoint] Player testing mode: ${playerInDemoMode}`);
+
     await ensureWallet(client, req.user.id, req.user.username);
-    const syncResult = await syncWalletBalance(client, req.user.id);
+    const syncResult = await syncWalletBalance(client, req.user.id, playerInDemoMode);
 
     console.log(`[wallet-sync-endpoint] Sync result for user ${req.user.id}:`, JSON.stringify({
       synced: syncResult.synced,
