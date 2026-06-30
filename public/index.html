@@ -890,6 +890,14 @@
   function fmtTokens(n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); }
   // Shot-purchase buttons, priced for the current stage.
   function shotButtonsHtml() {
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+
+    // If player has shots remaining, show count badge instead of purchase buttons
+    if (credRemaining > 0) {
+      return `<div class="credits-chip">${t('game.shots_left', {count: credRemaining, plural: credRemaining !== 1 ? 's' : ''})}</div>`;
+    }
+
+    // Otherwise show purchase options
     const p = state.pricing || { bundle2: 11, bundle8: 44, bundle16: 88 };
     return `<div style="display:flex;gap:4px;">
         <button class="shot-btn" onclick="buyBundle(2)"><span class="shot-count">${t('game.quick_shot')}</span><span class="shot-cost">${t('game.quick_shot_count')}</span><span class="shot-cost">${fmtTokens(p.bundle2)} tokens</span></button>
@@ -2272,6 +2280,13 @@
   window.buyBundle = async function(size) {
     if (state.walletBalance === undefined || state.walletBalance === null) {
       showToast('Wallet not initialized — please reload', 3000);
+      return;
+    }
+
+    // Prevent purchasing if player has shots remaining
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    if (credRemaining > 0) {
+      showToast('You must use your remaining shots first', 3000);
       return;
     }
 

@@ -62,6 +62,7 @@
   "game.best_value": "⭐ Miglior Valore",
   "game.best_value_count": "16 colpi",
   "game.shots_remaining": "🎯 {count} colpo{plural} rimanente{plural}",
+  "game.shots_left": "{count} colpo{plural} rimanente{plural}",
   "game.shots_loaded": "⚽ {size} colpi caricati!",
   "celebration.goal": "GOAL!",
   "celebration.champions": "CAMPIONI!",

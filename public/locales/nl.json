@@ -62,6 +62,7 @@
   "game.best_value": "⭐ Beste Waarde",
   "game.best_value_count": "16 schoten",
   "game.shots_remaining": "🎯 {count} schot{plural} resterend",
+  "game.shots_left": "{count} schot{plural} resterend",
   "game.shots_loaded": "⚽ {size} schoten geladen!",
   "celebration.goal": "GOAL!",
   "celebration.champions": "KAMPIOEN!",

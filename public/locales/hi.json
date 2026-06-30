@@ -62,6 +62,7 @@
   "game.best_value": "⭐ सर्वश्रेष्ठ मूल्य",
   "game.best_value_count": "16 शॉट्स",
   "game.shots_remaining": "🎯 {count} शॉट{plural} शेष",
+  "game.shots_left": "{count} शॉट{plural} शेष",
   "game.shots_loaded": "⚽ {size} शॉट्स लोड हो गए!",
   "celebration.goal": "गोल!",
   "celebration.champions": "चैंपियन!",
