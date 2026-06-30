@@ -755,6 +755,9 @@
   <audio id="home-bg-music" loop preload="auto">
     <source src="/audio/home-loop.mp3" type="audio/mpeg">
   </audio>
+  <audio id="intro-audio" preload="auto">
+    <source src="/audio/intro.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
   </script>
@@ -1120,11 +1123,29 @@
         this.homeLoopPlaying = true;
       }
     },
+    introElement: null,
+    playIntro() {
+      if (this.muted) return;
+      if (!this.introElement) {
+        this.introElement = document.getElementById('intro-audio');
+      }
+      if (!this.introElement) return;
+      this.introElement.volume = 0.18;
+      this.introElement.currentTime = 0;
+      this.introElement.play().catch(() => {});
+    },
+    stopIntro() {
+      if (this.introElement) {
+        this.introElement.pause();
+        this.introElement.currentTime = 0;
+      }
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
       if (!this.muted) this.ensure();
       this.muteHomeLoop(this.muted);
+      this.stopIntro();
       updateMuteButtons();
       return this.muted;
     }
@@ -1343,6 +1364,7 @@
     if (hash !== '#lobby' && hash !== '#') {
       stopNationAnthem();
       Sound.stopHomeLoop();
+      Sound.stopIntro();
     }
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
@@ -1352,7 +1374,10 @@
     }
     document.documentElement.style.removeProperty('--accent');
     document.documentElement.style.removeProperty('--accent-soft');
-    if (hash === '#lobby' || hash === '#') renderLobby();
+    if (hash === '#lobby' || hash === '#') {
+      Sound.playIntro();
+      renderLobby();
+    }
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') renderLeague();
     else if (hash === '#faq') renderFaq();
