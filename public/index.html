@@ -2090,7 +2090,7 @@
 
     const goalText = isFinal ? t('celebration.champions') : t('celebration.goal');
     const subtitleText = isFinal ? t('celebration.won_cup') : t('celebration.scored');
-    const fontSize = isFinal ? '4.5rem' : '5.5rem';
+    const fontSize = isFinal ? 'clamp(1.8rem, 4.5vw, 4.5rem)' : 'clamp(2rem, 5vw, 5.5rem)';
 
     goalOverlay.innerHTML = `
       <div class="goal-text" style="
@@ -2098,8 +2098,7 @@
         color:${accentColor || '#fbbf24'};
         text-shadow:0 0 20px ${accentColor || '#fbbf24'}77,
                     0 4px 12px rgba(0,0,0,0.8);
-        line-height:1;margin:0;word-wrap:break-word;overflow-wrap:break-word;
-        hyphens:auto;max-width:90vw;padding:0 12px;box-sizing:border-box;
+        line-height:1;margin:0;white-space:nowrap;
       ">${goalText}</div>
       <div class="goal-subtitle" style="
         font-family:'DM Sans',sans-serif;font-size:1rem;
