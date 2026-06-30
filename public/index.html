@@ -758,6 +758,12 @@
   <audio id="intro-audio" preload="auto">
     <source src="/audio/intro.mp3" type="audio/mpeg">
   </audio>
+  <audio id="leaderboard-audio" preload="auto">
+    <source src="/audio/leaderboard.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="winthecup-audio" preload="auto">
+    <source src="/audio/winthecup.mp3" type="audio/mpeg">
+  </audio>
 
   <script>
   </script>
@@ -1140,12 +1146,48 @@
         this.introElement.currentTime = 0;
       }
     },
+    leaderboardElement: null,
+    playLeaderboard() {
+      if (this.muted) return;
+      if (!this.leaderboardElement) {
+        this.leaderboardElement = document.getElementById('leaderboard-audio');
+      }
+      if (!this.leaderboardElement) return;
+      this.leaderboardElement.volume = 0.18;
+      this.leaderboardElement.currentTime = 0;
+      this.leaderboardElement.play().catch(() => {});
+    },
+    stopLeaderboard() {
+      if (this.leaderboardElement) {
+        this.leaderboardElement.pause();
+        this.leaderboardElement.currentTime = 0;
+      }
+    },
+    winthecupElement: null,
+    playWinthecup() {
+      if (this.muted) return;
+      if (!this.winthecupElement) {
+        this.winthecupElement = document.getElementById('winthecup-audio');
+      }
+      if (!this.winthecupElement) return;
+      this.winthecupElement.volume = 0.18;
+      this.winthecupElement.currentTime = 0;
+      this.winthecupElement.play().catch(() => {});
+    },
+    stopWinthecup() {
+      if (this.winthecupElement) {
+        this.winthecupElement.pause();
+        this.winthecupElement.currentTime = 0;
+      }
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
       if (!this.muted) this.ensure();
       this.muteHomeLoop(this.muted);
       this.stopIntro();
+      this.stopLeaderboard();
+      this.stopWinthecup();
       updateMuteButtons();
       return this.muted;
     }
@@ -1365,6 +1407,8 @@
       stopNationAnthem();
       Sound.stopHomeLoop();
       Sound.stopIntro();
+      Sound.stopLeaderboard();
+      Sound.stopWinthecup();
     }
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
@@ -1379,7 +1423,10 @@
       renderLobby();
     }
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
-    else if (hash === '#league') renderLeague();
+    else if (hash === '#league') {
+      Sound.playLeaderboard();
+      renderLeague();
+    }
     else if (hash === '#faq') renderFaq();
     else renderLobby();
   }
@@ -2453,6 +2500,7 @@
   // VICTORY STADIUM
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
+    Sound.playWinthecup();
     startConfetti();
     playVictoryAnthem();
     const r = await api('GET', '/api/session');
