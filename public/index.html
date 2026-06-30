@@ -1135,7 +1135,7 @@
   function playNationAnthem(nationSlug) { return Sound.nationAnthem(nationSlug); }
   function stopNationAnthem() { Sound.stopNationAnthem(); }
   window.toggleMute = function() { Sound.toggle(); };
-  function muteIcon() { return Sound.muted ? '🔇 Mute' : '🔊 Mute'; }
+  function muteIcon() { return Sound.muted ? '🔇' : '🔊'; }
   function updateMuteButtons() {
     document.querySelectorAll('.mute-btn').forEach(b => {
       b.innerHTML = muteIcon();
