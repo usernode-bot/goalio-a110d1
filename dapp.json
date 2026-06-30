@@ -91,9 +91,9 @@
       "expectText": "44 tokens"
     },
     {
-      "name": "Game board shows Mute control",
+      "name": "Game board shows mute icon",
       "path": "/#game/2",
-      "expectText": "Mute"
+      "expectSelector": ".mute-btn"
     },
     {
       "name": "League page renders",
