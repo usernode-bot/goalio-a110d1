@@ -253,6 +253,8 @@ async function getWalletBalance(client, userId) {
 async function syncWalletBalance(client, userId) {
   // Sync wallet balance from sidecar and update cached player_wallets
   try {
+    console.log(`[wallet-sync] Starting wallet sync for user ${userId}`);
+
     // Ensure wallet exists first
     const { rows: walletRows } = await client.query(
       'SELECT wallet_address FROM player_wallets WHERE user_id = $1',
@@ -260,50 +262,86 @@ async function syncWalletBalance(client, userId) {
     );
 
     if (!walletRows.length) {
-      // Wallet doesn't exist yet, return default
+      console.warn(`[wallet-sync] Wallet not found in database for user ${userId}`);
       return { balance: 1000, synced: false, error: 'Wallet not initialized' };
     }
+
+    const walletAddress = walletRows[0].wallet_address;
+    console.log(`[wallet-sync] User ${userId} wallet address: ${walletAddress}`);
 
     // Query sidecar for actual balance
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     try {
-      const walletAddress = walletRows[0].wallet_address;
-      const response = await fetch(`${USERNODE_SIDECAR_URL}/wallet/balance`, {
+      const requestUrl = `${USERNODE_SIDECAR_URL}/wallet/balance`;
+      const requestBody = { address: walletAddress };
+      console.log(`[wallet-sync] Calling sidecar: POST ${requestUrl}`, `Body: ${JSON.stringify(requestBody)}`);
+
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ address: walletAddress }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal
       });
 
+      console.log(`[wallet-sync] Sidecar response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(`Sidecar error: ${response.status} ${JSON.stringify(err)}`);
+        let errorBody = {};
+        try {
+          errorBody = await response.json();
+        } catch (parseErr) {
+          console.warn(`[wallet-sync] Could not parse sidecar error response as JSON: ${parseErr.message}`);
+          errorBody = { rawText: await response.text() };
+        }
+        const errorMsg = `Sidecar error: HTTP ${response.status} - ${JSON.stringify(errorBody)}`;
+        console.error(`[wallet-sync] ${errorMsg}`);
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
-      const sidecarBalance = parseFloat(data.balance) || 1000;
+      console.log(`[wallet-sync] Sidecar response body:`, JSON.stringify(data));
+
+      const sidecarBalance = parseFloat(data.balance);
+      if (isNaN(sidecarBalance)) {
+        console.warn(`[wallet-sync] Sidecar returned non-numeric balance: ${data.balance}`);
+        return { balance: await getWalletBalance(client, userId), synced: false, error: 'Invalid balance format from sidecar' };
+      }
+
+      console.log(`[wallet-sync] Sidecar balance for user ${userId}: ${sidecarBalance}`);
 
       // Update cached balance
       await client.query(
         'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
         [sidecarBalance, userId]
       );
+      console.log(`[wallet-sync] Updated cached balance to ${sidecarBalance} for user ${userId}`);
 
       return { balance: sidecarBalance, synced: true, source: 'sidecar' };
     } catch (err) {
       if (err.name === 'AbortError') {
-        return { balance: await getWalletBalance(client, userId), synced: false, error: 'Sidecar timeout' };
+        console.error(`[wallet-sync] Sidecar request timed out (5s) for user ${userId}`);
+        const cachedBalance = await getWalletBalance(client, userId);
+        return { balance: cachedBalance, synced: false, error: 'Sidecar request timeout (5 seconds)' };
       }
-      console.error(`Sidecar sync error for user ${userId}:`, err.message);
-      return { balance: await getWalletBalance(client, userId), synced: false, error: err.message };
+      const errorMsg = err.message || String(err);
+      console.error(`[wallet-sync] Sidecar sync error for user ${userId}: ${errorMsg}`);
+      const cachedBalance = await getWalletBalance(client, userId);
+      return { balance: cachedBalance, synced: false, error: errorMsg };
     } finally {
       clearTimeout(timeoutId);
     }
   } catch (err) {
-    console.error(`Failed to sync wallet for user ${userId}:`, err.message);
-    return { balance: await getWalletBalance(client, userId), synced: false, error: err.message };
+    const errorMsg = err.message || String(err);
+    console.error(`[wallet-sync] Unexpected error during wallet sync for user ${userId}: ${errorMsg}`);
+    try {
+      const cachedBalance = await getWalletBalance(client, userId);
+      return { balance: cachedBalance, synced: false, error: errorMsg };
+    } catch (fallbackErr) {
+      console.error(`[wallet-sync] Failed to get cached balance as fallback: ${fallbackErr.message}`);
+      return { balance: 1000, synced: false, error: errorMsg };
+    }
   }
 }
 
@@ -1258,16 +1296,17 @@ app.get('/api/wallet/sync', async (req, res) => {
   try {
     if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
 
+    console.log(`[wallet-sync-endpoint] GET /api/wallet/sync for user ${req.user.id} (${req.user.username})`);
+
     await ensureWallet(client, req.user.id, req.user.username);
     const syncResult = await syncWalletBalance(client, req.user.id);
 
-    if (!syncResult.synced && syncResult.error) {
-      return res.status(500).json({
-        error: syncResult.error,
-        balance: syncResult.balance,
-        synced: false
-      });
-    }
+    console.log(`[wallet-sync-endpoint] Sync result for user ${req.user.id}:`, JSON.stringify({
+      synced: syncResult.synced,
+      balance: syncResult.balance,
+      source: syncResult.source,
+      error: syncResult.error
+    }));
 
     const { rows } = await client.query(
       'SELECT wallet_address, last_synced_at FROM player_wallets WHERE user_id = $1',
@@ -1276,16 +1315,24 @@ app.get('/api/wallet/sync', async (req, res) => {
 
     const walletData = rows[0] || { wallet_address: `wallet_${req.user.id}`, last_synced_at: null };
 
-    res.json({
+    const response = {
       balance: syncResult.balance,
       address: walletData.wallet_address,
       last_synced_at: walletData.last_synced_at,
       synced: syncResult.synced,
-      source: syncResult.source
-    });
+      source: syncResult.source,
+      error: syncResult.error
+    };
+
+    console.log(`[wallet-sync-endpoint] Returning 200 OK response:`, JSON.stringify(response));
+
+    // Return 200 OK with sync metadata — synced:false indicates sidecar unavailable, not endpoint error
+    res.status(200).json(response);
   } catch (err) {
-    console.error('Wallet sync endpoint error:', err);
-    res.status(500).json({ error: err.message, synced: false });
+    const errorMsg = err.message || String(err);
+    console.error(`[wallet-sync-endpoint] Unexpected endpoint error for user ${req.user?.id}: ${errorMsg}`);
+    console.error(`[wallet-sync-endpoint] Full error:`, err);
+    res.status(500).json({ error: errorMsg, synced: false });
   } finally {
     client.release();
   }
