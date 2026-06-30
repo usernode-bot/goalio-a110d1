@@ -1045,6 +1045,7 @@
       if (!this.winthecupElement) return;
       this.winthecupElement.volume = 0.18;
       this.winthecupElement.currentTime = 0;
+      this.winthecupElement.load();
       this.winthecupElement.play().catch(() => {});
     },
     stopWinthecup() {
@@ -2420,8 +2421,8 @@
   // VICTORY STADIUM
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
-    Sound.playWinthecup();
     startConfetti();
+    setTimeout(() => { Sound.playWinthecup(); }, 50);
     const r = await api('GET', '/api/session');
     let totalWon = 0, displayName = '';
     if (r.ok) {
