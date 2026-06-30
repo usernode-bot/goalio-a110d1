@@ -786,7 +786,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 
 // POST /api/games/:id/guess
 app.post('/api/games/:id/guess', async (req, res) => {
-  const { square_index, session_id } = req.body;
+  const { square_index, session_id, testing_mode } = req.body;
   if (square_index === undefined || square_index < 0) {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
@@ -857,8 +857,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       }
     }
 
-    // Debit wallet for single guess (bundles pre-paid)
-    if (!usedBundleId) {
+    // Debit wallet for single guess (bundles pre-paid); skip in testing mode.
+    if (!usedBundleId && !testing_mode) {
       await ensureWallet(client, req.user.id, req.user.username);
       try {
         await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
@@ -942,13 +942,15 @@ app.post('/api/games/:id/guess', async (req, res) => {
         WHERE id = $5
       `, [req.user.id, req.user.username, prizePaid, jackpotPaid, game.id]);
 
-      // Credit prize + jackpot
-      await ensureWallet(client, req.user.id, req.user.username);
-      try {
-        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
-      } catch (err) {
-        prizeWalletError = err;
-        console.error('Prize payout wallet transaction failed:', err.message);
+      // Credit prize + jackpot (skip in testing mode — balance is frontend-managed)
+      if (!testing_mode) {
+        await ensureWallet(client, req.user.id, req.user.username);
+        try {
+          await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+        } catch (err) {
+          prizeWalletError = err;
+          console.error('Prize payout wallet transaction failed:', err.message);
+        }
       }
 
       // Remaining bundle credits are NOT refunded — they carry over to the next game
@@ -970,11 +972,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
         let wonThisRound = prizePaid + jackpotAmount;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          try {
-            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
-          } catch (err) {
-            bonusWalletError = err;
-            console.error('House bonus wallet transaction failed:', err.message);
+          if (!testing_mode) {
+            try {
+              await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+            } catch (err) {
+              bonusWalletError = err;
+              console.error('House bonus wallet transaction failed:', err.message);
+            }
           }
           wonThisRound += houseBonus;
         }
