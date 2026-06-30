@@ -2277,11 +2277,14 @@
   // ═══════════════════════════════════════════════════════════════
   function pricingForStage(stageIdx) {
     let perShot;
-    if (stageIdx <= 2) perShot = 13;
-    else if (stageIdx <= 4) perShot = 8;
-    else if (stageIdx === 5) perShot = 5.5;
-    else perShot = 4;
-    return { perShot, bundle2: perShot * 2, bundle8: perShot * 8, bundle16: perShot * 16 };
+    if (stageIdx <= 2) perShot = 6.5;
+    else if (stageIdx <= 4) perShot = 4;
+    else if (stageIdx === 5) perShot = 2.75;
+    else perShot = 2;
+    const bundle2Cost = Math.round(perShot * 2 * 0.97);
+    const bundle8Cost = Math.round(perShot * 8 * 0.85);
+    const bundle16Cost = Math.round(perShot * 16 * 0.80);
+    return { perShot, bundle2: bundle2Cost, bundle8: bundle8Cost, bundle16: bundle16Cost };
   }
 
   // ═══════════════════════════════════════════════════════════════
