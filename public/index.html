@@ -1915,19 +1915,6 @@
           state.credits.credits_remaining = currentRemaining - 1;
         }
       }
-      // In testing mode on a win: add prize + jackpot + house bonus to local balance,
-      // and refund the token value of any remaining unused bundle credits.
-      if (testingModeActive && d.hit) {
-        state.walletBalance += (d.prize_paid || 0) + (d.jackpot_paid || 0) + (d.house_bonus || 0);
-        if (state.credits) {
-          const remaining = parseInt(state.credits.credits_remaining) || 0;
-          if (remaining > 0) {
-            state.walletBalance += remaining * parseFloat(state.credits.tokens_per_credit || 0);
-          }
-          state.credits = null;
-        }
-      }
-
       // Apply testing-mode final-game refund to wallet
       if (testingModeActive && d.credits_refunded > 0) {
         state.walletBalance = (state.walletBalance || 0) + d.credits_refunded;
