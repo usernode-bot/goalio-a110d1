@@ -616,6 +616,62 @@
         1px 1px 0 #00FFFF;
     }
 
+    /* Retro Quip Overlay */
+    #retro-quip-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 60;
+      pointer-events: none;
+      display: none;
+    }
+
+    .retro-quip-box {
+      background: linear-gradient(135deg, rgba(20,10,40,0.95) 0%, rgba(10,10,30,0.98) 100%);
+      border: 3px solid #FF1493;
+      border-right: 3px solid #FFD700;
+      border-bottom: 3px solid #FFD700;
+      box-shadow:
+        0 0 20px rgba(255,20,147,0.8),
+        0 0 40px rgba(0,255,255,0.4),
+        inset 0 0 20px rgba(0,255,255,0.15);
+      padding: clamp(16px, 4vw, 24px);
+      position: relative;
+      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+      max-width: 90vw;
+      animation: quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes quip-scale-in {
+      0% { transform: scale(0.5); opacity: 0; filter: blur(4px); }
+      60% { transform: scale(1.08); opacity: 1; filter: blur(0); }
+      100% { transform: scale(1); opacity: 1; filter: blur(0); }
+    }
+
+    @keyframes quip-fade-out {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    .retro-quip-text {
+      font-family: 'Press Start 2P', monospace;
+      font-size: clamp(0.6rem, 3vw, 1rem);
+      color: #00FFFF;
+      text-shadow:
+        1px 1px 0 #FF1493,
+        2px 2px 0 #FFD700,
+        3px 3px 8px rgba(0,0,0,0.8);
+      letter-spacing: 1px;
+      margin: 0;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .retro-quip-box.fade-out {
+      animation: quip-fade-out 0.6s ease-out forwards;
+    }
+
     /* Reset Game Button - 80's style */
     .reset-btn-container {
       margin: 24px 0;
@@ -1747,6 +1803,7 @@
     document.getElementById('game-body').innerHTML = `
       ${hud}
       ${nationStrip}
+      <div id="retro-quip-overlay"></div>
       <div class="board-zone" id="board-zone">
         <div class="board-wrap">
           <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
@@ -1805,6 +1862,25 @@
 
   function updateCreditsDisplay() {
     updateHud();
+  }
+
+  function showRetroQuip(quipText) {
+    const overlay = document.getElementById('retro-quip-overlay');
+    if (!overlay) return;
+
+    overlay.innerHTML = `<div class="retro-quip-box">
+      <p class="retro-quip-text">${quipText}</p>
+    </div>`;
+    overlay.style.display = 'block';
+
+    const quipBox = overlay.querySelector('.retro-quip-box');
+    setTimeout(() => {
+      if (quipBox) quipBox.classList.add('fade-out');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        if (quipBox) quipBox.classList.remove('fade-out');
+      }, 600);
+    }, 3000);
   }
 
   window.onCellClick = async function(idx) {
@@ -1905,9 +1981,9 @@
           const cleanupTime = Math.round(actualDuration * 1000);
           setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
-        // Update hint bar
-        const hint = document.getElementById('hint-bar');
-        if (hint) hint.textContent = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+        // Show retro quip overlay
+        const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+        showRetroQuip(quip);
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       }
     } catch(e) {
