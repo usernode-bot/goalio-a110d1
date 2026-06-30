@@ -422,12 +422,12 @@ app.post('/api/session', async (req, res) => {
 
     const { rows } = await client.query(`
       INSERT INTO tournament_sessions
-        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
-      VALUES ($1, $2, 0, '{}', 0, false, NULL, $3)
+        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug, last_won_game_id)
+      VALUES ($1, $2, 0, '{}', 0, false, NULL, $3, NULL)
       ON CONFLICT (user_id) DO UPDATE SET
         my_team_slug = $2, stage_idx = 0, played_slugs = '{}',
         total_tokens_won = 0, session_complete = false,
-        current_game_id = NULL, next_opponent_slug = $3, updated_at = NOW()
+        current_game_id = NULL, next_opponent_slug = $3, last_won_game_id = NULL, updated_at = NOW()
       RETURNING *
     `, [req.user.id, my_team_slug, nextOpponent]);
 
@@ -523,20 +523,14 @@ app.post('/api/session/start-map', async (req, res) => {
 
     const game = gameRows[0];
 
-    // Carry over unused credits from the player's last won game into this new game.
+    // Carry over unused credits from the player's last won game in this tournament.
     // Credits are not refunded on win — they roll forward as prepaid shots.
-    const { rows: prevGameRows } = await client.query(`
-      SELECT id FROM games
-      WHERE winner_user_id = $1 AND status = 'completed'
-      ORDER BY completed_at DESC LIMIT 1
-    `, [req.user.id]);
-    if (prevGameRows.length) {
-      const prevGameId = prevGameRows[0].id;
+    if (session.last_won_game_id) {
       const { rows: prevSessions } = await client.query(`
         SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
         FROM game_sessions
         WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
-      `, [prevGameId, req.user.id]);
+      `, [session.last_won_game_id, req.user.id]);
       if (prevSessions.length) {
         const totalRemaining = prevSessions.reduce((s, r) => s + parseInt(r.remaining), 0);
         const totalValue = prevSessions.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
@@ -786,7 +780,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 
 // POST /api/games/:id/guess
 app.post('/api/games/:id/guess', async (req, res) => {
-  const { square_index, session_id } = req.body;
+  const { square_index, session_id, testing_mode } = req.body;
   if (square_index === undefined || square_index < 0) {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
@@ -857,8 +851,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       }
     }
 
-    // Debit wallet for single guess (bundles pre-paid)
-    if (!usedBundleId) {
+    // Debit wallet for single guess (bundles pre-paid); skip in testing mode.
+    if (!usedBundleId && !testing_mode) {
       await ensureWallet(client, req.user.id, req.user.username);
       try {
         await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
@@ -942,16 +936,49 @@ app.post('/api/games/:id/guess', async (req, res) => {
         WHERE id = $5
       `, [req.user.id, req.user.username, prizePaid, jackpotPaid, game.id]);
 
-      // Credit prize + jackpot
-      await ensureWallet(client, req.user.id, req.user.username);
-      try {
-        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
-      } catch (err) {
-        prizeWalletError = err;
-        console.error('Prize payout wallet transaction failed:', err.message);
+      // Credit prize + jackpot (skip in testing mode — balance is frontend-managed)
+      if (!testing_mode) {
+        await ensureWallet(client, req.user.id, req.user.username);
+        try {
+          await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+        } catch (err) {
+          prizeWalletError = err;
+          console.error('Prize payout wallet transaction failed:', err.message);
+        }
       }
 
-      // Remaining bundle credits are NOT refunded — they carry over to the next game
+      // On final match win, refund remaining bundle credits to wallet
+      const { rows: tourCheckRows } = await client.query(
+        'SELECT stage_idx FROM tournament_sessions WHERE user_id = $1', [req.user.id]
+      );
+      const isFinalMatchWin = tourCheckRows.length && tourCheckRows[0].stage_idx >= 6;
+      if (isFinalMatchWin) {
+        const { rows: remainingCredits } = await client.query(`
+          SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
+          FROM game_sessions
+          WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
+        `, [game.id, req.user.id]);
+        if (remainingCredits.length) {
+          const refundAmount = remainingCredits.reduce((sum, r) =>
+            sum + (parseInt(r.remaining) * parseFloat(r.tokens_per_credit)), 0
+          );
+          creditsRefunded = parseFloat(refundAmount.toFixed(2));
+          if (creditsRefunded > 0) {
+            try {
+              await creditWallet(client, req.user.id, creditsRefunded, 'bundle_refund_final', game.id);
+            } catch (err) {
+              console.error('Bundle refund wallet transaction failed:', err.message);
+            }
+            // Mark sessions as refunded
+            await client.query(
+              'UPDATE game_sessions SET refunded = true WHERE id = ANY($1)',
+              [remainingCredits.map(r => r.id)]
+            );
+          }
+        }
+      }
+
+      // Remaining bundle credits are NOT refunded on non-final wins — they carry over to the next game
       // via the start-map handler which consolidates them into a new session.
 
       // Advance tournament session
@@ -970,11 +997,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
         let wonThisRound = prizePaid + jackpotAmount;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          try {
-            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
-          } catch (err) {
-            bonusWalletError = err;
-            console.error('House bonus wallet transaction failed:', err.message);
+          if (!testing_mode) {
+            try {
+              await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+            } catch (err) {
+              bonusWalletError = err;
+              console.error('House bonus wallet transaction failed:', err.message);
+            }
           }
           wonThisRound += houseBonus;
         }
@@ -985,9 +1014,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
           UPDATE tournament_sessions SET
             stage_idx = $1, played_slugs = $2,
             total_tokens_won = total_tokens_won + $3,
-            session_complete = $4, current_game_id = NULL, next_opponent_slug = $6, updated_at = NOW()
+            session_complete = $4, current_game_id = NULL, next_opponent_slug = $6,
+            last_won_game_id = $7, updated_at = NOW()
           WHERE user_id = $5
-        `, [updatedStage, newPlayed, wonThisRound, sessionComplete, req.user.id, nextOpponentSlug]);
+        `, [updatedStage, newPlayed, wonThisRound, sessionComplete, req.user.id, nextOpponentSlug, game.id]);
 
         await client.query(`
           INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed, updated_at)
@@ -1288,7 +1318,7 @@ const THEMES_SEED = [
   { slug: 'morocco',     country_name: 'Morocco',     accent_colour: '#1db954', footballer_name: 'Hakim Ziyech' },
   { slug: 'usa',         country_name: 'USA',         accent_colour: '#4f7bff', footballer_name: 'Landon Donovan' },
   { slug: 'turkey',      country_name: 'Turkey',      accent_colour: '#ff3b4e', footballer_name: 'Hakan Şükür' },
-  { slug: 'belgium',     country_name: 'Belgium',     accent_colour: '#ffd23f', footballer_name: 'Eden Hazard' },
+  { slug: 'belgium',     country_name: 'Belgium',     accent_colour: '#ffd23f', footballer_name: 'Romelu Lukaku' },
   { slug: 'egypt',       country_name: 'Egypt',       accent_colour: '#d4af37', footballer_name: 'Mohamed Salah' },
   { slug: 'portugal',    country_name: 'Portugal',    accent_colour: '#e23b3b', footballer_name: 'Cristiano Ronaldo' },
   { slug: 'netherlands', country_name: 'Netherlands', accent_colour: '#ff7a18', footballer_name: 'Johan Cruyff' },
@@ -1387,6 +1417,7 @@ async function start() {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`ALTER TABLE tournament_sessions ADD COLUMN IF NOT EXISTS next_opponent_slug VARCHAR(32) REFERENCES themes(slug)`);
+  await pool.query(`ALTER TABLE tournament_sessions ADD COLUMN IF NOT EXISTS last_won_game_id INTEGER REFERENCES games(id)`);
   await pool.query(`COMMENT ON TABLE tournament_sessions IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS player_stats (
@@ -1572,7 +1603,21 @@ async function start() {
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['germany'], new Array(49).fill(true)]);
 
-    await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 4))`);
+    // Open final stage game with carry-over credits for refund testing
+    await pool.query(`
+      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
+      VALUES (5, $1, 6, 35, $2, 4, 1, 'open')
+      ON CONFLICT (id) DO NOTHING
+    `, [themeMap['belgium'], revealedPrefix(49, 4)]);
+
+    // Add carry-over credits (8 remaining, 4 t/credit = 32 t refund potential) for the staging test user
+    await pool.query(`
+      INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, refunded)
+      VALUES (5, -1, 8, 0, 4, false)
+      ON CONFLICT DO NOTHING
+    `);
+
+    await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 5))`);
 
   }
 
