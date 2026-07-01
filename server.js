@@ -1049,19 +1049,23 @@ app.post('/api/games/:id/guess', async (req, res) => {
     if (session_id) {
       const { rows: bsRows } = await client.query(`
         SELECT * FROM game_sessions
-        WHERE id = $1 AND user_id = $2 AND game_id = $3
-          AND refunded = false AND credits_used < credits_total
+        WHERE id = $1
         FOR UPDATE
-      `, [session_id, req.user.id, game.id]);
+      `, [session_id]);
 
       if (bsRows.length) {
-        tokensCharged = parseFloat(bsRows[0].tokens_per_credit);
-        usedBundleId = bsRows[0].id;
-        wasBonusShot = bsRows[0].is_bonus_credit || false;
-        await client.query(
-          'UPDATE game_sessions SET credits_used = credits_used + 1 WHERE id = $1',
-          [bsRows[0].id]
-        );
+        const session = bsRows[0];
+        // Validate session belongs to this game and user, and has credits remaining
+        if (session.game_id === game.id && session.user_id === req.user.id &&
+            session.refunded === false && session.credits_used < session.credits_total) {
+          tokensCharged = parseFloat(session.tokens_per_credit);
+          usedBundleId = session.id;
+          wasBonusShot = session.is_bonus_credit || false;
+          await client.query(
+            'UPDATE game_sessions SET credits_used = credits_used + 1 WHERE id = $1',
+            [session.id]
+          );
+        }
       }
     }
 
