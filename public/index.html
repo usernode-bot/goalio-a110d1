@@ -2123,6 +2123,7 @@
     if (testingModeActive) body.testing_mode = true;
 
     // Disable board during request
+    console.log('Sending guess with sessionId:', sessId, 'Current state.credits:', state.credits);
     document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
 
     try {
@@ -2134,6 +2135,7 @@
         return;
       }
       const d = await r.json();
+      console.log('Guess response received. regular_credits_remaining:', d.regular_credits_remaining, 'hit:', d.hit);
 
       // Update state
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
@@ -2150,6 +2152,7 @@
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       } else if (state.credits && d.regular_credits_remaining !== undefined) {
         state.credits.credits_remaining = d.regular_credits_remaining;
+        console.log('State updated. state.credits.credits_remaining now:', state.credits.credits_remaining);
       }
       // Apply testing-mode prize and jackpot winnings to wallet
       if (testingModeActive && d.hit) {
@@ -2668,6 +2671,7 @@
       state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
       state.regularSessionId = d.session.id;
       state.walletBalance = d.wallet_balance;
+      console.log('Bundle purchased. Session ID:', d.session.id, 'Credits remaining:', d.credits_remaining, 'State regularSessionId:', state.regularSessionId);
       updateHud();
       updateCreditsDisplay();
       showToast(t('game.shots_loaded', {size: size}), 2000);
