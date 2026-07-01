@@ -302,6 +302,67 @@
     }
     .tile-exit { animation: tile-exit-spin-fade 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
+    /* Penalty square jewel burst animation */
+    @keyframes penalty-jewel-emerge {
+      0% {
+        transform: scale(0) rotateZ(0deg);
+        opacity: 0;
+        filter: brightness(2) drop-shadow(0 0 0px #00ffff);
+      }
+      25% {
+        transform: scale(0.4) rotateZ(-45deg);
+        opacity: 1;
+        filter: brightness(3) drop-shadow(0 0 12px #00ffff) drop-shadow(0 0 24px #ffce4a);
+      }
+      60% {
+        transform: scale(2.5) rotateZ(45deg);
+        opacity: 0.9;
+        filter: brightness(2) drop-shadow(0 0 24px #00ffff) drop-shadow(0 0 40px #ffce4a);
+      }
+      100% {
+        transform: scale(2.5) rotateZ(90deg);
+        opacity: 1;
+        filter: brightness(1.6) drop-shadow(0 0 20px #00ffff) drop-shadow(0 0 32px #ffce4a);
+      }
+    }
+
+    @keyframes penalty-glow-ring {
+      0% {
+        transform: scale(0.8);
+        opacity: 1;
+        box-shadow: 0 0 0px rgba(0, 255, 255, 0.8), 0 0 0px rgba(255, 206, 74, 0.6);
+      }
+      50% {
+        transform: scale(2.2);
+        opacity: 0.6;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5), 0 0 40px rgba(255, 206, 74, 0.3);
+      }
+      100% {
+        transform: scale(4);
+        opacity: 0;
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), 0 0 60px rgba(255, 206, 74, 0);
+      }
+    }
+
+    .penalty-jewel {
+      animation: penalty-jewel-emerge 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #ffffff, #00ffff, #0066ff);
+      pointer-events: none;
+      z-index: 60;
+    }
+
+    .penalty-glow-ring {
+      animation: penalty-glow-ring 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 59;
+    }
+
     /* Ensure reveal animations only apply within game board */
     #lobby-body .reveal-zoom-burst, #lobby-body .reveal-slide,
     #victory-bg .reveal-zoom-burst, #victory-bg .reveal-slide { animation: none !important; transform: none !important; }
@@ -1809,6 +1870,7 @@
       state.prizePot = d.prize_pot;
       state.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
       state.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
+      state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       if (d.pricing) state.pricing = d.pricing;
 
       // If game is completed, go back to lobby
@@ -1845,6 +1907,7 @@
       <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
       <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
+      ${state.bonusCreditsAvailable > 0 ? `<div class="hud-chip" style="border-color:rgba(0,255,255,0.5);"><span style="display:block;font-size:0.7rem;">Bonus</span><span class="val bonus-val" style="color:#00ffff;">${state.bonusCreditsAvailable}</span></div>` : ''}
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1926,6 +1989,8 @@
     const lwv = document.querySelector('.lobby-wallet-val'); if (lwv) lwv.textContent = Math.round(state.walletBalance).toLocaleString() + ' t';
     const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
     const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = (state.credits ? parseInt(state.credits.credits_remaining) : 0);
+    // Update bonus shots display if available
+    const bv = document.querySelector('.bonus-val'); if (bv) bv.textContent = (state.bonusCreditsAvailable || 0);
   }
 
   function updateCreditsDisplay() {
@@ -2079,6 +2144,46 @@
       updateCreditsDisplay();
 
       const cell = document.querySelector(`.tile[data-idx="${idx}"]`);
+
+      // Handle penalty square discovery animation
+      if (d.is_penalty_hit) {
+        const boardEl = document.querySelector('.game-grid');
+        const rect = cell.getBoundingClientRect();
+        const boardRect = boardEl.getBoundingClientRect();
+        const offsetX = rect.left - boardRect.left + rect.width / 2;
+        const offsetY = rect.top - boardRect.top + rect.height / 2;
+
+        // Create jewel element
+        const jewel = document.createElement('div');
+        jewel.className = 'penalty-jewel';
+        jewel.style.left = (offsetX - 30) + 'px';
+        jewel.style.top = (offsetY - 30) + 'px';
+
+        // Create glow ring element
+        const ring = document.createElement('div');
+        ring.className = 'penalty-glow-ring';
+        ring.style.left = (offsetX - 40) + 'px';
+        ring.style.top = (offsetY - 40) + 'px';
+        ring.style.width = '80px';
+        ring.style.height = '80px';
+
+        boardEl.appendChild(ring);
+        boardEl.appendChild(jewel);
+
+        // Remove animation elements and show celebration after 1.2s
+        await new Promise(resolve => setTimeout(() => {
+          jewel.remove();
+          ring.remove();
+          showToast(`🎉 You found a penalty square! You won ${d.bonus_credits_awarded} free attempts!`);
+          // Update HUD to show bonus credits
+          if (d.bonus_credits_available > 0) {
+            state.bonusCreditsAvailable = d.bonus_credits_available;
+            updateHud();
+          }
+          resolve();
+        }, 1200));
+      }
+
       if (d.hit) {
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
