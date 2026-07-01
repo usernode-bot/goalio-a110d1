@@ -961,6 +961,7 @@
     pendingResult: null,
     revealVariantIdx: 0,
     testingMode: localStorage.getItem('testingMode') === 'true',
+    showingVictoryStadium: false,
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -1439,8 +1440,21 @@
   function route() {
     clearPolls();
     stopConfetti();
-    Sound.stopAllAudio();
     const hash = location.hash || '#lobby';
+
+    // Selectively stop audio based on where we're navigating FROM
+    // Don't use stopAllAudio() blindly — it kills audio like victory music
+    // that should continue playing during transitions
+    Sound.stopIntro();
+    Sound.stopLeaderboard();
+    // When leaving the victory stadium, stop the victory music
+    if (state.showingVictoryStadium) {
+      Sound.stopWinthecup();
+      state.showingVictoryStadium = false;
+    }
+    // Note: stopFindball/stopSuccesspurchase are context-specific
+    // and should only be stopped when appropriate for the target route
+
     document.getElementById('goal-ball')?.remove();
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
@@ -2612,6 +2626,7 @@
   // VICTORY STADIUM
   // ═══════════════════════════════════════════════════════════════
   async function renderVictoryStadium(result) {
+    state.showingVictoryStadium = true;
     Sound.playWinthecup();
     startConfetti();
     const r = await api('GET', '/api/session');
