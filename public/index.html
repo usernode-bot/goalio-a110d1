@@ -716,6 +716,32 @@
       animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
+    /* Arcade CRT scanline effect */
+    @keyframes arcade-scanlines {
+      0% { background-position: 0 0; opacity: 0; }
+      20% { opacity: 0.3; }
+      100% { background-position: 0 4px; opacity: 0; }
+    }
+
+    /* Arcade phosphor glow pulse */
+    @keyframes arcade-phosphor-glow {
+      0%, 100% { text-shadow: 0 0 8px rgba(0,255,255,0.4), 0 0 16px rgba(255,20,147,0.3); }
+      50% { text-shadow: 0 0 16px rgba(0,255,255,0.8), 0 0 32px rgba(255,20,147,0.6); }
+    }
+
+    /* CRT roll-in effect */
+    @keyframes arcade-crt-rollin {
+      0% { clip-path: polygon(0 0, 100% 0, 100% 0%, 0 0%); opacity: 0; }
+      100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
+    }
+
+    /* Pixel-grid dissolve */
+    @keyframes arcade-pixel-dissolve {
+      0% { opacity: 0; filter: contrast(0.5) brightness(0.6); }
+      50% { filter: contrast(1.2) brightness(1.1); }
+      100% { opacity: 1; filter: contrast(1) brightness(1); }
+    }
+
     /* Reset Game Button - 80's style */
     .reset-btn-container {
       margin: 24px 0;
@@ -1743,7 +1769,7 @@
     const app = document.getElementById('app');
     app.innerHTML = `<div class="game-screen">
       ${renderHeader()}
-      <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;z-index:2;">
+      <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:visible;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
       </div>
     </div>`;
@@ -2169,7 +2195,7 @@
     `;
 
     document.body.appendChild(goalOverlay);
-    setTimeout(() => goalOverlay.remove(), 900);
+    setTimeout(() => goalOverlay.remove(), 600);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2262,7 +2288,6 @@
       const iconHtml = isFinal ? '' : `<div style="font-size:2rem;margin-bottom:8px;">${icon}</div>`;
       resultCard.innerHTML = `
         <div class="result-card">
-          <div class="portrait-display" style="background-image:url('${portraitUrl}');"></div>
           ${iconHtml}
           <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:4px;">${resultTitle}</div>
           ${result.jackpot_paid > 0 && !isFinal ? `<div style="font-size:0.85rem;color:#aaa;margin-bottom:4px;">${stageIdx >= 3 ? theme.country_name + ' knocked out!' : 'You found the net!'}</div>` : ''}
@@ -2399,9 +2424,9 @@
     if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Confetti already stopped at 3s mark, now show the name tag with trivia
-    // Keep nameTag visible until after showResult() can restore it (extends fadeout timing)
-    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 5.5s forwards';
-    (boardZone || document.body).appendChild(nameTag);
+    // Keep nameTag visible for 4 seconds (fade in 0.5s, visible 4s, then fade out)
+    nameTag.style.animation = 'toast-in 0.5s ease, fadeout 3s ease 4.5s forwards';
+    boardZone && boardZone.appendChild(nameTag);
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
     await sleep(6000);
