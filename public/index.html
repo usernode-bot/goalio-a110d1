@@ -2194,7 +2194,7 @@
     `;
 
     document.body.appendChild(goalOverlay);
-    setTimeout(() => goalOverlay.remove(), 900);
+    setTimeout(() => goalOverlay.remove(), 600);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -2287,8 +2287,8 @@
       const refundHtml = result.credits_refunded > 0 ? `<div style="font-family:'Press Start 2P',monospace;color:#00FFFF;font-size:clamp(0.35rem, 0.8vw, 0.55rem);margin-top:6px;text-shadow:0.5px 0.5px 0 #FF1493, 1px 1px 0 #FFD700, 2px 2px 4px rgba(0,0,0,0.8);">Refund: +${result.credits_refunded.toFixed(1)} t</div>` : '';
       resultCard.innerHTML = `
         <div class="result-card" style="width:clamp(200px,45vw,280px);background:linear-gradient(135deg,rgba(20,10,40,0.95) 0%,rgba(10,10,30,0.98) 100%);border:2px solid #FF1493;border-right:2px solid #FFD700;border-bottom:2px solid #FFD700;box-shadow:0 0 10px rgba(255,20,147,0.8),0 0 20px rgba(0,255,255,0.4),inset 0 0 10px rgba(0,255,255,0.15);clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px));padding:20px 14px;display:flex;flex-direction:column;align-items:center;animation:arcade-pixel-dissolve 0.6s ease-out, arcade-crt-rollin 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">
-            <div style="font-family:'Press Start 2P',monospace;font-size:clamp(0.5rem, 1.2vw, 0.75rem);color:#00FFFF;font-weight:600;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #FFD700,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:0.5px;text-align:center;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2;margin-bottom:12px;animation:arcade-phosphor-glow 2s ease-in-out infinite;">${resultTitle}</div>
-            <div style="font-family:'Press Start 2P',monospace;color:#FFD700;font-size:clamp(0.7rem, 1.8vw, 1rem);font-weight:600;text-shadow:1px 1px 0 #00FFFF,2px 2px 0 #FF1493,3px 3px 8px rgba(0,0,0,0.8);text-align:center;margin:8px 0;line-height:1.2;animation:arcade-phosphor-glow 2.5s ease-in-out infinite;">+${result.prize_paid} tokens</div>
+            <div style="font-family:'Press Start 2P',monospace;font-size:clamp(0.5rem, 1.2vw, 0.75rem);color:#00FFFF;font-weight:600;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #FFD700,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:0.5px;text-align:center;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2;margin-bottom:12px;animation:arcade-phosphor-glow 4s ease-in-out infinite;">${resultTitle}</div>
+            <div style="font-family:'Press Start 2P',monospace;color:#FFD700;font-size:clamp(0.7rem, 1.8vw, 1rem);font-weight:600;text-shadow:1px 1px 0 #00FFFF,2px 2px 0 #FF1493,3px 3px 8px rgba(0,0,0,0.8);text-align:center;margin:8px 0;line-height:1.2;animation:arcade-phosphor-glow 4.5s ease-in-out infinite;">+${result.prize_paid} tokens</div>
             ${bonusHtml}
             ${potTopupHtml}
             ${refundHtml}
