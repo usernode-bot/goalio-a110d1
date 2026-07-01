@@ -1901,6 +1901,9 @@
 
     // Portrait behind tiles — always show footballer image; trophy shown in result card for final
     const portraitUrl = `/images/footballers/${theme.slug}.png`;
+    // Preload the portrait image to cache it before CSS background-image loads
+    const preloadImg = new Image();
+    preloadImg.src = portraitUrl;
 
     const hud = `<div class="game-hud">
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
@@ -1926,7 +1929,7 @@
     let tiles = '';
     for (let i = 0; i < gridSize; i++) {
       const isOpen = revealed[i];
-      tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
+      tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : 'onCellClick(' + i + ')'}"></div>`;
     }
 
     const initialHint = `${stageName(stageIdx)} — find the ball to knock out ${theme.country_name}`;
