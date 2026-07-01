@@ -2182,9 +2182,11 @@
           }
           resolve();
         }, 1200));
-      }
 
-      if (d.hit) {
+        // Mark tile as open and re-enable board after penalty animation
+        if (cell) cell.classList.add('open');
+        document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
+      } else if (d.hit) {
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
