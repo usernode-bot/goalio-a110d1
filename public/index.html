@@ -715,6 +715,32 @@
       animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
+    /* Arcade CRT scanline effect */
+    @keyframes arcade-scanlines {
+      0% { background-position: 0 0; opacity: 0; }
+      20% { opacity: 0.3; }
+      100% { background-position: 0 4px; opacity: 0; }
+    }
+
+    /* Arcade phosphor glow pulse */
+    @keyframes arcade-phosphor-glow {
+      0%, 100% { text-shadow: 0 0 8px rgba(0,255,255,0.4), 0 0 16px rgba(255,20,147,0.3); }
+      50% { text-shadow: 0 0 16px rgba(0,255,255,0.8), 0 0 32px rgba(255,20,147,0.6); }
+    }
+
+    /* CRT roll-in effect */
+    @keyframes arcade-crt-rollin {
+      0% { clip-path: polygon(0 0, 100% 0, 100% 0%, 0 0%); opacity: 0; }
+      100% { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); opacity: 1; }
+    }
+
+    /* Pixel-grid dissolve */
+    @keyframes arcade-pixel-dissolve {
+      0% { opacity: 0; filter: contrast(0.5) brightness(0.6); }
+      50% { filter: contrast(1.2) brightness(1.1); }
+      100% { opacity: 1; filter: contrast(1) brightness(1); }
+    }
+
     /* Reset Game Button - 80's style */
     .reset-btn-container {
       margin: 24px 0;
@@ -2255,25 +2281,20 @@
       state.pendingResult = result;
       const resultCard = document.createElement('div');
       resultCard.className = 'result-overlay';
-      resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);animation:quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;`;
-      const portraitUrl = isFinal ? `/images/trophy.svg` : `/images/footballers/${theme.slug}.png`;
-      const bonusHtml = result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#00FFFF;font-size:clamp(0.4rem, 1vw, 0.65rem);margin-top:8px;text-shadow:0.5px 0.5px 0 #FF1493, 1px 1px 0 #FFD700, 2px 2px 4px rgba(0,0,0,0.8);">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : '';
+      resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);animation:quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, arcade-scanlines 0.6s ease-out 0.2s forwards;`;
+      const bonusHtml = result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#00FFFF;font-size:clamp(0.4rem, 1vw, 0.65rem);margin-top:8px;text-shadow:0.5px 0.5px 0 #FF1493, 1px 1px 0 #FFD700, 2px 2px 4px rgba(0,0,0,0.8);animation:arcade-phosphor-glow 2s ease-in-out infinite;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : '';
       const potTopupHtml = result.pot_topup > 0 ? `<div style="font-family:'Press Start 2P',monospace;color:#FFD700;font-size:clamp(0.35rem, 0.8vw, 0.55rem);margin-top:6px;line-height:1.2;text-shadow:0.5px 0.5px 0 #FF1493, 1px 1px 0 #00FFFF, 2px 2px 4px rgba(0,0,0,0.8);max-width:calc(100% - 24px);word-wrap:break-word;overflow-wrap:break-word;">⚡ ${result.pot_topup} tokens added to Captain's Pot</div>` : '';
       const refundHtml = result.credits_refunded > 0 ? `<div style="font-family:'Press Start 2P',monospace;color:#00FFFF;font-size:clamp(0.35rem, 0.8vw, 0.55rem);margin-top:6px;text-shadow:0.5px 0.5px 0 #FF1493, 1px 1px 0 #FFD700, 2px 2px 4px rgba(0,0,0,0.8);">Refund: +${result.credits_refunded.toFixed(1)} t</div>` : '';
       resultCard.innerHTML = `
-        <div class="result-card" style="width:clamp(200px,45vw,280px);background:linear-gradient(135deg,rgba(20,10,40,0.95) 0%,rgba(10,10,30,0.98) 100%);border:2px solid #FF1493;border-right:2px solid #FFD700;border-bottom:2px solid #FFD700;box-shadow:0 0 10px rgba(255,20,147,0.8),0 0 20px rgba(0,255,255,0.4),inset 0 0 10px rgba(0,255,255,0.15);clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px));padding:0;display:flex;flex-direction:column;align-items:center;overflow:hidden;">
-          <img src="${portraitUrl}" alt="Footballer" style="width:100%;height:auto;display:block;object-fit:cover;border-bottom:2px solid #00FFFF;" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
-          <div style="display:none;width:100%;height:200px;background:#0a0a1e;"></div>
-          <div style="padding:14px 12px;width:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;">
-            <div style="font-family:'Press Start 2P',monospace;font-size:clamp(0.5rem, 1.2vw, 0.75rem);color:#00FFFF;font-weight:600;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #FFD700,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:0.5px;text-align:center;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2;margin-bottom:10px;">${resultTitle}</div>
-            <div style="font-family:'Press Start 2P',monospace;color:#FFD700;font-size:clamp(0.7rem, 1.8vw, 1rem);font-weight:600;text-shadow:1px 1px 0 #00FFFF,2px 2px 0 #FF1493,3px 3px 8px rgba(0,0,0,0.8);text-align:center;margin:8px 0;line-height:1.2;">+${result.prize_paid} tokens</div>
+        <div class="result-card" style="width:clamp(200px,45vw,280px);background:linear-gradient(135deg,rgba(20,10,40,0.95) 0%,rgba(10,10,30,0.98) 100%);border:2px solid #FF1493;border-right:2px solid #FFD700;border-bottom:2px solid #FFD700;box-shadow:0 0 10px rgba(255,20,147,0.8),0 0 20px rgba(0,255,255,0.4),inset 0 0 10px rgba(0,255,255,0.15);clip-path:polygon(0 0,calc(100% - 6px) 0,100% 6px,100% 100%,6px 100%,0 calc(100% - 6px));padding:20px 14px;display:flex;flex-direction:column;align-items:center;animation:arcade-pixel-dissolve 0.6s ease-out, arcade-crt-rollin 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);">
+            <div style="font-family:'Press Start 2P',monospace;font-size:clamp(0.5rem, 1.2vw, 0.75rem);color:#00FFFF;font-weight:600;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #FFD700,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:0.5px;text-align:center;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;line-height:1.2;margin-bottom:12px;animation:arcade-phosphor-glow 2s ease-in-out infinite;">${resultTitle}</div>
+            <div style="font-family:'Press Start 2P',monospace;color:#FFD700;font-size:clamp(0.7rem, 1.8vw, 1rem);font-weight:600;text-shadow:1px 1px 0 #00FFFF,2px 2px 0 #FF1493,3px 3px 8px rgba(0,0,0,0.8);text-align:center;margin:8px 0;line-height:1.2;animation:arcade-phosphor-glow 2.5s ease-in-out infinite;">+${result.prize_paid} tokens</div>
             ${bonusHtml}
             ${potTopupHtml}
             ${refundHtml}
-            <button class="bundle-btn btn-gold" style="width:calc(100% + 24px);margin:12px -12px -14px;padding:10px 12px;border:none;background:#FFD700;color:#0a0a1e;font-family:'Press Start 2P',monospace;font-size:clamp(0.4rem, 0.9vw, 0.6rem);font-weight:700;cursor:pointer;text-shadow:0 0 8px rgba(255,215,0,0.4);box-shadow:0 4px 0 rgba(255,20,147,0.6),0 0 10px rgba(255,215,0,0.5);letter-spacing:0.5px;" onclick="handleInterstitial()">CONTINUE →</button>
-          </div>
+            <button class="bundle-btn btn-gold" style="width:100%;margin:16px 0 0;padding:10px 12px;border:none;background:#FFD700;color:#0a0a1e;font-family:'Press Start 2P',monospace;font-size:clamp(0.4rem, 0.9vw, 0.6rem);font-weight:700;cursor:pointer;text-shadow:0 0 8px rgba(255,215,0,0.4);box-shadow:0 4px 0 rgba(255,20,147,0.6),0 0 10px rgba(255,215,0,0.5);letter-spacing:0.5px;" onclick="handleInterstitial()">CONTINUE →</button>
         </div>`;
-      resultCard.style.animation = 'quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards';
+      resultCard.style.animation = 'quip-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, arcade-scanlines 0.6s ease-out 0.2s forwards';
       document.body.appendChild(resultCard);
 
       if (result.new_stage_idx !== null) {
