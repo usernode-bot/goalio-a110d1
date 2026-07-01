@@ -1938,7 +1938,7 @@
     const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     const bonusShots = state.bonusCreditsAvailable || 0;
     const totalShots = regularShots + bonusShots;
-    const shotsDisplay = bonusShots > 0 ? `${totalShots} (${bonusShots}🎁 + ${regularShots})` : totalShots;
+    const shotsDisplay = totalShots;
 
     const hud = `<div class="game-hud">
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
@@ -2026,11 +2026,11 @@
     const lwv = document.querySelector('.lobby-wallet-val'); if (lwv) lwv.textContent = Math.round(state.walletBalance).toLocaleString() + ' t';
     const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
 
-    // Update shots display with bonus/regular breakdown
+    // Update shots display
     const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     const bonusShots = state.bonusCreditsAvailable || 0;
     const totalShots = regularShots + bonusShots;
-    const shotsDisplay = bonusShots > 0 ? `${totalShots} (${bonusShots}🎁 + ${regularShots})` : totalShots;
+    const shotsDisplay = totalShots;
     const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = shotsDisplay;
   }
 
