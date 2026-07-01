@@ -1345,7 +1345,17 @@ app.post('/api/games/:id/guess', async (req, res) => {
       was_bonus_shot: wasBonusShot,
       bonus_credits_awarded: bonusCreditsAwarded,
       bonus_credits_available: updatedBonusCreditsAvailable,
-      regular_credits_remaining: updatedRegularCreditsRemaining
+      regular_credits_remaining: updatedRegularCreditsRemaining,
+      debug_info: {
+        session_id_received: session_id,
+        updated_regular_session: updatedRegularSession ? {
+          id: updatedRegularSession.id,
+          credits_total: updatedRegularSession.credits_total,
+          credits_used: updatedRegularSession.credits_used,
+          credits_remaining: updatedRegularSession.credits_remaining
+        } : null,
+        final_regular_credits_remaining: updatedRegularCreditsRemaining
+      }
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
