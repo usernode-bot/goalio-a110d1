@@ -1044,6 +1044,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
     let usedBundleId = null;
     let wasBonusShot = false;
 
+    console.log('DEBUG: guess session_id received:', session_id);
+
     if (session_id) {
       const { rows: bsRows } = await client.query(`
         SELECT * FROM game_sessions
@@ -1309,6 +1311,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       WHERE game_id = $1 AND user_id = $2 AND refunded = false
         AND credits_used < credits_total
     `, [game.id, req.user.id]);
+
+    console.log('DEBUG: updatedSessions.rows:', JSON.stringify(updatedSessions));
 
     const updatedBonusCreditsAvailable = updatedSessions
       .filter(row => row.is_bonus_credit)
