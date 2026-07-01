@@ -2176,7 +2176,6 @@
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       } else if (state.credits && d.regular_credits_remaining !== undefined) {
         state.credits.credits_remaining = d.regular_credits_remaining;
-        console.log('%c════════════════════════════════════', 'color: #6BCB77');
       }
       // Apply testing-mode prize and jackpot winnings to wallet
       if (testingModeActive && d.hit) {
