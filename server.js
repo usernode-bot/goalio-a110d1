@@ -1060,7 +1060,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
           'UPDATE game_sessions SET credits_used = credits_used + 1 WHERE id = $1',
           [bsRows[0].id]
         );
-        console.log('[GUESS] Updated session:', bsRows[0].id, 'Credits Total:', bsRows[0].credits_total, 'Credits Used Before:', bsRows[0].credits_used, 'Now:', bsRows[0].credits_used + 1);
       }
     }
 
@@ -1311,15 +1310,12 @@ app.post('/api/games/:id/guess', async (req, res) => {
         AND credits_used < credits_total
     `, [game.id, req.user.id]);
 
-    console.log('[GUESS] After guess, updatedSessions rows:', updatedSessions.length, 'Sessions:', updatedSessions.map(s => ({id: s.id, total: s.credits_total, used: s.credits_used, remaining: s.credits_remaining, isBonus: s.is_bonus_credit})));
-
     const updatedBonusCreditsAvailable = updatedSessions
       .filter(row => row.is_bonus_credit)
       .reduce((sum, row) => sum + (row.credits_total - row.credits_used), 0);
 
     const updatedRegularSession = updatedSessions.find(r => !r.is_bonus_credit) || null;
     const updatedRegularCreditsRemaining = updatedRegularSession ? updatedRegularSession.credits_remaining : 0;
-    console.log('[GUESS] updatedRegularCreditsRemaining:', updatedRegularCreditsRemaining, 'Session:', updatedRegularSession ? { id: updatedRegularSession.id, total: updatedRegularSession.credits_total, used: updatedRegularSession.credits_used } : null);
 
     res.json({
       hit: isHit,

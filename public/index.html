@@ -1274,6 +1274,30 @@
         this.successpurchaseElement.currentTime = 0;
       }
     },
+    penaltyElement: null,
+    playPenalty() {
+      if (this.muted) return;
+      if (!this.penaltyElement) {
+        this.penaltyElement = document.getElementById('penalty-audio');
+        if (!this.penaltyElement) {
+          this.penaltyElement = document.createElement('audio');
+          this.penaltyElement.id = 'penalty-audio';
+          this.penaltyElement.src = 'https://www.dropbox.com/scl/fi/lpxpuyn0c2wpytvmibfrh/penalty.mp3?rlkey=w0y0gao6e3hc5gcjr1pnzimrf&st=ohygit9z&dl=1';
+          this.penaltyElement.crossOrigin = 'anonymous';
+          document.body.appendChild(this.penaltyElement);
+        }
+      }
+      if (!this.penaltyElement) return;
+      this.penaltyElement.volume = 0.18;
+      this.penaltyElement.currentTime = 0;
+      this.penaltyElement.play().catch(() => {});
+    },
+    stopPenalty() {
+      if (this.penaltyElement) {
+        this.penaltyElement.pause();
+        this.penaltyElement.currentTime = 0;
+      }
+    },
     toggle() {
       this.muted = !this.muted;
       try { localStorage.setItem('goal_muted', this.muted ? '1' : '0'); } catch(_) {}
@@ -1283,6 +1307,7 @@
       this.stopWinthecup();
       this.stopFindball();
       this.stopSuccesspurchase();
+      this.stopPenalty();
       updateMuteButtons();
       return this.muted;
     },
@@ -1292,6 +1317,7 @@
       this.stopWinthecup();
       this.stopFindball();
       this.stopSuccesspurchase();
+      this.stopPenalty();
     }
   };
   function playBlip() { Sound.blip(); }
@@ -2123,7 +2149,6 @@
     if (testingModeActive) body.testing_mode = true;
 
     // Disable board during request
-    console.log('Sending guess with sessionId:', sessId, 'Current state.credits:', state.credits);
     document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
 
     try {
@@ -2135,18 +2160,6 @@
         return;
       }
       const d = await r.json();
-      console.log('%c═══ FULL GUESS RESPONSE ═══', 'color: #FF6B6B; font-weight: bold', {
-        'Status': r.status,
-        'regular_credits_remaining': d.regular_credits_remaining,
-        'hit': d.hit,
-        'was_bonus_shot': d.was_bonus_shot,
-        'bonus_credits_available': d.bonus_credits_available,
-        'squares_revealed': d.squares_revealed,
-        'stage_completed': d.stage_completed,
-        'interstitial': d.interstitial,
-        'wallet_balance': d.wallet_balance,
-        'FULL_RESPONSE': d
-      });
 
       // Update state
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
@@ -2162,9 +2175,7 @@
       if (d.was_bonus_shot) {
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       } else if (state.credits && d.regular_credits_remaining !== undefined) {
-        console.log('%c[BEFORE UPDATE] state.credits:', 'color: #FFD93D', state.credits);
         state.credits.credits_remaining = d.regular_credits_remaining;
-        console.log('%c[AFTER UPDATE] state.credits.credits_remaining now:', 'color: #6BCB77', state.credits.credits_remaining);
         console.log('%c════════════════════════════════════', 'color: #6BCB77');
       }
       // Apply testing-mode prize and jackpot winnings to wallet
@@ -2186,45 +2197,12 @@
 
       const cell = document.querySelector(`.tile[data-idx="${idx}"]`);
 
-      // Handle penalty square discovery animation
+      // Handle penalty square discovery
       if (d.is_penalty_hit) {
-        const boardEl = document.querySelector('.game-grid');
-        const rect = cell.getBoundingClientRect();
-        const boardRect = boardEl.getBoundingClientRect();
-        const offsetX = rect.left - boardRect.left + rect.width / 2;
-        const offsetY = rect.top - boardRect.top + rect.height / 2;
-
-        // Create jewel element
-        const jewel = document.createElement('div');
-        jewel.className = 'penalty-jewel';
-        jewel.style.left = (offsetX - 30) + 'px';
-        jewel.style.top = (offsetY - 30) + 'px';
-
-        // Create glow ring element
-        const ring = document.createElement('div');
-        ring.className = 'penalty-glow-ring';
-        ring.style.left = (offsetX - 40) + 'px';
-        ring.style.top = (offsetY - 40) + 'px';
-        ring.style.width = '80px';
-        ring.style.height = '80px';
-
-        boardEl.appendChild(ring);
-        boardEl.appendChild(jewel);
-
-        // Remove animation elements and show celebration after 1.2s
-        await new Promise(resolve => setTimeout(() => {
-          jewel.remove();
-          ring.remove();
-          showToast(`🎉 You found a penalty square! You won ${d.bonus_credits_awarded} free attempts!`);
-          // Update HUD to show bonus credits
-          if (d.bonus_credits_available > 0) {
-            state.bonusCreditsAvailable = d.bonus_credits_available;
-            updateHud();
-          }
-          resolve();
-        }, 1200));
-
-        // Mark tile as open and re-enable board after penalty animation
+        state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+        updateHud();
+        Sound.playPenalty();
+        showToast(`You found a penalty square! You won ${d.bonus_credits_awarded} free attempts!`);
         if (cell) cell.classList.add('open');
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       } else if (d.hit) {
@@ -2684,7 +2662,6 @@
       state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
       state.regularSessionId = d.session.id;
       state.walletBalance = d.wallet_balance;
-      console.log('Bundle purchased. Session ID:', d.session.id, 'Credits remaining:', d.credits_remaining, 'State regularSessionId:', state.regularSessionId);
       updateHud();
       updateCreditsDisplay();
       showToast(t('game.shots_loaded', {size: size}), 2000);
