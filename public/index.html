@@ -2135,7 +2135,18 @@
         return;
       }
       const d = await r.json();
-      console.log('Guess response received. regular_credits_remaining:', d.regular_credits_remaining, 'hit:', d.hit);
+      console.log('%c═══ FULL GUESS RESPONSE ═══', 'color: #FF6B6B; font-weight: bold', {
+        'Status': r.status,
+        'regular_credits_remaining': d.regular_credits_remaining,
+        'hit': d.hit,
+        'was_bonus_shot': d.was_bonus_shot,
+        'bonus_credits_available': d.bonus_credits_available,
+        'squares_revealed': d.squares_revealed,
+        'stage_completed': d.stage_completed,
+        'interstitial': d.interstitial,
+        'wallet_balance': d.wallet_balance,
+        'FULL_RESPONSE': d
+      });
 
       // Update state
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
@@ -2151,8 +2162,10 @@
       if (d.was_bonus_shot) {
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       } else if (state.credits && d.regular_credits_remaining !== undefined) {
+        console.log('%c[BEFORE UPDATE] state.credits:', 'color: #FFD93D', state.credits);
         state.credits.credits_remaining = d.regular_credits_remaining;
-        console.log('State updated. state.credits.credits_remaining now:', state.credits.credits_remaining);
+        console.log('%c[AFTER UPDATE] state.credits.credits_remaining now:', 'color: #6BCB77', state.credits.credits_remaining);
+        console.log('%c════════════════════════════════════', 'color: #6BCB77');
       }
       // Apply testing-mode prize and jackpot winnings to wallet
       if (testingModeActive && d.hit) {
