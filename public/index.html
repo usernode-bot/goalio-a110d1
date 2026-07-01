@@ -2645,6 +2645,7 @@
         credits_remaining: size,
         tokens_per_credit: pricing.perShot
       };
+      state.regularSessionId = state.credits.id;
       updateHud();
       updateCreditsDisplay();
       Sound.playSuccesspurchase();
@@ -2665,6 +2666,7 @@
     try {
       const d = await r.json();
       state.credits = { id: d.session.id, credits_remaining: d.credits_remaining, tokens_per_credit: d.session.tokens_per_credit };
+      state.regularSessionId = d.session.id;
       state.walletBalance = d.wallet_balance;
       updateHud();
       updateCreditsDisplay();
