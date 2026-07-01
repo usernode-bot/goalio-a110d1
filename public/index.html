@@ -2073,10 +2073,10 @@
     }
     if ((game.revealed || [])[idx]) return;
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) || 0 : 0;
+    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : null;
     const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
 
-    if (credRemaining === 0) {
+    if (credRemaining === 0 && state.credits !== null) {
       const p = pricingForStage(state.game.stage_idx);
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
