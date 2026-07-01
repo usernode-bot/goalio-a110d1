@@ -1845,6 +1845,9 @@
       state.game = d.game;
       state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
       state.credits = d.credits;
+      state.regularSessionId = d.credits ? d.credits.id : null;
+      state.bonusSession = d.bonus_session;
+      state.bonusSessionId = d.bonus_session ? d.bonus_session.id : null;
       if (state.credits && state.credits.credits_remaining !== undefined) {
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
       }
@@ -1853,6 +1856,7 @@
       if (state._pendingTestingCarryover && testingModeActive) {
         if (!state.credits) {
           state.credits = state._pendingTestingCarryover;
+          state.regularSessionId = state._pendingTestingCarryover.id;
         } else {
           state.credits.credits_remaining = (parseInt(state.credits.credits_remaining) || 0) +
                                             (state._pendingTestingCarryover.credits_remaining || 0);
@@ -1905,12 +1909,16 @@
     const preloadImg = new Image();
     preloadImg.src = portraitUrl;
 
+    const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const bonusShots = state.bonusCreditsAvailable || 0;
+    const totalShots = regularShots + bonusShots;
+    const shotsDisplay = bonusShots > 0 ? `${totalShots} (${bonusShots}🎁 + ${regularShots})` : totalShots;
+
     const hud = `<div class="game-hud">
       <div class="hud-chip"><span style="display:block;">${t('game.wallet_label')}</span><span class="val wallet-val">${Math.round(state.walletBalance)} t</span></div>
       <div class="hud-chip"><span style="display:block;">${t('game.prize_label')}</span><span class="val prize-val" style="color:#fbbf24;">${state.prizePot} t</span></div>
       ${potChipHtml(state.potBalance)}
-      <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${state.credits ? parseInt(state.credits.credits_remaining) : 0}</span></div>
-      ${state.bonusCreditsAvailable > 0 ? `<div class="hud-chip" style="border-color:rgba(0,255,255,0.5);"><span style="display:block;font-size:0.7rem;">Bonus</span><span class="val bonus-val" style="color:#00ffff;">${state.bonusCreditsAvailable}</span></div>` : ''}
+      <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${shotsDisplay}</span></div>
     </div>`;
 
     const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
@@ -1991,9 +1999,13 @@
     const wv = document.querySelector('.wallet-val'); if (wv) wv.textContent = Math.round(state.walletBalance) + ' t';
     const lwv = document.querySelector('.lobby-wallet-val'); if (lwv) lwv.textContent = Math.round(state.walletBalance).toLocaleString() + ' t';
     const pv = document.querySelector('.prize-val'); if (pv) pv.textContent = prizeDecay(state.squaresRevealed, state.gridSize) + ' t';
-    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = (state.credits ? parseInt(state.credits.credits_remaining) : 0);
-    // Update bonus shots display if available
-    const bv = document.querySelector('.bonus-val'); if (bv) bv.textContent = (state.bonusCreditsAvailable || 0);
+
+    // Update shots display with bonus/regular breakdown
+    const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const bonusShots = state.bonusCreditsAvailable || 0;
+    const totalShots = regularShots + bonusShots;
+    const shotsDisplay = bonusShots > 0 ? `${totalShots} (${bonusShots}🎁 + ${regularShots})` : totalShots;
+    const sv = document.querySelector('.shots-val'); if (sv) sv.textContent = shotsDisplay;
   }
 
   function updateCreditsDisplay() {
@@ -2073,10 +2085,19 @@
     }
     if ((game.revealed || [])[idx]) return;
 
-    const credRemaining = state.credits ? parseInt(state.credits.credits_remaining) : null;
-    const sessId = (credRemaining > 0 && state.credits) ? state.credits.id : null;
+    const regularCredRemaining = state.credits ? parseInt(state.credits.credits_remaining) : 0;
+    const bonusCredRemaining = state.bonusCreditsAvailable || 0;
 
-    if (credRemaining === 0 && state.credits !== null) {
+    // Determine which session to use (prioritize bonus credits)
+    let sessId = null;
+    if (bonusCredRemaining > 0) {
+      sessId = state.bonusSessionId;
+    } else if (regularCredRemaining > 0) {
+      sessId = state.regularSessionId;
+    }
+
+    // Only show "buy more shots" modal if both regular and bonus credits are exhausted
+    if (regularCredRemaining === 0 && bonusCredRemaining === 0) {
       const p = pricingForStage(state.game.stage_idx);
       const modal = document.createElement('div');
       modal.className = 'modal-bg';
@@ -2123,11 +2144,12 @@
         state.walletBalance = d.wallet_balance;
       }
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
-      if (state.credits && sessId && state.credits.credits_remaining !== undefined) {
-        const currentRemaining = parseInt(state.credits.credits_remaining) || 0;
-        if (currentRemaining > 0) {
-          state.credits.credits_remaining = currentRemaining - 1;
-        }
+
+      // Update credits based on which session was used
+      if (d.was_bonus_shot) {
+        state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+      } else if (state.credits && d.regular_credits_remaining !== undefined) {
+        state.credits.credits_remaining = d.regular_credits_remaining;
       }
       // Apply testing-mode prize and jackpot winnings to wallet
       if (testingModeActive && d.hit) {

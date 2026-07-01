@@ -707,6 +707,7 @@ app.post('/api/session/start-map', async (req, res) => {
 
     // Carry over unused credits from the player's last won game in this tournament.
     // Credits are not refunded on win — they roll forward as prepaid shots.
+    let carryoverSessionCreated = false;
     if (session.last_won_game_id) {
       const { rows: prevSessions } = await client.query(`
         SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
@@ -714,6 +715,7 @@ app.post('/api/session/start-map', async (req, res) => {
         WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
       `, [session.last_won_game_id, req.user.id]);
       if (prevSessions.length) {
+        carryoverSessionCreated = true;
         const totalRemaining = prevSessions.reduce((s, r) => s + parseInt(r.remaining), 0);
         const totalValue = prevSessions.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
         const avgRate = parseFloat((totalValue / totalRemaining).toFixed(2));
@@ -728,6 +730,16 @@ app.post('/api/session/start-map', async (req, res) => {
           VALUES ($1, $2, $3, 0, $4)
         `, [game.id, req.user.id, totalRemaining, avgRate]);
       }
+    }
+
+    // If no carryover session was created, create an initial empty session
+    // This ensures every game has at least one session row for the frontend to reference
+    if (!carryoverSessionCreated) {
+      const pricing = pricingForStage(session.stage_idx);
+      await client.query(`
+        INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
+        VALUES ($1, $2, 0, 0, $3)
+      `, [game.id, req.user.id, pricing.perShot]);
     }
 
     await client.query(
@@ -832,9 +844,16 @@ app.get('/api/games/:id', async (req, res) => {
     const prizePot = prizeDecay(squaresRevealed, gridSize);
     const pricing = pricingForStage(game.stage_idx);
 
+    // Separate regular and bonus sessions
+    const regularSession = credRows.find(r => !r.is_bonus_credit) || null;
+    const bonusSession = credRows.find(r => r.is_bonus_credit) || null;
+    const regularCreditsRemaining = regularSession ? regularSession.credits_remaining : 0;
+
     res.json({
       game,
-      credits: credRows[0] || null,
+      credits: regularSession,
+      bonus_session: bonusSession,
+      regular_credits_remaining: regularCreditsRemaining,
       captain_pot_balance: parseFloat(potData.balance),
       last_won_at: potData.last_won_at,
       last_winner_username: potData.last_winner_username,
@@ -1023,6 +1042,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     // Determine cost — check for active bundle session, else the stage single-shot rate
     let tokensCharged = pricingForStage(game.stage_idx).perShot;
     let usedBundleId = null;
+    let wasBonusShot = false;
 
     if (session_id) {
       const { rows: bsRows } = await client.query(`
@@ -1035,6 +1055,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       if (bsRows.length) {
         tokensCharged = parseFloat(bsRows[0].tokens_per_credit);
         usedBundleId = bsRows[0].id;
+        wasBonusShot = bsRows[0].is_bonus_credit || false;
         await client.query(
           'UPDATE game_sessions SET credits_used = credits_used + 1 WHERE id = $1',
           [bsRows[0].id]
@@ -1280,6 +1301,22 @@ app.post('/api/games/:id/guess', async (req, res) => {
     const potLastWonAt = potRows.length ? potRows[0].last_won_at : null;
     const walletBalance = await getWalletBalance(client, req.user.id);
 
+    // Recalculate bonus credits available after the guess
+    const { rows: updatedSessions } = await client.query(`
+      SELECT id, credits_total, credits_used, is_bonus_credit,
+             (credits_total - credits_used) as credits_remaining
+      FROM game_sessions
+      WHERE game_id = $1 AND user_id = $2 AND refunded = false
+        AND credits_used < credits_total
+    `, [game.id, req.user.id]);
+
+    const updatedBonusCreditsAvailable = updatedSessions
+      .filter(row => row.is_bonus_credit)
+      .reduce((sum, row) => sum + (row.credits_total - row.credits_used), 0);
+
+    const updatedRegularSession = updatedSessions.find(r => !r.is_bonus_credit) || null;
+    const updatedRegularCreditsRemaining = updatedRegularSession ? updatedRegularSession.credits_remaining : 0;
+
     res.json({
       hit: isHit,
       square_index,
@@ -1301,8 +1338,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
       prize_pending: prizeWalletError ? true : false,
       bonus_pending: bonusWalletError ? true : false,
       is_penalty_hit: isPenaltyHit,
+      was_bonus_shot: wasBonusShot,
       bonus_credits_awarded: bonusCreditsAwarded,
-      bonus_credits_available: isPenaltyHit ? bonusCreditsAwarded : 0
+      bonus_credits_available: updatedBonusCreditsAvailable,
+      regular_credits_remaining: updatedRegularCreditsRemaining
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
