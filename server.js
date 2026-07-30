@@ -13,7 +13,7 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: 20,
 });
-const JWT_SECRET = process.env.JWT_SECRET;
+const USERNODE_JWT_PUBLIC_KEY = process.env.USERNODE_JWT_PUBLIC_KEY;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
 
@@ -33,8 +33,11 @@ app.use((req, res, next) => {
   const authHeader = req.headers['authorization'] || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const token = req.query.token || req.headers['x-usernode-token'] || bearerToken;
-  if (token && JWT_SECRET) {
-    try { req.user = jwt.verify(token, JWT_SECRET); } catch {}
+  if (token && USERNODE_JWT_PUBLIC_KEY) {
+    try {
+      const payload = jwt.verify(token, USERNODE_JWT_PUBLIC_KEY, { algorithms: ['RS256'], issuer: 'usernode', audience: 'usernode:app:' + process.env.USERNODE_APP_ID });
+      if (payload.pur === 'iframe') req.user = payload;
+    } catch {}
   }
   if (req.method !== 'GET' || req.path.startsWith('/api/')) {
     if (PUBLIC_API_PATHS.has(req.path)) return next();
