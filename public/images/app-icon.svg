@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#1e5b3f"/>
+      <stop offset="1" stop-color="#062417"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#a86f0c"/>
+      <stop offset="0.35" stop-color="#ffe27a"/>
+      <stop offset="0.6" stop-color="#f5b82e"/>
+      <stop offset="1" stop-color="#9a6308"/>
+    </linearGradient>
+    <radialGradient id="globe" cx="38%" cy="32%" r="70%">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="0.45" stop-color="#f7c33c"/>
+      <stop offset="1" stop-color="#a86f0c"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- globe -->
+  <circle cx="256" cy="150" r="88" fill="url(#globe)" stroke="#7a4d05" stroke-width="6"/>
+  <g fill="none" stroke="#9a6308" stroke-width="7" stroke-linecap="round" opacity="0.8">
+    <ellipse cx="256" cy="150" rx="38" ry="86"/>
+    <path d="M172 128 Q256 110 340 128"/>
+    <path d="M172 172 Q256 190 340 172"/>
+  </g>
+  <!-- swirling body rising to hold the globe -->
+  <path d="M168 196 C176 262 222 300 226 350 L222 392 L290 392 L286 350 C290 300 336 262 344 196
+           C322 236 292 250 256 250 C220 250 190 236 168 196 Z"
+        fill="url(#gold)" stroke="#7a4d05" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M206 250 C222 290 250 312 262 350" fill="none" stroke="#7a4d05" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <path d="M306 250 C296 280 282 300 278 330" fill="none" stroke="#7a4d05" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
+  <!-- base -->
+  <path d="M196 392 L316 392 L328 420 L184 420 Z" fill="url(#gold)" stroke="#7a4d05" stroke-width="6" stroke-linejoin="round"/>
+  <rect x="180" y="420" width="152" height="18" fill="#0f6b3c" stroke="#7a4d05" stroke-width="6"/>
+  <rect x="172" y="438" width="168" height="30" rx="6" fill="url(#gold)" stroke="#7a4d05" stroke-width="6"/>
+</svg>

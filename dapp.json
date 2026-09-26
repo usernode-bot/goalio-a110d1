@@ -1,5 +1,8 @@
 {
   "name": "GOAL! World Cup Edition",
+  "icon": {
+    "image": "public/icon.png"
+  },
   "_rebuild_trigger": "2026-06-29T08:30:00Z",
   "secrets": [
     {

@@ -29,7 +29,7 @@ const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
 
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.ico', (req, res) => res.type('image/png').sendFile(path.join(__dirname, 'public', 'favicon-32.png')));
 
 app.use((req, res, next) => {
   const authHeader = req.headers['authorization'] || '';
