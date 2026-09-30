@@ -174,5 +174,11 @@
   "countries.netherlands": "Hollanda",
   "countries.norway": "Norveç",
   "countries.germany": "Almanya",
-  "countries.mexico": "Meksika"
+  "countries.mexico": "Meksika",
+  "events.handball": "EL TOPU! {amount} kaybettin",
+  "events.free_kick": "SERBEST VURUŞ! {amount} kazandın",
+  "events.injury": "OYUNCU SAKATLANDI! {amount} kaybettin",
+  "events.pitch_invasion": "SAHA İSTİLASI! {amount} kaybettin",
+  "events.red_card": "KIRMIZI KART! {amount} kaybettin",
+  "events.penalty_save": "PENALTI KURTARILDI! {amount} kazandın"
 }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- stretcher frame -->
+  <rect x="18" y="56" width="64" height="7" rx="2" fill="white" stroke="#222" stroke-width="1.5"/>
+  <path d="M22 63 L14 78" stroke="#f0c040" stroke-width="4" stroke-linecap="round"/>
+  <path d="M78 63 L86 78" stroke="#f0c040" stroke-width="4" stroke-linecap="round"/>
+  <!-- player lying on stretcher -->
+  <circle cx="32" cy="48" r="8" fill="#f0c040"/>
+  <path d="M40 52 L62 50 L66 56 L44 58 Z" fill="#FF1493"/>
+  <path d="M62 50 L76 54 L76 58 L66 56 Z" fill="#f0c040"/>
+  <!-- bandage wrap on head -->
+  <path d="M25 46 Q32 42 39 46" fill="none" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <!-- medical cross -->
+  <rect x="70" y="24" width="16" height="16" rx="2" fill="white"/>
+  <rect x="75.5" y="26.5" width="5" height="11" fill="#e11d48"/>
+  <rect x="70.5" y="29.5" width="15" height="5" fill="#e11d48"/>
+  <!-- pain flash -->
+  <path d="M18 26 L22 20 M26 28 L30 22" stroke="#00FFFF" stroke-width="3" stroke-linecap="round"/>
+</svg>

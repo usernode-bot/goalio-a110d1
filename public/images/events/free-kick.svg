@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- boot mid-strike -->
+  <path d="M12 60 Q14 52 22 52 L40 54 L46 58 L44 66 L20 68 Q14 68 12 60 Z" fill="#f0c040"/>
+  <path d="M18 52 L20 38 Q21 34 26 34 L34 36 Q38 38 38 44 L36 53 Z" fill="#f0c040"/>
+  <path d="M40 56 L48 58 L46 64 L38 63 Z" fill="#222"/>
+  <!-- ball just struck -->
+  <circle cx="66" cy="44" r="12" fill="white" stroke="#222" stroke-width="2"/>
+  <path d="M66 34 L70 40 L66 45 L62 40 Z" fill="#111"/>
+  <path d="M76 42 L71 45 L73 50 Z" fill="#111"/>
+  <!-- defensive wall silhouette top right -->
+  <path d="M84 22 L88 22 L88 34 L84 34 Z" fill="#FF1493"/>
+  <path d="M92 24 L96 24 L96 34 L92 34 Z" fill="#FF1493"/>
+  <!-- strike trajectory -->
+  <path d="M46 60 Q56 56 60 50" fill="none" stroke="#00FFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 4"/>
+</svg>

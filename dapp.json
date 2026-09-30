@@ -162,6 +162,21 @@
       "name": "Wallet balance displays in HUD",
       "path": "/#game/2",
       "expectText": "tokens"
+    },
+    {
+      "name": "Revealed event square shows event graphic",
+      "path": "/#game/2",
+      "expectSelector": ".tile-event"
+    },
+    {
+      "name": "Game API exposes revealed events",
+      "path": "/api/games/2",
+      "expectText": "events"
+    },
+    {
+      "name": "Event graphic SVG serves",
+      "path": "/images/events/red-card.svg",
+      "expectSelector": "svg"
     }
   ],
   "visibility": {

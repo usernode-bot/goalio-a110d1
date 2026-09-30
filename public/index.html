@@ -225,6 +225,17 @@
     .tile.open { cursor: default; background: transparent; box-shadow: none; pointer-events: none; }
     .tile.open::before { opacity: 0; }
 
+    /* Match Event squares: uncovered graphic replaces the plain portrait slice */
+    .tile.tile-event {
+      background-color: rgba(10, 10, 30, 0.82);
+      background-size: 78% 78%;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: inset 0 0 0 1px rgba(255, 215, 0, 0.45);
+    }
+    .tile.tile-event.good { box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.55), inset 0 0 14px -2px rgba(52, 211, 153, 0.4); }
+    .tile.tile-event.bad { box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.55), inset 0 0 14px -2px rgba(239, 68, 68, 0.4); }
+
     @keyframes shake {
       0%,100% { transform: translateX(0); }
       15% { transform: translateX(-6px); }
@@ -719,6 +730,40 @@
       animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
+    /* Match Event banner tints: gold-green for wins, red for losses */
+    .retro-quip-box.event-good {
+      border: 2px solid #34d399;
+      border-right: 2px solid #FFD700;
+      border-bottom: 2px solid #FFD700;
+      box-shadow:
+        0 0 10px rgba(52, 211, 153, 0.8),
+        0 0 20px rgba(255, 215, 0, 0.4),
+        inset 0 0 10px rgba(255, 215, 0, 0.15);
+    }
+    .retro-quip-box.event-good .retro-quip-text {
+      color: #6ee7b7;
+      text-shadow:
+        0.5px 0.5px 0 #0e8a4c,
+        1px 1px 0 #FFD700,
+        2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+    .retro-quip-box.event-bad {
+      border: 2px solid #ef4444;
+      border-right: 2px solid #FF1493;
+      border-bottom: 2px solid #FF1493;
+      box-shadow:
+        0 0 10px rgba(239, 68, 68, 0.8),
+        0 0 20px rgba(255, 20, 147, 0.4),
+        inset 0 0 10px rgba(255, 20, 147, 0.15);
+    }
+    .retro-quip-box.event-bad .retro-quip-text {
+      color: #fca5a5;
+      text-shadow:
+        0.5px 0.5px 0 #991b1b,
+        1px 1px 0 #FF1493,
+        2px 2px 4px rgba(0, 0, 0, 0.8);
+    }
+
     /* Arcade CRT scanline effect */
     @keyframes arcade-scanlines {
       0% { background-position: 0 0; opacity: 0; }
@@ -944,6 +989,17 @@
   const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 16','Quarter-Final','Semi-Final','Final'];
   const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
 
+  // Match Event squares — server owns amounts and weights; this maps a type
+  // to its i18n keys, banner tint and file name under /images/events/.
+  const EVENT_META = {
+    handball:       { cls: 'bad',  kind: 'bad',  file: 'handball' },
+    free_kick:      { cls: 'good', kind: 'good', file: 'free-kick' },
+    injury:         { cls: 'bad',  kind: 'bad',  file: 'injury' },
+    pitch_invasion: { cls: 'bad',  kind: 'bad',  file: 'pitch-invasion' },
+    red_card:       { cls: 'bad',  kind: 'bad',  file: 'red-card' },
+    penalty_save:   { cls: 'good', kind: 'good', file: 'penalty-save' },
+  };
+
   const KNOCKOUT_PALETTES = {
     3: { accent: '#88C0D0', accent2: '#5E81AC', cardDeep: '#2E3440', name: 'Nord Frost' },
     4: { accent: '#34D399', accent2: '#2DD4BF', cardDeep: '#042F2E', name: 'Emerald Teal' },
@@ -1131,6 +1187,27 @@
       const t = ctx.currentTime;
       this.tone(660, t, 0.08, 'square', 0.16);
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
+    },
+    // Match Event SFX — rising two-tone fanfare for wins, descending
+    // whistle-then-buzz for losses. Varies per event so the six don't
+    // sound identical. Synth only: mute-aware, offline-safe, no files.
+    async eventGood(eventType) {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      const base = eventType === 'penalty_save' ? 587 : eventType === 'free_kick' ? 523 : 494;
+      this.tone(base, t, 0.09, 'square', 0.16);
+      this.tone(base * 1.25, t + 0.09, 0.09, 'square', 0.16);
+      this.tone(base * 1.5, t + 0.18, 0.16, 'square', 0.18);
+    },
+    async eventBad(eventType) {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      // Descending whistle
+      const top = eventType === 'red_card' ? 880 : eventType === 'injury' ? 740 : 830;
+      this.tone(top, t, 0.12, 'triangle', 0.14);
+      this.tone(top * 0.78, t + 0.13, 0.14, 'triangle', 0.14);
+      // Low buzz on the land
+      this.tone(eventType === 'handball' ? 130 : 110, t + 0.3, 0.22, 'sawtooth', 0.12);
     },
     introElement: null,
     playIntro() {
@@ -1824,6 +1901,7 @@
       state.prevPotBalance = d.captain_pot_balance;
       state.squaresRevealed = d.squares_revealed;
       state.prizePot = d.prize_pot;
+      state.gameEvents = d.events || {};
       state.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
       state.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
       if (d.pricing) state.pricing = d.pricing;
@@ -1873,14 +1951,20 @@
       <span style="margin-left:auto;background:rgba(0,0,0,0.55);border:1px solid rgba(251,191,36,0.5);border-radius:5px;padding:1px 7px;color:#fbbf24;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap;text-transform:uppercase;letter-spacing:0.06em;box-shadow:0 0 6px rgba(251,191,36,0.2);">${stageName(stageIdx)}</span>
     </div>`;
 
-    // Build tiles for this stage's grid; open tiles show portrait beneath
+    // Build tiles for this stage's grid; open tiles show portrait beneath.
+    // Revealed Match Event squares show their graphic instead.
     const gridSize = state.gridSize || gridSizeForStage(stageIdx);
     const gridCols = state.gridCols || gridColsForStage(stageIdx);
     const revealed = game.revealed || new Array(gridSize).fill(false);
+    const gameEvents = state.gameEvents || {};
     let tiles = '';
     for (let i = 0; i < gridSize; i++) {
       const isOpen = revealed[i];
-      tiles += `<div class="tile${isOpen ? ' open' : ''}" data-idx="${i}" onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
+      const evt = isOpen ? gameEvents[String(i)] : null;
+      const meta = evt ? EVENT_META[evt] : null;
+      const evtClass = meta ? ' tile-event ' + meta.cls : '';
+      const evtBg = meta ? ` style="background-image:url('/images/events/${meta.file}.svg');"` : '';
+      tiles += `<div class="tile${isOpen ? ' open' : ''}${evtClass}" data-idx="${i}"${evtBg} onclick="${isOpen ? '' : `onCellClick(${i})`}"></div>`;
     }
 
     const initialHint = `${stageName(stageIdx)} — find the ball to knock out ${theme.country_name}`;
@@ -1949,11 +2033,11 @@
     updateHud();
   }
 
-  function showRetroQuip(quipText, row) {
+  function showRetroQuip(quipText, row, modifierClass) {
     const overlay = document.getElementById('retro-quip-overlay');
     if (!overlay) return;
 
-    overlay.innerHTML = `<div class="retro-quip-box">
+    overlay.innerHTML = `<div class="retro-quip-box${modifierClass ? ' ' + modifierClass : ''}">
       <p class="retro-quip-text">${quipText}</p>
     </div>`;
     overlay.style.display = 'block';
@@ -2009,6 +2093,8 @@
         overlay.style.display = 'none';
         if (quipBox) {
           quipBox.classList.remove(selectedAnimation);
+          // Clear event tint classes so the next quip renders unmodified
+          quipBox.classList.remove('event-good', 'event-bad');
         }
       }, animationDuration);
     }, 1500);
@@ -2101,22 +2187,48 @@
         await runWinSequence(cell, idx, d);
       } else {
         // Miss — rotate reveal variant + optionally double speed
+        let revealCleanup = 620;
         if (cell) {
           const variant = REVEAL_VARIANTS[state.revealVariantIdx % REVEAL_VARIANTS.length];
           state.revealVariantIdx++;
           const isFast = Math.random() < 0.33;
           const baseDuration = variant === 'flip-miss' ? 0.62 : variant === 'dissolving' ? 0.42 : 0.62;
           const actualDuration = isFast ? baseDuration * 0.5 : baseDuration;
+          revealCleanup = Math.round(actualDuration * 1000);
           cell.classList.add(variant);
           if (isFast) cell.classList.add('reveal-fast');
-          const cleanupTime = Math.round(actualDuration * 1000);
+          const cleanupTime = revealCleanup;
           setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
-        // Show retro quip overlay with smart positioning based on tile row
+        // Show retro quip overlay with smart positioning based on tile row.
+        // A Match Event replaces the random quip with its own banner, sound
+        // and uncovered graphic.
         const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
         const tileRow = Math.floor(idx / gridCols);
-        const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-        showRetroQuip(quip, tileRow);
+        if (d.event && d.event.type && EVENT_META[d.event.type]) {
+          const meta = EVENT_META[d.event.type];
+          const amount = Math.abs(d.event.delta);
+          const msgKey = d.event.delta >= 0 ? 'events.' + d.event.type + '.gain' : 'events.' + d.event.type + '.lose';
+          const sign = d.event.delta >= 0 ? '+' : '-';
+          const msg = t(msgKey, { amount: sign + amount + ' t' });
+          // Uncover the event graphic on the tile once the reveal animation lands
+          setTimeout(() => {
+            if (cell) {
+              cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
+              cell.classList.add('tile-event', meta.cls);
+            }
+            Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
+          }, revealCleanup);
+          showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad');
+          // Testing mode: server skips wallet ops, apply the delta frontend-side
+          if (testingModeActive) {
+            state.walletBalance = (state.walletBalance || 0) + d.event.delta;
+            updateHud();
+          }
+        } else {
+          const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+          showRetroQuip(quip, tileRow);
+        }
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       }
     } catch(e) {

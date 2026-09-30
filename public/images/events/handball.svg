@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- open hand striking from the left -->
+  <path d="M14 52 L30 44 L36 40 L40 44 L34 50 L30 52 L38 54 L34 60 L26 60 L20 62 Z" fill="#f0c040"/>
+  <path d="M36 40 L40 34 L46 36 L42 42 Z" fill="#f0c040"/>
+  <path d="M42 34 L47 30 L52 34 L47 39 Z" fill="#f0c040"/>
+  <!-- motion arcs from the strike -->
+  <path d="M24 32 Q20 40 22 48" fill="none" stroke="#FF1493" stroke-width="3" stroke-linecap="round"/>
+  <path d="M32 26 Q27 36 29 46" fill="none" stroke="#FF1493" stroke-width="2" stroke-linecap="round"/>
+  <!-- ball deflected to the right -->
+  <circle cx="72" cy="46" r="14" fill="white" stroke="#222" stroke-width="2"/>
+  <path d="M72 34 L76 41 L72 46 L68 41 Z" fill="#111"/>
+  <path d="M84 43 L78 47 L80 52 Z" fill="#111"/>
+  <path d="M63 50 L69 48 L68 43 Z" fill="#111"/>
+  <!-- deflection sparks -->
+  <path d="M60 62 L64 58" stroke="#00FFFF" stroke-width="3" stroke-linecap="round"/>
+  <path d="M78 66 L82 62" stroke="#00FFFF" stroke-width="3" stroke-linecap="round"/>
+</svg>
