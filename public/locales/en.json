@@ -174,5 +174,11 @@
   "countries.netherlands": "Netherlands",
   "countries.norway": "Norway",
   "countries.germany": "Germany",
-  "countries.mexico": "Mexico"
+  "countries.mexico": "Mexico",
+  "events.handball": "HANDBALL! {amount} lost",
+  "events.free_kick": "FREE KICK! {amount} won",
+  "events.injury": "PLAYER INJURED! {amount} lost",
+  "events.pitch_invasion": "PITCH INVASION! {amount} lost",
+  "events.red_card": "RED CARD! {amount} lost",
+  "events.penalty_save": "PENALTY SAVE! {amount} won"
 }

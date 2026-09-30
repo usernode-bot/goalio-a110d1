@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- running fans, arms up -->
+  <circle cx="30" cy="40" r="7" fill="#f0c040"/>
+  <path d="M30 47 L30 64 M30 50 L20 42 M30 50 L40 42 M30 64 L24 76 M30 64 L36 76" stroke="#f0c040" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <circle cx="56" cy="36" r="7" fill="#FF1493"/>
+  <path d="M56 43 L56 60 M56 46 L46 38 M56 46 L66 38 M56 60 L50 72 M56 60 L62 72" stroke="#FF1493" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <circle cx="76" cy="44" r="6" fill="#00FFFF"/>
+  <path d="M76 50 L76 66 M76 53 L67 46 M76 53 L85 46 M76 66 L71 77 M76 66 L81 77" stroke="#00FFFF" stroke-width="4" stroke-linecap="round" fill="none"/>
+  <!-- pitch line below -->
+  <path d="M12 82 L88 82" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <path d="M12 76 L88 76" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round"/>
+  <!-- scarf waving -->
+  <path d="M42 26 Q48 20 54 26 Q50 30 42 26 Z" fill="#FFD700"/>
+</svg>

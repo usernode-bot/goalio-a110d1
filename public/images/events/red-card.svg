@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- arm holding the card up from below -->
+  <path d="M46 92 L46 66 L56 66 L56 92 Z" fill="#f0c040"/>
+  <path d="M42 68 L60 68 L60 76 L42 76 Z" fill="#f0c040"/>
+  <!-- red card held high, tilted -->
+  <g transform="rotate(-8 50 40)">
+    <rect x="34" y="12" width="32" height="46" rx="3" fill="#e11d48" stroke="white" stroke-width="2.5"/>
+  </g>
+  <!-- decision flash lines -->
+  <path d="M22 24 L28 30 M78 24 L72 30 M24 54 L31 51 M76 54 L69 51" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -174,5 +174,11 @@
   "countries.netherlands": "नीदरलैंड",
   "countries.norway": "नॉर्वे",
   "countries.germany": "जर्मनी",
-  "countries.mexico": "मेक्सिको"
+  "countries.mexico": "मेक्सिको",
+  "events.handball": "हैंडबॉल! {amount} खोए",
+  "events.free_kick": "फ्री किक! {amount} जीते",
+  "events.injury": "खिलाड़ी घायल! {amount} खोए",
+  "events.pitch_invasion": "मैदान में घुसपैठ! {amount} खोए",
+  "events.red_card": "लाल कार्ड! {amount} खोए",
+  "events.penalty_save": "पेनल्टी बचाया! {amount} जीते"
 }
