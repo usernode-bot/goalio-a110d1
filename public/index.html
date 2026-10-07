@@ -719,6 +719,28 @@
       animation: quip-bounce-out 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     }
 
+    /* Pitch event card — quip box with a drawn moment and the token result */
+    .event-card {
+      min-width: 150px;
+      padding-top: 14px;
+    }
+
+    .event-figure {
+      margin: 0 auto 8px;
+      display: block;
+    }
+
+    .event-delta {
+      font-family: 'Space Mono', monospace;
+      font-size: clamp(0.6rem, 2.5vw, 0.72rem);
+      font-weight: 700;
+      margin: 7px 0 0;
+      text-align: center;
+    }
+
+    .delta-good { color: #34d399; }
+    .delta-bad { color: #f87171; }
+
     /* Arcade CRT scanline effect */
     @keyframes arcade-scanlines {
       0% { background-position: 0 0; opacity: 0; }
@@ -1132,6 +1154,23 @@
       this.tone(660, t, 0.08, 'square', 0.16);
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
     },
+    // Pitch event stings — bright rising arpeggio for a win, low descending
+    // sting for a loss. Both go through ensure() so the mute toggle applies.
+    async eventGood() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      this.tone(523, t, 0.09, 'square', 0.16);
+      this.tone(659, t + 0.08, 0.09, 'square', 0.16);
+      this.tone(784, t + 0.16, 0.09, 'square', 0.16);
+      this.tone(1046, t + 0.24, 0.18, 'square', 0.14);
+    },
+    async eventBad() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      this.tone(311, t, 0.14, 'sawtooth', 0.13);
+      this.tone(233, t + 0.13, 0.14, 'sawtooth', 0.13);
+      this.tone(155, t + 0.26, 0.24, 'sawtooth', 0.13);
+    },
     introElement: null,
     playIntro() {
       if (this.muted) return;
@@ -1476,6 +1515,7 @@
       renderLeague();
     }
     else if (hash === '#faq') renderFaq();
+    else if (hash === '#demo-events') renderDemoEvents();
     else renderLobby();
   }
   window.addEventListener('hashchange', route);
@@ -1949,13 +1989,37 @@
     updateHud();
   }
 
-  function showRetroQuip(quipText, row) {
+  // Hidden pitch event graphics — flat retro shapes matching football.svg
+  // (white ball, #222 strokes, the arcade palette). No emoji, no image files.
+  const EVENT_SVGS = {
+    free_kick: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Free kick</title><path d="M8 86 Q34 78 50 58" fill="none" stroke="#FF1493" stroke-width="6" stroke-linecap="round" stroke-dasharray="1 11"/><circle cx="64" cy="38" r="21" fill="#ffffff" stroke="#222222" stroke-width="4"/><path d="M64 24 L72 33 L66 41 L56 38 Z" fill="#222222"/></svg>`,
+    penalty_save: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Penalty save</title><path d="M14 26 Q26 10 42 18 L38 42 Q26 48 12 40 Z" fill="#fbbf24" stroke="#222222" stroke-width="3"/><path d="M86 26 Q74 10 58 18 L62 42 Q74 48 88 40 Z" fill="#fbbf24" stroke="#222222" stroke-width="3"/><circle cx="50" cy="60" r="21" fill="#ffffff" stroke="#222222" stroke-width="4"/><path d="M50 46 L58 55 L52 63 L43 60 Z" fill="#222222"/></svg>`,
+    handball: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Handball</title><circle cx="60" cy="36" r="21" fill="#ffffff" stroke="#222222" stroke-width="4"/><path d="M60 22 L68 31 L62 39 L53 36 Z" fill="#222222"/><path d="M10 90 Q14 62 42 50 L50 62 Q30 70 26 90 Z" fill="#fbbf24" stroke="#222222" stroke-width="3"/></svg>`,
+    player_injured: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Player injured</title><circle cx="30" cy="26" r="11" fill="#ffffff" stroke="#222222" stroke-width="3"/><path d="M18 80 Q20 50 34 44 L46 54 Q34 60 32 80 Z" fill="#fbbf24" stroke="#222222" stroke-width="3"/><rect x="6" y="86" width="52" height="5" rx="2.5" fill="#00FFFF" opacity="0.6"/><rect x="60" y="52" width="34" height="34" rx="5" fill="#ffffff" stroke="#222222" stroke-width="3"/><rect x="73" y="57" width="8" height="24" fill="#e23b4e"/><rect x="65" y="65" width="24" height="8" fill="#e23b4e"/></svg>`,
+    pitch_invasion: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Pitch invasion</title><circle cx="22" cy="32" r="10" fill="#fbbf24" stroke="#222222" stroke-width="3"/><circle cx="50" cy="24" r="10" fill="#FF1493" stroke="#222222" stroke-width="3"/><circle cx="78" cy="34" r="10" fill="#00FFFF" stroke="#222222" stroke-width="3"/><rect x="12" y="44" width="20" height="24" rx="6" fill="#fbbf24" stroke="#222222" stroke-width="3"/><rect x="40" y="36" width="20" height="24" rx="6" fill="#FF1493" stroke="#222222" stroke-width="3"/><rect x="68" y="46" width="20" height="24" rx="6" fill="#00FFFF" stroke="#222222" stroke-width="3"/><rect x="4" y="66" width="92" height="9" rx="4" fill="#ffffff" stroke="#222222" stroke-width="3"/></svg>`,
+    red_card: `<svg class="event-figure" width="64" height="64" viewBox="0 0 100 100" role="img"><title>Red card</title><rect x="30" y="16" width="40" height="62" rx="6" fill="#e23b4e" stroke="#ffffff" stroke-width="4" transform="rotate(9 50 50)"/></svg>`,
+  };
+
+  function eventCardContent(eventKey, delta, paid) {
+    const name = t('game.event_' + eventKey);
+    const amount = Math.abs(Math.round(delta));
+    const resultLine = paid && delta > 0
+      ? `<p class="event-delta delta-good">${t('game.event_win', { amount })}</p>`
+      : paid && delta < 0
+        ? `<p class="event-delta delta-bad">${t('game.event_loss', { amount })}</p>`
+        : '';
+    return `<div class="retro-quip-box event-card">
+      ${EVENT_SVGS[eventKey] || ''}
+      <p class="retro-quip-text">${name}</p>
+      ${resultLine}
+    </div>`;
+  }
+
+  function showOverlayBox(innerHtml, row, holdMs) {
     const overlay = document.getElementById('retro-quip-overlay');
     if (!overlay) return;
 
-    overlay.innerHTML = `<div class="retro-quip-box">
-      <p class="retro-quip-text">${quipText}</p>
-    </div>`;
+    overlay.innerHTML = innerHtml;
     overlay.style.display = 'block';
 
     const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
@@ -2011,7 +2075,32 @@
           quipBox.classList.remove(selectedAnimation);
         }
       }, animationDuration);
-    }, 1500);
+    }, holdMs);
+  }
+
+  function showRetroQuip(quipText, row) {
+    showOverlayBox(`<div class="retro-quip-box">
+      <p class="retro-quip-text">${quipText}</p>
+    </div>`, row, 1500);
+  }
+
+  // Event card holds a beat longer than a quip so the graphic reads
+  function showEventCard(eventKey, delta, paid, row) {
+    showOverlayBox(eventCardContent(eventKey, delta, paid), row, 2600);
+  }
+
+  // Quiet demo view: all six pitch event cards rendered through the same
+  // markup the game uses (for automated checks — not linked from the UI).
+  function renderDemoEvents() {
+    const app = document.getElementById('app');
+    const demo = [
+      ['free_kick', 20], ['penalty_save', 30],
+      ['handball', -20], ['player_injured', -25],
+      ['pitch_invasion', -30], ['red_card', -50],
+    ];
+    app.innerHTML = `<div style="min-height:100vh;background:#0a0a0f;padding:32px 16px;display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:center;">
+      ${demo.map(([k, d]) => eventCardContent(k, d, true)).join('')}
+    </div>`;
   }
 
   window.onCellClick = async function(idx) {
@@ -2086,6 +2175,11 @@
       if (testingModeActive && d.credits_refunded > 0) {
         state.walletBalance = (state.walletBalance || 0) + d.credits_refunded;
       }
+      // Apply testing-mode pitch event result to wallet (server skips wallet
+      // calls in testing mode — balance is frontend-managed), clamped at zero.
+      if (testingModeActive && d.event && d.event_paid !== false) {
+        state.walletBalance = Math.max(0, (state.walletBalance || 0) + (d.event_delta || 0));
+      }
 
       // If THIS player just won the jackpot, record their win timestamp so the
       // broadcast toast (meant for everyone else) is suppressed for them when
@@ -2101,22 +2195,33 @@
         await runWinSequence(cell, idx, d);
       } else {
         // Miss — rotate reveal variant + optionally double speed
+        let cleanupTime = 620;
         if (cell) {
           const variant = REVEAL_VARIANTS[state.revealVariantIdx % REVEAL_VARIANTS.length];
           state.revealVariantIdx++;
           const isFast = Math.random() < 0.33;
           const baseDuration = variant === 'flip-miss' ? 0.62 : variant === 'dissolving' ? 0.42 : 0.62;
           const actualDuration = isFast ? baseDuration * 0.5 : baseDuration;
+          cleanupTime = Math.round(actualDuration * 1000);
           cell.classList.add(variant);
           if (isFast) cell.classList.add('reveal-fast');
-          const cleanupTime = Math.round(actualDuration * 1000);
           setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
-        // Show retro quip overlay with smart positioning based on tile row
         const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
         const tileRow = Math.floor(idx / gridCols);
-        const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-        showRetroQuip(quip, tileRow);
+        if (d.event) {
+          // Pitch event: card pops over the board once the tile finishes
+          // flipping, with a win or loss sting
+          setTimeout(() => {
+            if (d.event_delta > 0) Sound.eventGood();
+            else if (d.event_delta < 0) Sound.eventBad();
+            showEventCard(d.event, d.event_delta, d.event_paid !== false, tileRow);
+          }, cleanupTime);
+        } else {
+          // Show retro quip overlay with smart positioning based on tile row
+          const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+          showRetroQuip(quip, tileRow);
+        }
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
       }
     } catch(e) {

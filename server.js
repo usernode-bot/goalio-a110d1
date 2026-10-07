@@ -102,6 +102,38 @@ const POT_FLOORS = [100, 160, 230, 320];
 function potFloorForTier(tier) {
   return POT_FLOORS[Math.max(0, Math.min(3, tier))];
 }
+
+// Hidden pitch events under roughly half the covered squares. The layout is
+// chosen once when a board is created and never edited after, so the reveal
+// and the payout always agree. The ball square never carries an event.
+// Amounts are indexed by potTierForStage(stage_idx): [group, knockout, semi, final].
+const EVENT_KEYS = ['free_kick', 'penalty_save', 'handball', 'player_injured', 'pitch_invasion', 'red_card'];
+const EVENT_AMOUNTS = {
+  free_kick:       [10, 15, 20, 25],
+  penalty_save:    [20, 25, 30, 40],
+  handball:        [-10, -15, -20, -25],
+  player_injured:  [-15, -20, -25, -30],
+  pitch_invasion:  [-20, -25, -30, -40],
+  red_card:        [-30, -40, -50, -60],
+};
+
+function assignSquareEvents(gridSize, footballSquare, revealed) {
+  const candidates = [];
+  for (let i = 0; i < gridSize; i++) {
+    if (i !== footballSquare && !revealed[i]) candidates.push(i);
+  }
+  // Partial Fisher-Yates so the picked half is uniformly random
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const events = {};
+  const count = Math.floor(candidates.length / 2);
+  for (let i = 0; i < count; i++) {
+    events[candidates[i]] = EVENT_KEYS[Math.floor(Math.random() * EVENT_KEYS.length)];
+  }
+  return events;
+}
 function potFloorForStage(stageIdx) {
   return potFloorForTier(potTierForStage(stageIdx));
 }
@@ -474,9 +506,9 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
     // Ensure wallet exists before crediting
     await ensureWallet(client, userId, `user_${userId}`);
 
-    // For prize payouts, check if the house wallet has sufficient balance
+    // For house-backed credits, check if the house wallet has sufficient balance
     // to debit. If not, the credit is marked as pending and not applied.
-    if (reason === 'prize_payout' || reason === 'house_bonus') {
+    if (reason === 'prize_payout' || reason === 'house_bonus' || reason === 'event_win') {
       const houseBalance = await getHouseWalletBalance(client);
       if (houseBalance < amount) {
         console.error(`[creditWallet] House wallet insufficient balance: ${houseBalance} < ${amount} for ${reason}`);
@@ -695,14 +727,15 @@ app.post('/api/session/start-map', async (req, res) => {
     const gridSize = gridSizeForStage(session.stage_idx);
     const footballSquare = Math.floor(Math.random() * gridSize);
     const revealed = new Array(gridSize).fill(false);
+    const squareEvents = assignSquareEvents(gridSize, footballSquare, revealed);
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
         (theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count,
-         status, active_player_id, active_player_username, last_active_at)
-      VALUES ($1, $2, $3, $4, 0, 0, 'active', $5, $6, NOW())
+         status, active_player_id, active_player_username, last_active_at, square_events)
+      VALUES ($1, $2, $3, $4, 0, 0, 'active', $5, $6, NOW(), $7)
       RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status
-    `, [theme.id, session.stage_idx, footballSquare, revealed, req.user.id, req.user.username]);
+    `, [theme.id, session.stage_idx, footballSquare, revealed, req.user.id, req.user.username, squareEvents]);
 
     const game = gameRows[0];
 
@@ -1003,6 +1036,18 @@ app.post('/api/games/:id/guess', async (req, res) => {
       return res.status(409).json({ error: 'Square already revealed' });
     }
 
+    // Lazily assign pitch events to boards created before this feature, under
+    // the same row lock so concurrent reveals can't double-assign.
+    // Already-revealed squares are excluded so an event is never buried under
+    // an open square where it could never resolve.
+    if (game.square_events === null || game.square_events === undefined) {
+      game.square_events = assignSquareEvents(gridSize, game.football_square, game.revealed || []);
+      await client.query(
+        'UPDATE games SET square_events = $1 WHERE id = $2',
+        [game.square_events, game.id]
+      );
+    }
+
     // Ensure wallet exists at the start of guess (prevents state pollution)
     try {
       await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
@@ -1089,6 +1134,40 @@ app.post('/api/games/:id/guess', async (req, res) => {
     let interstitial = null, newStageIdx = null, stageCompleted = false;
     let potTopup = 0, potTopupMessage = null;
     let prizeWalletError = null, bonusWalletError = null;
+    let eventKey = null, eventDelta = 0, eventPaid = true;
+
+    // Resolve the hidden pitch event on a miss. The hit path is untouched:
+    // the ball square never carries an event, and the shot cost still applies.
+    if (!isHit) {
+      const ev = game.square_events ? game.square_events[String(square_index)] : null;
+      if (ev && EVENT_AMOUNTS[ev]) {
+        eventKey = ev;
+        eventDelta = EVENT_AMOUNTS[ev][potTierForStage(game.stage_idx)];
+        if (!testing_mode) {
+          if (eventDelta > 0) {
+            // Wins are paid from the house wallet like prize payouts; if the
+            // house wallet is short, the card still shows but nothing is paid.
+            try {
+              await creditWallet(client, req.user.id, eventDelta, 'event_win', game.id);
+            } catch (err) {
+              eventPaid = false;
+              console.error('Event win wallet transaction failed:', err.message);
+            }
+          } else if (eventDelta < 0) {
+            // Losses are charged through the same wallet path as shot charges,
+            // clamped so a loss never takes the wallet below zero.
+            const balance = await getWalletBalance(client, req.user.id);
+            const loss = Math.min(-eventDelta, Math.max(0, balance));
+            if (loss > 0) {
+              await debitWallet(client, req.user.id, loss, 'pitch_event_loss', game.id);
+              eventDelta = -loss;
+            } else {
+              eventDelta = 0;
+            }
+          }
+        }
+      }
+    }
 
     if (isHit) {
       prizePaid = prizeDecay(squaresRevealedBefore, gridSize);
@@ -1270,7 +1349,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
       opponent_slug: game.theme_slug,
       footballer_name: game.footballer_name,
       prize_pending: prizeWalletError ? true : false,
-      bonus_pending: bonusWalletError ? true : false
+      bonus_pending: bonusWalletError ? true : false,
+      event: eventKey,
+      event_delta: eventDelta,
+      event_paid: eventPaid
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -1613,6 +1695,10 @@ async function start() {
     completed_at TIMESTAMPTZ
   )`);
   await pool.query(`COMMENT ON TABLE games IS 'staging:private'`);
+  // Hidden pitch events per board, e.g. {"7":"free_kick","9":"red_card"}.
+  // Keys are square indexes; null means the board predates events and gets a
+  // layout assigned lazily on its first reveal after this ships.
+  await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS square_events JSONB`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
     id SERIAL PRIMARY KEY,
@@ -1824,24 +1910,31 @@ async function start() {
 
     // Game 1 — group stage (stage 0, 4×4 = 16 tiles), 6 revealed
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (1, $1, 0, 11, $2, 6, 2, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status, square_events)
+      VALUES (1, $1, 0, 11, $2, 6, 2, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['brazil'], revealedPrefix(16, 6)]);
+    `, [themeMap['brazil'], revealedPrefix(16, 6), JSON.stringify({
+      6: 'free_kick', 7: 'handball', 8: 'penalty_save', 12: 'red_card', 13: 'pitch_invasion'
+    })]);
 
     // Game 2 — semi-final (stage 5, 6×6 = 36 tiles), 20 revealed
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (2, $1, 5, 32, $2, 20, 4, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status, square_events)
+      VALUES (2, $1, 5, 32, $2, 20, 4, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['france'], revealedPrefix(36, 20)]);
+    `, [themeMap['france'], revealedPrefix(36, 20), JSON.stringify({
+      20: 'free_kick', 21: 'player_injured', 23: 'penalty_save', 24: 'red_card',
+      26: 'handball', 28: 'pitch_invasion', 30: 'free_kick', 33: 'player_injured'
+    })]);
 
     // Game 3 — knockout (stage 3, 5×5 = 25 tiles), 14 revealed
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (3, $1, 3, 20, $2, 14, 6, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status, square_events)
+      VALUES (3, $1, 3, 20, $2, 14, 6, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], revealedPrefix(25, 14)]);
+    `, [themeMap['argentina'], revealedPrefix(25, 14), JSON.stringify({
+      14: 'penalty_save', 15: 'pitch_invasion', 16: 'free_kick', 21: 'red_card', 23: 'handball'
+    })]);
 
     // Sequence fixup so next insert gets id > 3
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 3))`);
@@ -1855,10 +1948,17 @@ async function start() {
 
     // Open final stage game with carry-over credits for refund testing
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status)
-      VALUES (5, $1, 6, 35, $2, 4, 1, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, revealed, total_guesses, total_players_count, status, square_events)
+      VALUES (5, $1, 6, 35, $2, 4, 1, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['belgium'], revealedPrefix(49, 4)]);
+    `, [themeMap['belgium'], revealedPrefix(49, 4), JSON.stringify({
+      4: 'free_kick', 6: 'penalty_save', 8: 'handball', 10: 'player_injured',
+      12: 'pitch_invasion', 14: 'red_card', 16: 'free_kick', 18: 'penalty_save',
+      20: 'handball', 22: 'player_injured', 24: 'pitch_invasion', 26: 'red_card',
+      28: 'free_kick', 30: 'penalty_save', 32: 'handball', 34: 'player_injured',
+      36: 'pitch_invasion', 38: 'red_card', 40: 'free_kick', 42: 'penalty_save',
+      44: 'handball', 46: 'player_injured'
+    })]);
 
     // Add carry-over credits (8 remaining, 4 t/credit = 32 t refund potential) for the staging test user
     await pool.query(`
