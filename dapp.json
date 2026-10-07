@@ -69,6 +69,11 @@
       "expectSelector": ".game-grid"
     },
     {
+      "name": "Event cards demo renders",
+      "path": "/#demo-events",
+      "expectSelector": ".event-card"
+    },
+    {
       "name": "Game board shows HUD",
       "path": "/#game/2",
       "expectSelector": ".hud-chip"
