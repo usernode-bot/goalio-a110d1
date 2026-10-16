@@ -1123,8 +1123,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
     let usedBundleId = null;
     let wasBonusShot = false;
 
-    console.log('DEBUG: guess session_id received:', session_id);
-
     if (session_id) {
       const { rows: bsRows } = await client.query(`
         SELECT * FROM game_sessions
@@ -1434,15 +1432,24 @@ app.post('/api/games/:id/guess', async (req, res) => {
       FROM game_sessions
       WHERE game_id = $1 AND user_id = $2 AND refunded = false
         AND credits_used < credits_total
+      ORDER BY created_at DESC
     `, [game.id, req.user.id]);
-
-    console.log('DEBUG: updatedSessions.rows:', JSON.stringify(updatedSessions));
 
     const updatedBonusCreditsAvailable = updatedSessions
       .filter(row => row.is_bonus_credit)
       .reduce((sum, row) => sum + (row.credits_total - row.credits_used), 0);
 
-    const updatedRegularSession = updatedSessions.find(r => !r.is_bonus_credit) || null;
+    // Report the bundle row this guess actually drew from; once it is fully
+    // used it drops out of the filter above, and the count falls back to the
+    // newest other active regular row (or 0). Matches GET /api/games/:id's
+    // newest-first ordering.
+    let updatedRegularSession = null;
+    if (usedBundleId && !wasBonusShot) {
+      updatedRegularSession = updatedSessions.find(r => r.id === usedBundleId) || null;
+    }
+    if (!updatedRegularSession) {
+      updatedRegularSession = updatedSessions.find(r => !r.is_bonus_credit) || null;
+    }
     const updatedRegularCreditsRemaining = updatedRegularSession ? updatedRegularSession.credits_remaining : 0;
 
     res.json({
@@ -1471,16 +1478,6 @@ app.post('/api/games/:id/guess', async (req, res) => {
       bonus_credits_awarded: bonusCreditsAwarded,
       bonus_credits_available: updatedBonusCreditsAvailable,
       regular_credits_remaining: updatedRegularCreditsRemaining,
-      debug_info: {
-        session_id_received: session_id,
-        updated_regular_session: updatedRegularSession ? {
-          id: updatedRegularSession.id,
-          credits_total: updatedRegularSession.credits_total,
-          credits_used: updatedRegularSession.credits_used,
-          credits_remaining: updatedRegularSession.credits_remaining
-        } : null,
-        final_regular_credits_remaining: updatedRegularCreditsRemaining
-      }
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
