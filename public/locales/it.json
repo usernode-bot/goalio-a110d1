@@ -174,5 +174,11 @@
   "countries.netherlands": "Paesi Bassi",
   "countries.norway": "Norvegia",
   "countries.germany": "Germania",
-  "countries.mexico": "Messico"
+  "countries.mexico": "Messico",
+  "events.handball": "MANO! {amount} persi",
+  "events.free_kick": "CALCIO DI PUNIZIONE! {amount} vinti",
+  "events.injury": "GIOCATORE INFORTUNATO! {amount} persi",
+  "events.pitch_invasion": "INVASIONE DI CAMPO! {amount} persi",
+  "events.red_card": "CARTELLINO ROSSO! {amount} persi",
+  "events.penalty_save": "RIGORE PARATO! {amount} vinti"
 }
