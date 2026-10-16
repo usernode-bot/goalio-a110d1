@@ -2051,7 +2051,9 @@
     updateHud();
   }
 
-  function showRetroQuip(quipText, row, modifierClass) {
+  let quipSeq = 0;
+  function showRetroQuip(quipText, row, modifierClass, holdMs) {
+    const mySeq = ++quipSeq;
     const overlay = document.getElementById('retro-quip-overlay');
     if (!overlay) return;
 
@@ -2104,10 +2106,12 @@
     const animationDuration = animationDurations[selectedAnimation];
 
     setTimeout(() => {
+      if (mySeq !== quipSeq) return;
       if (quipBox) {
         quipBox.classList.add(selectedAnimation);
       }
       setTimeout(() => {
+        if (mySeq !== quipSeq) return;
         overlay.style.display = 'none';
         if (quipBox) {
           quipBox.classList.remove(selectedAnimation);
@@ -2115,7 +2119,7 @@
           quipBox.classList.remove('event-good', 'event-bad');
         }
       }, animationDuration);
-    }, 1500);
+    }, holdMs || 1500);
   }
 
   window.onCellClick = async function(idx) {
@@ -2226,7 +2230,7 @@
         if (d.event && d.event.type && EVENT_META[d.event.type]) {
           const meta = EVENT_META[d.event.type];
           const amount = Math.abs(d.event.delta);
-          const msgKey = d.event.delta >= 0 ? 'events.' + d.event.type + '.gain' : 'events.' + d.event.type + '.lose';
+          const msgKey = 'events.' + d.event.type;
           const sign = d.event.delta >= 0 ? '+' : '-';
           const msg = t(msgKey, { amount: sign + amount + ' t' });
           // Uncover the event graphic on the tile once the reveal animation lands
@@ -2237,7 +2241,7 @@
             }
             Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
           }, revealCleanup);
-          showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad');
+          showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
           // Testing mode: server skips wallet ops, apply the delta frontend-side
           if (testingModeActive) {
             state.walletBalance = (state.walletBalance || 0) + d.event.delta;
