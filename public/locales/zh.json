@@ -174,5 +174,11 @@
   "countries.netherlands": "荷兰",
   "countries.norway": "挪威",
   "countries.germany": "德国",
-  "countries.mexico": "墨西哥"
+  "countries.mexico": "墨西哥",
+  "events.handball": "手球!失去 {amount}",
+  "events.free_kick": "任意球!赢得 {amount}",
+  "events.injury": "球员受伤!失去 {amount}",
+  "events.pitch_invasion": "球迷闯入!失去 {amount}",
+  "events.red_card": "红牌!失去 {amount}",
+  "events.penalty_save": "扑出点球!赢得 {amount}"
 }

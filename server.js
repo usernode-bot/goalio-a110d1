@@ -13,7 +13,7 @@ const pool = new Pool({
   idleTimeoutMillis: 30000,
   max: 20,
 });
-const JWT_SECRET = process.env.JWT_SECRET;
+const USERNODE_JWT_PUBLIC_KEY = process.env.USERNODE_JWT_PUBLIC_KEY;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
 
@@ -24,17 +24,22 @@ const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqc
 const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://usernode:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode', '/favicon.ico']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
+
+app.get('/favicon.ico', (req, res) => res.type('image/png').sendFile(path.join(__dirname, 'public', 'favicon-32.png')));
 
 app.use((req, res, next) => {
   const authHeader = req.headers['authorization'] || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   const token = req.query.token || req.headers['x-usernode-token'] || bearerToken;
-  if (token && JWT_SECRET) {
-    try { req.user = jwt.verify(token, JWT_SECRET); } catch {}
+  if (token && USERNODE_JWT_PUBLIC_KEY) {
+    try {
+      const payload = jwt.verify(token, USERNODE_JWT_PUBLIC_KEY, { algorithms: ['RS256'], issuer: 'usernode', audience: 'usernode:app:' + process.env.USERNODE_APP_ID });
+      if (payload.pur === 'iframe') req.user = payload;
+    } catch {}
   }
   if (req.method !== 'GET' || req.path.startsWith('/api/')) {
     if (PUBLIC_API_PATHS.has(req.path)) return next();
@@ -102,6 +107,57 @@ function potFloorForStage(stageIdx) {
 }
 function potTierName(tier) {
   return ['group', 'knockout', 'semi-final', 'final'][Math.max(0, Math.min(3, tier))];
+}
+
+// ── Match Event squares ─────────────────────────────────────────────────────
+// Roughly half of the non-ball squares hide an event. Uncovering one wins or
+// loses tokens (multiplier applied to the stage's single-shot price), shows a
+// graphic and plays a synth sound. Weights favour losses slightly so events
+// add drama without giving players a free grind; the house margin holds.
+//   weighted EV per event square ≈ -0.7 × perShot, ≈ -0.35 × perShot per miss
+//   at ~50% event density.
+const EVENT_TYPES = {
+  handball:       { weight: 0.20, multiplier: -2, kind: 'bad'  },
+  free_kick:      { weight: 0.20, multiplier:  3, kind: 'good' },
+  injury:         { weight: 0.15, multiplier: -3, kind: 'bad'  },
+  pitch_invasion: { weight: 0.15, multiplier: -3, kind: 'bad'  },
+  red_card:       { weight: 0.15, multiplier: -4, kind: 'bad'  },
+  penalty_save:   { weight: 0.15, multiplier:  4, kind: 'good' },
+};
+const EVENT_WEIGHT_TOTAL = Object.values(EVENT_TYPES).reduce((s, e) => s + e.weight, 0);
+
+function eventAmountForStage(stageIdx, multiplier) {
+  return Math.max(1, Math.round(pricingForStage(stageIdx).perShot * Math.abs(multiplier)));
+}
+
+// Pick a random event type by weight.
+function randomEventType() {
+  let roll = Math.random() * EVENT_WEIGHT_TOTAL;
+  for (const [type, def] of Object.entries(EVENT_TYPES)) {
+    roll -= def.weight;
+    if (roll < 0) return type;
+  }
+  return Object.keys(EVENT_TYPES)[0];
+}
+
+// Build the event map for a fresh board: K distinct non-ball squares, each
+// assigned an event type by weighted draw. Shape { "<index>": "<type>" }.
+function buildEventSquares(footballSquare, gridSize) {
+  const candidates = [];
+  for (let i = 0; i < gridSize; i++) {
+    if (i !== footballSquare) candidates.push(i);
+  }
+  // Shuffle candidates
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const k = Math.floor((gridSize - 1) / 2);
+  const map = {};
+  for (let i = 0; i < k && i < candidates.length; i++) {
+    map[String(candidates[i])] = randomEventType();
+  }
+  return map;
 }
 
 // Prize decay formula, now keyed to the FRACTION of the board revealed so it
@@ -469,9 +525,10 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
     // Ensure wallet exists before crediting
     await ensureWallet(client, userId, `user_${userId}`);
 
-    // For prize payouts, check if the house wallet has sufficient balance
-    // to debit. If not, the credit is marked as pending and not applied.
-    if (reason === 'prize_payout' || reason === 'house_bonus') {
+    // For prize payouts and event bonuses, check if the house wallet has
+    // sufficient balance to debit. If not, the credit is marked as pending
+    // and not applied.
+    if (reason === 'prize_payout' || reason === 'house_bonus' || reason === 'event_bonus') {
       const houseBalance = await getHouseWalletBalance(client);
       if (houseBalance < amount) {
         console.error(`[creditWallet] House wallet insufficient balance: ${houseBalance} < ${amount} for ${reason}`);
@@ -694,14 +751,15 @@ app.post('/api/session/start-map', async (req, res) => {
       penaltySquare = Math.floor(Math.random() * gridSize);
     }
     const revealed = new Array(gridSize).fill(false);
+    const eventSquares = buildEventSquares(footballSquare, gridSize);
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
         (theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count,
-         status, active_player_id, active_player_username, last_active_at)
-      VALUES ($1, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW())
+         status, active_player_id, active_player_username, last_active_at, event_squares)
+      VALUES ($1, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8)
       RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square
-    `, [theme.id, session.stage_idx, footballSquare, penaltySquare, revealed, req.user.id, req.user.username]);
+    `, [theme.id, session.stage_idx, footballSquare, penaltySquare, revealed, req.user.id, req.user.username, JSON.stringify(eventSquares)]);
 
     const game = gameRows[0];
 
@@ -804,6 +862,7 @@ app.get('/api/games/:id', async (req, res) => {
              g.total_players_count, g.status, g.active_player_id,
              g.winner_username, g.prize_paid, g.jackpot_paid, g.created_at, g.completed_at,
              g.penalty_square, g.penalty_found,
+             g.event_squares,
              t.slug, t.country_name, t.accent_colour, t.footballer_name
       FROM games g
       JOIN themes t ON t.id = g.theme_id
@@ -812,6 +871,12 @@ app.get('/api/games/:id', async (req, res) => {
 
     if (!gameRows.length) return res.status(404).json({ error: 'Game not found' });
     const game = gameRows[0];
+
+    // Parse event_squares which comes back as a JSON string/undefined depending
+    // on the driver, normalizing to an object.
+    if (typeof game.event_squares === 'string') {
+      try { game.event_squares = JSON.parse(game.event_squares); } catch { game.event_squares = {}; }
+    }
 
     let credRows = [];
     let bonusCreditsAvailable = 0;
@@ -849,6 +914,14 @@ app.get('/api/games/:id', async (req, res) => {
     const bonusSession = credRows.find(r => r.is_bonus_credit) || null;
     const regularCreditsRemaining = regularSession ? regularSession.credits_remaining : 0;
 
+    // Only expose event squares that are already revealed. An unrevealed
+    // event position would prove that square is not the ball and let players
+    // narrow the search.
+    const allEvents = game.event_squares || {};
+    const revealedEvents = Object.fromEntries(
+      Object.entries(allEvents).filter(([idx]) => (game.revealed || [])[parseInt(idx, 10)])
+    );
+
     res.json({
       game,
       credits: regularSession,
@@ -860,6 +933,7 @@ app.get('/api/games/:id', async (req, res) => {
       wallet_balance: walletBalance,
       prize_pot: prizePot,
       squares_revealed: squaresRevealed,
+      events: revealedEvents,
       grid_size: gridSize,
       grid_cols: gridColsForStage(game.stage_idx),
       pricing,
@@ -1011,6 +1085,11 @@ app.post('/api/games/:id/guess', async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
     const game = gameRows[0];
+
+    // Normalize event_squares (JSONB may surface as a string via some drivers)
+    if (typeof game.event_squares === 'string') {
+      try { game.event_squares = JSON.parse(game.event_squares); } catch { game.event_squares = {}; }
+    }
     const gridSize = gridSizeForStage(game.stage_idx);
 
     if (square_index >= gridSize) {
@@ -1084,6 +1163,30 @@ app.post('/api/games/:id/guess', async (req, res) => {
     const jackpotEligible = game.total_guesses === 0;
     const isHit = square_index === game.football_square;
 
+    // Match Event on this square? Only misses can carry one (the ball square
+    // never does). Positive delta = win, negative = loss.
+    const gameEvents = game.event_squares || {};
+    const eventType = (!isHit && gameEvents[String(square_index)]) || null;
+    let eventDelta = 0;
+    if (eventType) {
+      const def = EVENT_TYPES[eventType];
+      if (def) {
+        const amount = eventAmountForStage(game.stage_idx, def.multiplier);
+        eventDelta = def.multiplier > 0 ? amount : -amount;
+        // Clamp losses to the wallet balance so a penalty can never go below
+        // zero or fail the guess.
+        if (eventDelta < 0 && !testing_mode) {
+          const { rows: balRows } = await client.query(
+            'SELECT balance FROM player_wallets WHERE user_id = $1 FOR UPDATE',
+            [req.user.id]
+          );
+          const balance = balRows.length ? parseFloat(balRows[0].balance) : 0;
+          const loss = Math.min(balance, amount);
+          eventDelta = -loss;
+        }
+      }
+    }
+
     const squaresRevealedBefore = (game.revealed || []).filter(Boolean).length;
     const newRevealed = [...(game.revealed || [])];
     newRevealed[square_index] = true;
@@ -1108,9 +1211,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
     // Insert guess record
     await client.query(`
-      INSERT INTO guesses (game_id, user_id, username, square_index, tokens_charged, pot_contribution, is_hit, is_penalty_hit)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, [game.id, req.user.id, req.user.username, square_index, tokensCharged, potContribution, isHit, isPenaltyHit]);
+      INSERT INTO guesses (game_id, user_id, username, square_index, tokens_charged, pot_contribution, is_hit, is_penalty_hit, event_type, event_delta)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `, [game.id, req.user.id, req.user.username, square_index, tokensCharged, potContribution, isHit, isPenaltyHit, eventType, eventDelta]);
 
     // Update game row
     await client.query(`
@@ -1145,6 +1248,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     let interstitial = null, newStageIdx = null, stageCompleted = false;
     let potTopup = 0, potTopupMessage = null;
     let prizeWalletError = null, bonusWalletError = null;
+    let eventWalletError = null;
 
     if (isHit) {
       prizePaid = prizeDecay(squaresRevealedBefore, gridSize);
@@ -1300,6 +1404,22 @@ app.post('/api/games/:id/guess', async (req, res) => {
       }
     }
 
+    // Apply the Match Event wallet effect (real mode only — testing mode
+    // applies the delta frontend-side). A wallet failure must never fail the
+    // guess itself; log it and continue, same pattern as prizeWalletError.
+    if (eventType && eventDelta !== 0 && !testing_mode) {
+      try {
+        if (eventDelta > 0) {
+          await creditWallet(client, req.user.id, eventDelta, 'event_bonus', game.id);
+        } else {
+          await debitWallet(client, req.user.id, -eventDelta, 'event_penalty', game.id);
+        }
+      } catch (err) {
+        eventWalletError = err;
+        console.error(`Event wallet transaction failed (${eventType}, delta ${eventDelta}):`, err.message);
+      }
+    }
+
     await client.query('COMMIT');
 
     const { rows: potRows } = await client.query('SELECT balance, last_won_at FROM captain_pot WHERE id = 1');
@@ -1330,6 +1450,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       square_index,
       prize_paid: prizePaid,
       jackpot_paid: jackpotPaid,
+      event: eventType ? { type: eventType, delta: eventDelta, pending: eventWalletError ? true : false } : null,
       last_won_at: potLastWonAt,
       credits_refunded: creditsRefunded,
       house_bonus: houseBonus,
@@ -1703,6 +1824,7 @@ async function start() {
   )`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_square SMALLINT`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_found BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS event_squares JSONB NOT NULL DEFAULT '{}'::jsonb`);
   await pool.query(`COMMENT ON TABLE games IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
@@ -1717,6 +1839,8 @@ async function start() {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`);
   await pool.query(`ALTER TABLE guesses ADD COLUMN IF NOT EXISTS is_penalty_hit BOOLEAN DEFAULT false`);
+  await pool.query(`ALTER TABLE guesses ADD COLUMN IF NOT EXISTS event_type VARCHAR(24)`);
+  await pool.query(`ALTER TABLE guesses ADD COLUMN IF NOT EXISTS event_delta NUMERIC(8,2)`);
   await pool.query(`COMMENT ON TABLE guesses IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS game_sessions (
@@ -1841,8 +1965,10 @@ async function start() {
     await pool.query(`DELETE FROM wallet_transactions`);
     await pool.query(`DELETE FROM guesses`);
     await pool.query(`DELETE FROM game_sessions`);
-    await pool.query(`DELETE FROM games`);
+    // tournament_sessions references games (current_game_id / last_won_game_id),
+    // so it must be cleared before the games rows can go.
     await pool.query(`DELETE FROM tournament_sessions`);
+    await pool.query(`DELETE FROM games`);
     await pool.query(`DELETE FROM player_stats`);
     await pool.query(`DELETE FROM player_wallets`);
     await pool.query(`DELETE FROM admin_users`);
@@ -1916,42 +2042,56 @@ async function start() {
     };
 
     // Game 1 — group stage (stage 0, 4×4 = 16 tiles), 6 revealed, penalty NOT found
+    // Event squares: two inside the revealed prefix so graphics render on load.
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status)
-      VALUES (1, $1, 0, 11, 9, $2, 6, 2, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (1, $1, 0, 11, 9, $2, 6, 2, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['brazil'], revealedPrefix(16, 6)]);
+    `, [themeMap['brazil'], revealedPrefix(16, 6), JSON.stringify({
+      '1': 'free_kick', '4': 'handball', '9': 'red_card', '13': 'penalty_save'
+    })]);
 
     // Game 2 — semi-final (stage 5, 6×6 = 36 tiles), 20 revealed, penalty FOUND
+    // Event squares: several types inside the revealed prefix (indices 0-19)
+    // so the dapp check route /#game/2 renders .tile-event without guessing.
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_found, revealed, total_guesses, total_players_count, status)
-      VALUES (2, $1, 5, 32, 14, true, $2, 20, 4, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_found, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (2, $1, 5, 32, 14, true, $2, 20, 4, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['france'], revealedPrefix(36, 20)]);
+    `, [themeMap['france'], revealedPrefix(36, 20), JSON.stringify({
+      '0': 'free_kick', '3': 'handball', '7': 'red_card', '11': 'penalty_save',
+      '15': 'injury', '19': 'pitch_invasion', '23': 'free_kick', '28': 'handball', '34': 'red_card'
+    })]);
 
     // Game 3 — knockout (stage 3, 5×5 = 25 tiles), 14 revealed, penalty NOT found
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status)
-      VALUES (3, $1, 3, 20, 8, $2, 14, 6, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (3, $1, 3, 20, 8, $2, 14, 6, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], revealedPrefix(25, 14)]);
+    `, [themeMap['argentina'], revealedPrefix(25, 14), JSON.stringify({
+      '2': 'handball', '5': 'penalty_save', '8': 'red_card', '17': 'free_kick'
+    })]);
 
     // Sequence fixup so next insert gets id > 3
     await pool.query(`SELECT setval('games_id_seq', GREATEST((SELECT MAX(id) FROM games), 3))`);
 
     // Completed staging game — final (stage 6, 7×7 = 49 tiles), fully revealed
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, status, winner_username, prize_paid, completed_at)
-      VALUES (4, $1, 6, 40, 25, $2, 18, 'completed', 'Staging Kaiser', 96, NOW())
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, status, winner_username, prize_paid, completed_at, event_squares)
+      VALUES (4, $1, 6, 40, 25, $2, 18, 'completed', 'Staging Kaiser', 96, NOW(), $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['germany'], new Array(49).fill(true)]);
+    `, [themeMap['germany'], new Array(49).fill(true), JSON.stringify({
+      '6': 'free_kick', '18': 'injury', '27': 'penalty_save', '33': 'red_card'
+    })]);
 
     // Open final stage game with carry-over credits for refund testing
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status)
-      VALUES (5, $1, 6, 35, 20, $2, 4, 1, 'open')
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (5, $1, 6, 35, 20, $2, 4, 1, 'open', $3)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['belgium'], revealedPrefix(49, 4)]);
+    `, [themeMap['belgium'], revealedPrefix(49, 4), JSON.stringify({
+      '1': 'penalty_save', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
+    })]);
 
     // Add carry-over credits (8 remaining, 4 t/credit = 32 t refund potential) for the staging test user
     await pool.query(`
