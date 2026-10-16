@@ -1404,15 +1404,33 @@
   // CONFETTI
   // ═══════════════════════════════════════════════════════════════
   let confettiLoop = null;
+  let confettiResetTimer = null;
+  function resetConfetti() {
+    if (confettiResetTimer) { clearTimeout(confettiResetTimer); confettiResetTimer = null; }
+    if (window.confetti && typeof confetti.reset === 'function') confetti.reset();
+  }
   function startConfetti() {
+    // Cancel any delayed reset left over from an earlier celebration,
+    // so it can't wipe particles from the new one
+    if (confettiResetTimer) { clearTimeout(confettiResetTimer); confettiResetTimer = null; }
     if (confettiLoop) return;
     confettiLoop = setInterval(() => {
       confetti({ particleCount: 6, spread: 70, origin: { y: 0.4 }, colors: ['#fbbf24','#10b981','#3b82f6','#ef4444','#8b5cf6'] });
     }, 200);
   }
-  function stopConfetti() {
+  function stopConfetti(immediate) {
     if (confettiLoop) { clearInterval(confettiLoop); confettiLoop = null; }
+    if (immediate) { resetConfetti(); return; }
+    // Grace delay: falling particles get a few seconds to land, then the
+    // canvas is cleared so nothing stays frozen over the board
+    if (confettiResetTimer) clearTimeout(confettiResetTimer);
+    confettiResetTimer = setTimeout(resetConfetti, 4000);
   }
+  // If the tab or iframe was hidden mid-celebration, the library's rAF loop
+  // stalls and particles stay frozen on the canvas — clear them on return
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resetConfetti();
+  });
 
   // ═══════════════════════════════════════════════════════════════
   // HEADER
@@ -1519,7 +1537,7 @@
 
   function route() {
     clearPolls();
-    stopConfetti();
+    stopConfetti(true);
     const hash = location.hash || '#lobby';
 
     // Selectively stop audio based on where we're navigating FROM
