@@ -114,9 +114,9 @@
       "expectText": "Tech & Profitability"
     },
     {
-      "name": "FAQ displays reset button",
+      "name": "FAQ displays language selector",
       "path": "/#faq",
-      "expectText": "RESET GAME"
+      "expectSelector": ".language-grid"
     },
     {
       "name": "FAQ displays testing mode toggle",
@@ -161,7 +161,7 @@
     {
       "name": "Wallet balance displays in HUD",
       "path": "/#game/2",
-      "expectText": "tokens"
+      "expectSelector": ".wallet-val"
     }
   ],
   "visibility": {
