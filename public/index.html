@@ -2255,6 +2255,10 @@
       sessId = state.regularSessionId;
     }
 
+    // This shot comes out of regular credits only when no bonus shot is
+    // available (bonus shots are used first)
+    const usedRegular = bonusCredRemaining === 0 && regularCredRemaining > 0;
+
     // Only show "buy more shots" modal if both regular and bonus credits are exhausted
     if (regularCredRemaining === 0 && bonusCredRemaining === 0) {
       const p = pricingForStage(state.game.stage_idx);
@@ -2307,6 +2311,13 @@
       // Update credits based on which session was used
       if (d.was_bonus_shot) {
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+      } else if (testingModeActive) {
+        // In testing mode bought shots live only in the browser: the server
+        // finds no game_sessions row for them, so its regular_credits_remaining
+        // is always 0. Count down locally instead of trusting the server.
+        if (usedRegular && state.credits) {
+          state.credits.credits_remaining = Math.max(0, parseInt(state.credits.credits_remaining) - 1);
+        }
       } else if (state.credits && d.regular_credits_remaining !== undefined) {
         state.credits.credits_remaining = d.regular_credits_remaining;
       }
