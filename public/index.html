@@ -247,27 +247,17 @@
     }
     .shake { animation: shake 0.8s ease-in-out; }
 
-    /* Dramatic 3D-flip tile reveal for cascade/win */
-    @keyframes tile-flip {
-      0%   { transform: perspective(500px) rotateY(0deg) scale(1); filter: brightness(1); opacity: 1; }
-      7%   { filter: brightness(3) saturate(2); transform: perspective(500px) rotateY(-8deg) scale(1.05); }
-      28%  { transform: perspective(500px) rotateY(42deg); filter: brightness(1.3); opacity: 0.9; }
-      68%  { transform: perspective(500px) rotateY(82deg); opacity: 0.3; filter: brightness(0.3); }
-      100% { transform: perspective(500px) rotateY(90deg) scaleX(0.01); opacity: 0; }
+    /* Miss guess: expose the empty square with a 3D flip, then gravity-fall
+       off the bottom of the screen. Tilt/drift come from --fall-tilt and
+       --fall-drift set per tile before the animation starts. */
+    @keyframes tile-expose-fall {
+      0%   { transform: perspective(500px) rotateY(0deg) translateY(0); filter: brightness(1) saturate(1); opacity: 1; animation-timing-function: cubic-bezier(.4,0,.2,1); }
+      7%   { filter: brightness(2.6) saturate(1.6); animation-timing-function: cubic-bezier(.4,0,.2,1); }
+      26%  { transform: perspective(500px) rotateY(80deg) translateY(0) rotateZ(0deg); opacity: .45; filter: brightness(1.15); animation-timing-function: cubic-bezier(.5,0,.85,.4); }
+      100% { transform: perspective(500px) rotateY(100deg) translateY(120vh) translateX(var(--fall-drift, 0px)) rotateZ(var(--fall-tilt, 14deg)); opacity: 0; }
     }
-    .dissolving { animation: tile-flip 0.42s cubic-bezier(.4,0,.2,1) forwards; }
-    /* Miss guess: screen-shake + dramatic flip */
-    @keyframes tile-flip-miss {
-      0%   { transform: perspective(500px) rotateY(0deg) translateX(0) scale(1); filter: brightness(1); opacity: 1; }
-      5%   { filter: brightness(2.8) saturate(2); transform: perspective(500px) translateX(-7px) scale(1.04); }
-      10%  { transform: perspective(500px) translateX(7px); filter: brightness(2); }
-      16%  { transform: perspective(500px) translateX(-5px); }
-      22%  { transform: perspective(500px) translateX(4px); }
-      28%  { transform: perspective(500px) translateX(0) rotateY(0deg); filter: brightness(1.1); }
-      55%  { transform: perspective(500px) rotateY(58deg); opacity: 0.6; filter: brightness(0.6); }
-      100% { transform: perspective(500px) rotateY(90deg) scaleX(0.01); opacity: 0; }
-    }
-    .flip-miss { animation: tile-flip-miss 0.62s cubic-bezier(.4,0,.6,1) forwards; }
+    .tile-fall { animation: tile-expose-fall 1.1s forwards; pointer-events: none; }
+    .tile-fall.reveal-fast { animation-duration: .55s !important; }
 
     /* Win sequence animations */
     @keyframes fadeout { 0% { opacity: 1; } 100% { opacity: 0; } }
@@ -288,33 +278,6 @@
       100% { filter: drop-shadow(0 0 0px gold); transform: scale(1); }
     }
     .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-
-    /* Reveal animation variants */
-    @keyframes reveal-zoom-burst {
-      0% { transform: perspective(600px) scale(0.8) rotateZ(0deg); opacity: 1; filter: brightness(1); }
-      40% { filter: brightness(2.5) saturate(1.5); }
-      60% { transform: perspective(600px) scale(1.3) rotateZ(8deg); opacity: 0.5; }
-      100% { transform: perspective(600px) scale(2) rotateZ(15deg); opacity: 0; }
-    }
-    .reveal-zoom-burst { animation: reveal-zoom-burst 0.62s cubic-bezier(.4,0,.2,1) forwards; }
-
-    @keyframes reveal-slide {
-      0% { transform: translateX(0) scaleY(1); opacity: 1; filter: brightness(1); }
-      20% { filter: brightness(2.2) saturate(1.8); }
-      50% { transform: translateX(40px) scaleY(0.95) rotateZ(-5deg); opacity: 0.4; }
-      100% { transform: translateX(80px) scaleY(0.1) rotateZ(-15deg); opacity: 0; }
-    }
-    .reveal-slide { animation: reveal-slide 0.62s cubic-bezier(.4,0,.6,1) forwards; }
-
-    .reveal-fast { animation-duration: 0.31s !important; }
-
-    /* Slow miss reveal: the card fades out over 5 s so the portrait
-       slice underneath shows through before the tile opens */
-    @keyframes reveal-fade-slow {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-    .reveal-fade-slow { animation: reveal-fade-slow 5s linear forwards; }
 
     /* Tile exit animation for goal celebration */
     @keyframes tile-exit-spin-fade {
@@ -384,10 +347,6 @@
       pointer-events: none;
       z-index: 59;
     }
-
-    /* Ensure reveal animations only apply within game board */
-    #lobby-body .reveal-zoom-burst, #lobby-body .reveal-slide, #lobby-body .reveal-fade-slow,
-    #victory-bg .reveal-zoom-burst, #victory-bg .reveal-slide, #victory-bg .reveal-fade-slow { animation: none !important; transform: none !important; }
 
     /* Football goal spin animation */
     @keyframes goal-spin {
@@ -1076,8 +1035,6 @@
     6: { accent: '#F9C846', accent2: '#E63946', cardDeep: '#1A1423', name: 'Champions Gold & Crimson' },
   };
 
-  const REVEAL_VARIANTS = ['flip-miss', 'dissolving', 'reveal-zoom-burst', 'reveal-slide'];
-
   let state = {
     session: null, walletBalance: 1000, potBalance: 100,
     potLastWonAt: null, leaderState: null,
@@ -1087,7 +1044,6 @@
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
-    revealVariantIdx: 0,
     testingMode: localStorage.getItem('testingMode') === 'true',
     showingVictoryStadium: false,
   };
@@ -1604,7 +1560,6 @@
       themes: [], polls: [],
       prevPotBalance: 100,
       pendingResult: null,
-      revealVariantIdx: 0,
     };
   }
 
@@ -2352,13 +2307,25 @@
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss — the card fades out slowly over 5 s so the portrait slice
-        // underneath shows through, then the tile stays open
-        let revealCleanup = 5000;
+        // Miss — expose the empty square with a 3D flip, then gravity fall off-screen
+        let revealCleanup = 1100;
         if (cell) {
-          cell.classList.add('reveal-fade-slow');
-          cell.style.pointerEvents = 'none';
-          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('reveal-fade-slow'); }, revealCleanup);
+          // The finished spawn one-shots still sit on the class list and their
+          // later-defined animation shorthands would override .tile-fall —
+          // drop them, and clear the inline spawn delay that would otherwise
+          // delay the fall too.
+          cell.classList.remove('tile-spawn', 'tile-sparkle-flash');
+          cell.style.animationDelay = '';
+          const isFast = Math.random() < 0.33;
+          const tilt = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 12);
+          const drift = (Math.random() * 48) - 24;
+          cell.style.setProperty('--fall-tilt', tilt.toFixed(1) + 'deg');
+          cell.style.setProperty('--fall-drift', drift.toFixed(1) + 'px');
+          cell.classList.add('tile-fall');
+          if (isFast) cell.classList.add('reveal-fast');
+          const cleanupTime = isFast ? 550 : 1100;
+          revealCleanup = cleanupTime;
+          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('tile-fall'); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
         }
         // Show retro quip overlay with smart positioning based on tile row.
         // A Match Event replaces the random quip with its own banner, sound
@@ -2373,7 +2340,7 @@
           const msg = t(msgKey, { amount: sign + amount + ' t' });
           // The event banner sound plays right away with the message
           Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
-          // Uncover the event graphic on the tile once the slow fade finishes
+          // Uncover the event graphic on the tile once the tile has fallen away
           setTimeout(() => {
             if (cell) {
               cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
@@ -2390,8 +2357,8 @@
           const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
           showRetroQuip(quip, tileRow);
         }
-        document.querySelectorAll('.tile:not(.open):not(.reveal-fade-slow)').forEach(c => c.style.pointerEvents = '');
-        // The fading tile stays untappable until its own timeout opens it
+        document.querySelectorAll('.tile:not(.open):not(.tile-fall)').forEach(c => c.style.pointerEvents = '');
+        // The falling tile stays untappable until its own timeout opens it
         if (cell) cell.style.pointerEvents = 'none';
       }
     } catch(e) {
