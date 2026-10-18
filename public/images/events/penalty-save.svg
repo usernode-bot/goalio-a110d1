@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- goal frame corner -->
+  <path d="M14 78 L14 22 L60 22" fill="none" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M14 22 L86 78" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2"/>
+  <!-- keeper glove punching the ball away -->
+  <path d="M52 52 Q48 44 54 40 L66 34 Q72 32 74 38 L76 48 Q76 56 68 60 L58 62 Q52 60 52 52 Z" fill="#f0c040"/>
+  <path d="M56 40 L60 34 M62 38 L66 32 M68 37 L72 32" stroke="#f0c040" stroke-width="4" stroke-linecap="round"/>
+  <!-- ball deflected wide -->
+  <circle cx="78" cy="66" r="11" fill="white" stroke="#222" stroke-width="2"/>
+  <path d="M78 57 L81 62 L78 66 L75 62 Z" fill="#111"/>
+  <path d="M87 64 L82 66 L84 71 Z" fill="#111"/>
+  <!-- save sparks -->
+  <path d="M64 68 L60 72 M70 76 L66 80" stroke="#00FFFF" stroke-width="3" stroke-linecap="round"/>
+  <!-- SAVE arc -->
+  <path d="M40 30 Q56 20 72 28" fill="none" stroke="#FF1493" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 4"/>
+</svg>
