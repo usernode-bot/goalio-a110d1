@@ -308,8 +308,9 @@
 
     .reveal-fast { animation-duration: 0.31s !important; }
 
-    /* Slow miss reveal: the card fades out over 5 s so the portrait
-       slice underneath shows through before the tile opens */
+    /* Match event squares only: the card fades out over 5 s so the
+       portrait slice underneath shows through before the tile opens.
+       Plain misses use the fast reveal variants above instead. */
     @keyframes reveal-fade-slow {
       0% { opacity: 1; }
       100% { opacity: 0; }
@@ -2352,34 +2353,36 @@
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss — the card fades out slowly over 5 s so the portrait slice
-        // underneath shows through, then the tile stays open
-        let revealCleanup = 5000;
-        if (cell) {
-          cell.classList.add('reveal-fade-slow');
-          cell.style.pointerEvents = 'none';
-          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('reveal-fade-slow'); }, revealCleanup);
-        }
+        // Miss. A match event square shows its graphic right away, then the
+        // card fades out slowly over 5 s so the portrait slice underneath
+        // shows through. A plain miss plays one of the fast reveal variants.
+        const meta = d.event && d.event.type ? EVENT_META[d.event.type] : null;
+        let revealCleanup = meta ? 5000 : 620;
         // Show retro quip overlay with smart positioning based on tile row.
         // A Match Event replaces the random quip with its own banner, sound
         // and uncovered graphic.
         const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
         const tileRow = Math.floor(idx / gridCols);
-        if (d.event && d.event.type && EVENT_META[d.event.type]) {
-          const meta = EVENT_META[d.event.type];
+        if (meta) {
+          if (cell) {
+            // The event graphic is readable straight away while the tile fades
+            cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
+            cell.classList.add('tile-event', meta.cls, 'reveal-fade-slow');
+            cell.style.pointerEvents = 'none';
+            setTimeout(() => {
+              // Clear the event styling before the fade animation ends so the
+              // graphic does not snap back when opacity returns to 1
+              cell.classList.add('open');
+              cell.classList.remove('reveal-fade-slow', 'tile-event', meta.cls);
+              cell.style.backgroundImage = '';
+            }, revealCleanup);
+          }
+          // The event banner sound plays right away with the message
+          Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
           const amount = Math.abs(d.event.delta);
           const msgKey = 'events.' + d.event.type;
           const sign = d.event.delta >= 0 ? '+' : '-';
           const msg = t(msgKey, { amount: sign + amount + ' t' });
-          // The event banner sound plays right away with the message
-          Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
-          // Uncover the event graphic on the tile once the slow fade finishes
-          setTimeout(() => {
-            if (cell) {
-              cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
-              cell.classList.add('tile-event', meta.cls);
-            }
-          }, revealCleanup);
           showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
           // Testing mode: server skips wallet ops, apply the delta frontend-side
           if (testingModeActive) {
@@ -2387,11 +2390,24 @@
             updateHud();
           }
         } else {
+          if (cell) {
+            // Rotate reveal variant + optionally double speed
+            const variant = REVEAL_VARIANTS[state.revealVariantIdx % REVEAL_VARIANTS.length];
+            state.revealVariantIdx++;
+            const isFast = Math.random() < 0.33;
+            const baseDuration = variant === 'flip-miss' ? 0.62 : variant === 'dissolving' ? 0.42 : 0.62;
+            const actualDuration = isFast ? baseDuration * 0.5 : baseDuration;
+            revealCleanup = Math.round(actualDuration * 1000);
+            cell.classList.add(variant);
+            if (isFast) cell.classList.add('reveal-fast');
+            const cleanupTime = revealCleanup;
+            setTimeout(() => { cell.classList.add('open'); cell.classList.remove(variant); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
+          }
           const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
           showRetroQuip(quip, tileRow);
         }
         document.querySelectorAll('.tile:not(.open):not(.reveal-fade-slow)').forEach(c => c.style.pointerEvents = '');
-        // The fading tile stays untappable until its own timeout opens it
+        // The fading or bursting tile stays untappable until its own timeout opens it
         if (cell) cell.style.pointerEvents = 'none';
       }
     } catch(e) {
