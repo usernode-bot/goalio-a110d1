@@ -166,7 +166,7 @@
     {
       "name": "Revealed event square shows event graphic",
       "path": "/#game/2",
-      "expectSelector": ".tile-event"
+      "expectSelector": ".tile-event, .tile-event-revealed"
     },
     {
       "name": "Game API exposes revealed events",

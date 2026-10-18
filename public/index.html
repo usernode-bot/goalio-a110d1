@@ -279,6 +279,11 @@
     }
     .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
+    /* Match Event square fade: 2s after the graphic appears the tile fades out,
+       leaving the portrait slice visible like an empty open square. Two-class
+       selector so it beats .tile-spawn / .tile-sparkle-flash. */
+    .tile.tile-event-fade { animation: fadeout 0.6s ease-out forwards; pointer-events: none; }
+
     /* Tile exit animation for goal celebration */
     @keyframes tile-exit-spin-fade {
       0% { transform: scale(1) rotateZ(0deg); opacity: 1; filter: drop-shadow(0 0 8px gold); }
@@ -1027,6 +1032,28 @@
     red_card:       { cls: 'bad',  kind: 'bad',  file: 'red-card' },
     penalty_save:   { cls: 'good', kind: 'good', file: 'penalty-save' },
   };
+
+  // Fade a Match Event square out 2s after its graphic appears, then clear
+  // the event styling so the portrait slice shows through like an empty
+  // open square. No-op if the board was replaced before the timer fires.
+  function fadeEventTile(cell, delay = 2000) {
+    if (!cell) return;
+    setTimeout(() => {
+      if (!cell.isConnected || !cell.classList.contains('tile-event')) return;
+      // Drop the spawn/sparkle one-shots and their inline delay so the
+      // fadeout shorthand is the one animation that runs.
+      cell.classList.remove('tile-spawn', 'tile-sparkle-flash');
+      cell.style.animationDelay = '';
+      cell.classList.add('tile-event-fade');
+      setTimeout(() => {
+        if (!cell.isConnected) return;
+        cell.classList.remove('tile-event-fade', 'tile-event', 'good', 'bad');
+        // Style-free marker: this square was a Match Event and has faded.
+        cell.classList.add('tile-event-revealed');
+        cell.style.backgroundImage = '';
+      }, 600);
+    }, delay);
+  }
 
   const KNOCKOUT_PALETTES = {
     3: { accent: '#88C0D0', accent2: '#5E81AC', cardDeep: '#2E3440', name: 'Nord Frost' },
@@ -2100,6 +2127,9 @@
         portraitEl.style.transition = 'opacity 0.5s ease';
         portraitEl.style.opacity = '1';
       }
+      // Revealed Match Event squares from an earlier visit fade out too,
+      // starting once the portrait is visible.
+      document.querySelectorAll('#game-grid .tile.tile-event').forEach(c => fadeEventTile(c));
     }, 3000);
   }
 
@@ -2345,6 +2375,7 @@
             if (cell) {
               cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
               cell.classList.add('tile-event', meta.cls);
+              fadeEventTile(cell);
             }
           }, revealCleanup);
           showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
