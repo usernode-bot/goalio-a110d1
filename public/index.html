@@ -279,6 +279,15 @@
     }
     .tile-sparkle-flash { animation: tile-sparkle-flash 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
+    /* Match event squares only: the card fades out over 5 s so the
+       portrait slice underneath shows through before the tile opens.
+       Plain misses use the tile-fall animation instead. */
+    @keyframes reveal-fade-slow {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .reveal-fade-slow { animation: reveal-fade-slow 5s linear forwards; }
+
     /* Tile exit animation for goal celebration */
     @keyframes tile-exit-spin-fade {
       0% { transform: scale(1) rotateZ(0deg); opacity: 1; filter: drop-shadow(0 0 8px gold); }
@@ -2307,46 +2316,36 @@
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss — expose the empty square with a 3D flip, then gravity fall off-screen
-        let revealCleanup = 1100;
-        if (cell) {
-          // The finished spawn one-shots still sit on the class list and their
-          // later-defined animation shorthands would override .tile-fall —
-          // drop them, and clear the inline spawn delay that would otherwise
-          // delay the fall too.
-          cell.classList.remove('tile-spawn', 'tile-sparkle-flash');
-          cell.style.animationDelay = '';
-          const isFast = Math.random() < 0.33;
-          const tilt = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 12);
-          const drift = (Math.random() * 48) - 24;
-          cell.style.setProperty('--fall-tilt', tilt.toFixed(1) + 'deg');
-          cell.style.setProperty('--fall-drift', drift.toFixed(1) + 'px');
-          cell.classList.add('tile-fall');
-          if (isFast) cell.classList.add('reveal-fast');
-          const cleanupTime = isFast ? 550 : 1100;
-          revealCleanup = cleanupTime;
-          setTimeout(() => { cell.classList.add('open'); cell.classList.remove('tile-fall'); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
-        }
+        // Miss. A match event square shows its graphic right away, then the
+        // card fades out slowly over 5 s so the portrait slice underneath
+        // shows through. A plain miss flips and falls off-screen.
+        const meta = d.event && d.event.type ? EVENT_META[d.event.type] : null;
+        let revealCleanup = meta ? 5000 : 1100;
         // Show retro quip overlay with smart positioning based on tile row.
         // A Match Event replaces the random quip with its own banner, sound
         // and uncovered graphic.
         const gridCols = state.gridCols || gridColsForStage(state.game.stage_idx);
         const tileRow = Math.floor(idx / gridCols);
-        if (d.event && d.event.type && EVENT_META[d.event.type]) {
-          const meta = EVENT_META[d.event.type];
+        if (meta) {
+          if (cell) {
+            // The event graphic is readable straight away while the tile fades
+            cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
+            cell.classList.add('tile-event', meta.cls, 'reveal-fade-slow');
+            cell.style.pointerEvents = 'none';
+            setTimeout(() => {
+              // Clear the event styling before the fade animation ends so the
+              // graphic does not snap back when opacity returns to 1
+              cell.classList.add('open');
+              cell.classList.remove('reveal-fade-slow', 'tile-event', meta.cls);
+              cell.style.backgroundImage = '';
+            }, revealCleanup);
+          }
+          // The event banner sound plays right away with the message
+          Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
           const amount = Math.abs(d.event.delta);
           const msgKey = 'events.' + d.event.type;
           const sign = d.event.delta >= 0 ? '+' : '-';
           const msg = t(msgKey, { amount: sign + amount + ' t' });
-          // The event banner sound plays right away with the message
-          Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
-          // Uncover the event graphic on the tile once the tile has fallen away
-          setTimeout(() => {
-            if (cell) {
-              cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
-              cell.classList.add('tile-event', meta.cls);
-            }
-          }, revealCleanup);
           showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
           // Testing mode: server skips wallet ops, apply the delta frontend-side
           if (testingModeActive) {
@@ -2354,11 +2353,30 @@
             updateHud();
           }
         } else {
+          if (cell) {
+            // Plain miss — expose the empty square with a 3D flip, then gravity fall off-screen
+            // The finished spawn one-shots still sit on the class list and their
+            // later-defined animation shorthands would override .tile-fall —
+            // drop them, and clear the inline spawn delay that would otherwise
+            // delay the fall too.
+            cell.classList.remove('tile-spawn', 'tile-sparkle-flash');
+            cell.style.animationDelay = '';
+            const isFast = Math.random() < 0.33;
+            const tilt = (Math.random() < 0.5 ? -1 : 1) * (8 + Math.random() * 12);
+            const drift = (Math.random() * 48) - 24;
+            cell.style.setProperty('--fall-tilt', tilt.toFixed(1) + 'deg');
+            cell.style.setProperty('--fall-drift', drift.toFixed(1) + 'px');
+            cell.classList.add('tile-fall');
+            if (isFast) cell.classList.add('reveal-fast');
+            const cleanupTime = isFast ? 550 : 1100;
+            revealCleanup = cleanupTime;
+            setTimeout(() => { cell.classList.add('open'); cell.classList.remove('tile-fall'); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
+          }
           const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
           showRetroQuip(quip, tileRow);
         }
-        document.querySelectorAll('.tile:not(.open):not(.tile-fall)').forEach(c => c.style.pointerEvents = '');
-        // The falling tile stays untappable until its own timeout opens it
+        document.querySelectorAll('.tile:not(.open):not(.tile-fall):not(.reveal-fade-slow)').forEach(c => c.style.pointerEvents = '');
+        // The fading or falling tile stays untappable until its own timeout opens it
         if (cell) cell.style.pointerEvents = 'none';
       }
     } catch(e) {
