@@ -24,7 +24,7 @@ const HOUSE_WALLET_ADDRESS = process.env.HOUSE_WALLET_ADDRESS || 'ut1yusmc55zyqc
 const USERNODE_SIDECAR_URL = process.env.USERNODE_SIDECAR_URL || (IS_STAGING ? 'http://usernode:3001' : 'http://usernode:3000');
 const MOCK_WALLET_TXS = IS_STAGING && (!HOUSE_WALLET_PRIVATE_KEY || process.env.MOCK_WALLET_TXS === 'true');
 
-const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/api/testing-mode', '/favicon.ico']);
+const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/favicon.ico']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
 
 app.use(express.json());
@@ -156,6 +156,28 @@ function buildEventSquares(footballSquare, gridSize) {
   const map = {};
   for (let i = 0; i < k && i < candidates.length; i++) {
     map[String(candidates[i])] = randomEventType();
+  }
+  return map;
+}
+
+// Build the bonus map for a fresh board: on the 49-tile Final only, 7 of the
+// squares that are not the ball, the penalty square or a match event square
+// each hide a bonus: 75% win a shot, 25% lose one, decided now so the outcome
+// is fixed when the board is created. Shape { "<index>": "win" | "lose" }.
+function buildBonusSquares(footballSquare, penaltySquare, eventSquares, gridSize) {
+  if (gridSize !== 49) return {};
+  const used = new Set([String(footballSquare), String(penaltySquare), ...Object.keys(eventSquares || {})]);
+  const candidates = [];
+  for (let i = 0; i < gridSize; i++) {
+    if (!used.has(String(i))) candidates.push(i);
+  }
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const map = {};
+  for (let i = 0; i < 7 && i < candidates.length; i++) {
+    map[String(candidates[i])] = Math.random() < 0.75 ? 'win' : 'lose';
   }
   return map;
 }
@@ -314,11 +336,10 @@ async function getWalletBalance(client, userId) {
   return rows.length > 0 ? parseFloat(rows[0].balance) : 1000;
 }
 
-async function syncWalletBalance(client, userId, playerInDemoMode = false) {
+async function syncWalletBalance(client, userId) {
   // Sync wallet balance from sidecar and update cached player_wallets
-  // playerInDemoMode: if true, return mock demo balance; if false, call sidecar
   try {
-    console.log(`[wallet-sync] Starting wallet sync for user ${userId}, demo mode: ${playerInDemoMode}`);
+    console.log(`[wallet-sync] Starting wallet sync for user ${userId}`);
 
     // Ensure wallet exists first
     const { rows: walletRows } = await client.query(
@@ -334,20 +355,7 @@ async function syncWalletBalance(client, userId, playerInDemoMode = false) {
     const walletAddress = walletRows[0].wallet_address;
     console.log(`[wallet-sync] User ${userId} wallet address: ${walletAddress}`);
 
-    // If player is in demo mode, return mock demo balance
-    if (playerInDemoMode) {
-      // Return demo balance (different from the 1000 demo to show it's working)
-      const demoBalance = 500;
-      console.log(`[wallet-sync] Player in demo mode: returning demo balance ${demoBalance}`);
-      // Update the database with the demo balance so it persists
-      await client.query(
-        'UPDATE player_wallets SET balance = $1, last_synced_at = NOW() WHERE user_id = $2',
-        [demoBalance, userId]
-      );
-      return { balance: demoBalance, synced: true, source: 'mock' };
-    }
-
-    // In staging with mocked wallet TXs (and not in demo mode), still use mock for real mode
+    // In staging with mocked wallet TXs, use the mock balance instead of the sidecar
     if (MOCK_WALLET_TXS) {
       const demoBalance = 500;
       console.error(`[wallet-sync] MOCK_WALLET_TXS is enabled (IS_STAGING=${IS_STAGING}, HOUSE_WALLET_PRIVATE_KEY=${!!process.env.HOUSE_WALLET_PRIVATE_KEY})`);
@@ -563,6 +571,74 @@ async function creditWallet(client, userId, amount, reason = 'prize_payout', gam
   }
 }
 
+// Add n free bonus shots (is_bonus_credit, rate 0) for this game and user.
+// A game keeps one bonus row: top up the newest non-refunded bonus row, or
+// insert one when none exists. Penalty-square free attempts use this too, so
+// won bonus shots and penalty free attempts stay in the same row.
+async function addBonusShots(client, gameId, userId, n) {
+  const { rows } = await client.query(`
+    SELECT id FROM game_sessions
+    WHERE game_id = $1 AND user_id = $2 AND refunded = false AND is_bonus_credit = true
+    ORDER BY created_at DESC LIMIT 1 FOR UPDATE
+  `, [gameId, userId]);
+  if (rows.length) {
+    await client.query(
+      'UPDATE game_sessions SET credits_total = credits_total + $1 WHERE id = $2',
+      [n, rows[0].id]
+    );
+    return rows[0].id;
+  }
+  const { rows: ins } = await client.query(`
+    INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, is_bonus_credit)
+    VALUES ($1, $2, $3, 0, 0, true)
+    RETURNING id
+  `, [gameId, userId, n]);
+  return ins[0].id;
+}
+
+// Carry every unused, unrefunded shot the player holds on other games onto
+// newGameId: bought shots consolidate into one regular row at the
+// remainder-weighted average rate, free bonus shots stay free (rate 0) so
+// they never dilute the Final's refund rate. Returns true when a regular
+// carried row was created. Called inside the caller's transaction.
+async function carryOverShots(client, userId, newGameId) {
+  const { rows: prev } = await client.query(`
+    SELECT id, is_bonus_credit, (credits_total - credits_used) AS remaining, tokens_per_credit
+    FROM game_sessions
+    WHERE game_id <> $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
+    FOR UPDATE
+  `, [newGameId, userId]);
+  if (!prev.length) return false;
+  const regular = prev.filter(r => !r.is_bonus_credit);
+  const bonusRows = prev.filter(r => r.is_bonus_credit);
+  let created = false;
+  if (regular.length) {
+    const totalRemaining = regular.reduce((s, r) => s + parseInt(r.remaining), 0);
+    const totalValue = regular.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
+    const avgRate = parseFloat((totalValue / totalRemaining).toFixed(2));
+    // Close out old sessions (credits are now on the new game, not refunded to wallet)
+    await client.query(
+      'UPDATE game_sessions SET credits_used = credits_total WHERE id = ANY($1)',
+      [regular.map(r => r.id)]
+    );
+    // Create one consolidated carried-over session on the new game
+    await client.query(`
+      INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
+      VALUES ($1, $2, $3, 0, $4)
+    `, [newGameId, userId, totalRemaining, avgRate]);
+    created = true;
+  }
+  if (bonusRows.length) {
+    const bonusRemainder = bonusRows.reduce((s, r) => s + parseInt(r.remaining), 0);
+    await client.query(
+      'UPDATE game_sessions SET credits_used = credits_total WHERE id = ANY($1)',
+      [bonusRows.map(r => r.id)]
+    );
+    await addBonusShots(client, newGameId, userId, bonusRemainder);
+  }
+  return created;
+}
+
 async function pickNextOpponent(client, playedSlugs, myTeamSlug) {
   const excludeSlugs = [...(playedSlugs || []), myTeamSlug];
   const { rows: themeRows } = await client.query(
@@ -752,43 +828,24 @@ app.post('/api/session/start-map', async (req, res) => {
     }
     const revealed = new Array(gridSize).fill(false);
     const eventSquares = buildEventSquares(footballSquare, gridSize);
+    const bonusSquares = buildBonusSquares(footballSquare, penaltySquare, eventSquares, gridSize);
+
+    await client.query('BEGIN');
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
         (theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count,
-         status, active_player_id, active_player_username, last_active_at, event_squares)
-      VALUES ($1, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8)
+         status, active_player_id, active_player_username, last_active_at, event_squares, bonus_squares)
+      VALUES ($1, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8, $9)
       RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square
-    `, [theme.id, session.stage_idx, footballSquare, penaltySquare, revealed, req.user.id, req.user.username, JSON.stringify(eventSquares)]);
+    `, [theme.id, session.stage_idx, footballSquare, penaltySquare, revealed, req.user.id, req.user.username, JSON.stringify(eventSquares), JSON.stringify(bonusSquares)]);
 
     const game = gameRows[0];
 
-    // Carry over unused credits from the player's last won game in this tournament.
-    // Credits are not refunded on win — they roll forward as prepaid shots.
-    let carryoverSessionCreated = false;
-    if (session.last_won_game_id) {
-      const { rows: prevSessions } = await client.query(`
-        SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
-        FROM game_sessions
-        WHERE game_id = $1 AND user_id = $2 AND refunded = false AND credits_used < credits_total
-      `, [session.last_won_game_id, req.user.id]);
-      if (prevSessions.length) {
-        carryoverSessionCreated = true;
-        const totalRemaining = prevSessions.reduce((s, r) => s + parseInt(r.remaining), 0);
-        const totalValue = prevSessions.reduce((s, r) => s + parseInt(r.remaining) * parseFloat(r.tokens_per_credit), 0);
-        const avgRate = parseFloat((totalValue / totalRemaining).toFixed(2));
-        // Close out old sessions (credits are now on the new game, not refunded to wallet)
-        await client.query(
-          'UPDATE game_sessions SET credits_used = credits_total WHERE id = ANY($1)',
-          [prevSessions.map(r => r.id)]
-        );
-        // Create one consolidated carried-over session on the new game
-        await client.query(`
-          INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit)
-          VALUES ($1, $2, $3, 0, $4)
-        `, [game.id, req.user.id, totalRemaining, avgRate]);
-      }
-    }
+    // Carry over every unused shot from the player's other games — won maps,
+    // maps left, maps timed out on. Credits are not refunded on win — they
+    // roll forward as prepaid shots.
+    const carryoverSessionCreated = await carryOverShots(client, req.user.id, game.id);
 
     // If no carryover session was created, create an initial empty session
     // This ensures every game has at least one session row for the frontend to reference
@@ -805,8 +862,11 @@ app.post('/api/session/start-map', async (req, res) => {
       [game.id, req.user.id]
     );
 
+    await client.query('COMMIT');
+
     res.json({ game, theme, session: { ...session, current_game_id: game.id } });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -825,6 +885,7 @@ app.post('/api/games/:id/join', async (req, res) => {
     if (session.current_game_id) return res.status(409).json({ error: 'Already on a map' });
 
     // Atomically claim open game
+    await client.query('BEGIN');
     const { rows: gameRows } = await client.query(`
       UPDATE games
       SET status = 'active', active_player_id = $1, active_player_username = $2, last_active_at = NOW()
@@ -832,13 +893,21 @@ app.post('/api/games/:id/join', async (req, res) => {
       RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square, penalty_found
     `, [req.user.id, req.user.username, req.params.id]);
 
-    if (!gameRows.length) return res.status(409).json({ error: 'Map no longer available' });
+    if (!gameRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Map no longer available' });
+    }
     const game = gameRows[0];
 
     await client.query(
       'UPDATE tournament_sessions SET current_game_id = $1, updated_at = NOW() WHERE user_id = $2',
       [game.id, req.user.id]
     );
+
+    // Joining an open map carries unused shots from the player's other games too
+    await carryOverShots(client, req.user.id, game.id);
+
+    await client.query('COMMIT');
 
     const { rows: themeRows } = await client.query(
       'SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE id = $1',
@@ -847,6 +916,7 @@ app.post('/api/games/:id/join', async (req, res) => {
 
     res.json({ game, theme: themeRows[0], session: { ...session, current_game_id: game.id } });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -1064,7 +1134,7 @@ app.post('/api/games/:id/bundle', async (req, res) => {
 
 // POST /api/games/:id/guess
 app.post('/api/games/:id/guess', async (req, res) => {
-  const { square_index, session_id, testing_mode } = req.body;
+  const { square_index, session_id } = req.body;
   if (square_index === undefined || square_index < 0) {
     return res.status(400).json({ error: 'Invalid square_index' });
   }
@@ -1146,8 +1216,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       }
     }
 
-    // Debit wallet for single guess (bundles pre-paid); skip in testing mode.
-    if (!usedBundleId && !testing_mode) {
+    // Debit wallet for single guess (bundles pre-paid)
+    if (!usedBundleId) {
       await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
       try {
         await debitWallet(client, req.user.id, tokensCharged, 'single_shot', game.id);
@@ -1173,7 +1243,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
         eventDelta = def.multiplier > 0 ? amount : -amount;
         // Clamp losses to the wallet balance so a penalty can never go below
         // zero or fail the guess.
-        if (eventDelta < 0 && !testing_mode) {
+        if (eventDelta < 0) {
           const { rows: balRows } = await client.query(
             'SELECT balance FROM player_wallets WHERE user_id = $1 FOR UPDATE',
             [req.user.id]
@@ -1207,6 +1277,42 @@ app.post('/api/games/:id/guess', async (req, res) => {
       bonusCreditsAwarded = bonusMap[gridSize] || 2;
     }
 
+    // Bonus square on this miss? Bonus squares never sit on the ball, the
+    // penalty square or an event square, so only one surprise fires per tile.
+    // The shot for this guess is already deducted; a won square adds a free
+    // shot, a lost square takes one back (a free shot first, then a bought
+    // one) — never below zero and never from the wallet.
+    let bonusOutcome = null;
+    let bonusDelta = 0;
+    if (!isHit && !eventType && !isPenaltyHit) {
+      if (typeof game.bonus_squares === 'string') {
+        try { game.bonus_squares = JSON.parse(game.bonus_squares); } catch { game.bonus_squares = {}; }
+      }
+      const outcome = (game.bonus_squares || {})[String(square_index)];
+      if (outcome === 'win' || outcome === 'lose') {
+        bonusOutcome = outcome;
+        if (outcome === 'win') {
+          await addBonusShots(client, game.id, req.user.id, 1);
+          bonusDelta = 1;
+        } else {
+          const { rows: loseRows } = await client.query(`
+            SELECT id FROM game_sessions
+            WHERE game_id = $1 AND user_id = $2 AND refunded = false
+              AND credits_used < credits_total
+            ORDER BY is_bonus_credit DESC, created_at DESC
+            LIMIT 1 FOR UPDATE
+          `, [game.id, req.user.id]);
+          if (loseRows.length) {
+            await client.query(
+              'UPDATE game_sessions SET credits_used = credits_used + 1 WHERE id = $1',
+              [loseRows[0].id]
+            );
+            bonusDelta = -1;
+          }
+        }
+      }
+    }
+
     // Insert guess record
     await client.query(`
       INSERT INTO guesses (game_id, user_id, username, square_index, tokens_charged, pot_contribution, is_hit, is_penalty_hit, event_type, event_delta)
@@ -1219,16 +1325,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
       WHERE id = $4
     `, [newRevealed, game.total_guesses + 1, newPlayerCount, game.id]);
 
-    // If penalty square was found, create bonus credit session
+    // If penalty square was found, add its free attempts to the game's bonus row
     if (isPenaltyHit) {
       await client.query(
         'UPDATE games SET penalty_found = true WHERE id = $1',
         [game.id]
       );
-      await client.query(`
-        INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, is_bonus_credit)
-        VALUES ($1, $2, $3, 0, 0, true)
-      `, [game.id, req.user.id, bonusCreditsAwarded]);
+      await addBonusShots(client, game.id, req.user.id, bonusCreditsAwarded);
     }
 
     // Contribute to captain pot
@@ -1277,15 +1380,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
         WHERE id = $5
       `, [req.user.id, req.user.username, prizePaid, jackpotPaid, game.id]);
 
-      // Credit prize + jackpot (skip in testing mode — balance is frontend-managed)
-      if (!testing_mode) {
-        await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
-        try {
-          await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
-        } catch (err) {
-          prizeWalletError = err;
-          console.error('Prize payout wallet transaction failed:', err.message);
-        }
+      // Credit prize + jackpot
+      await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
+      try {
+        await creditWallet(client, req.user.id, prizePaid + jackpotAmount, 'prize_payout', game.id);
+      } catch (err) {
+        prizeWalletError = err;
+        console.error('Prize payout wallet transaction failed:', err.message);
       }
 
       // On final match win, refund remaining bundle credits to wallet
@@ -1338,13 +1439,11 @@ app.post('/api/games/:id/guess', async (req, res) => {
         let wonThisRound = prizePaid + jackpotAmount;
         if (sessionComplete) {
           houseBonus = HOUSE_BONUS_TOKENS;
-          if (!testing_mode) {
-            try {
-              await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
-            } catch (err) {
-              bonusWalletError = err;
-              console.error('House bonus wallet transaction failed:', err.message);
-            }
+          try {
+            await creditWallet(client, req.user.id, houseBonus, 'house_bonus', game.id);
+          } catch (err) {
+            bonusWalletError = err;
+            console.error('House bonus wallet transaction failed:', err.message);
           }
           wonThisRound += houseBonus;
         }
@@ -1402,10 +1501,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
       }
     }
 
-    // Apply the Match Event wallet effect (real mode only — testing mode
-    // applies the delta frontend-side). A wallet failure must never fail the
+    // Apply the Match Event wallet effect. A wallet failure must never fail the
     // guess itself; log it and continue, same pattern as prizeWalletError.
-    if (eventType && eventDelta !== 0 && !testing_mode) {
+    if (eventType && eventDelta !== 0) {
       try {
         if (eventDelta > 0) {
           await creditWallet(client, req.user.id, eventDelta, 'event_bonus', game.id);
@@ -1452,6 +1550,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
     }
     const updatedRegularCreditsRemaining = updatedRegularSession ? updatedRegularSession.credits_remaining : 0;
 
+    // Newest active bonus row for this game, so the client can charge the
+    // next free shot from it (also refreshes a stale id after a penalty hit).
+    const updatedBonusRow = updatedSessions.find(r => r.is_bonus_credit) || null;
+
     res.json({
       hit: isHit,
       square_index,
@@ -1477,6 +1579,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
       was_bonus_shot: wasBonusShot,
       bonus_credits_awarded: bonusCreditsAwarded,
       bonus_credits_available: updatedBonusCreditsAvailable,
+      bonus_session_id: updatedBonusRow ? updatedBonusRow.id : null,
+      bonus_square: bonusOutcome ? { outcome: bonusOutcome, delta: bonusDelta } : null,
       regular_credits_remaining: updatedRegularCreditsRemaining,
     });
   } catch (err) {
@@ -1602,12 +1706,9 @@ app.get('/api/wallet/sync', async (req, res) => {
 
     console.log(`[wallet-sync-endpoint] GET /api/wallet/sync for user ${req.user.id} (${req.user.username})`);
 
-    // Get the player's current mode from query param (testingMode=1 means demo mode)
-    const playerInDemoMode = req.query.testingMode === '1' || req.query.testingMode === 'true';
-    console.log(`[wallet-sync-endpoint] Player testing mode: ${playerInDemoMode}`);
-
+    // Sync the wallet balance from the sidecar
     await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
-    const syncResult = await syncWalletBalance(client, req.user.id, playerInDemoMode);
+    const syncResult = await syncWalletBalance(client, req.user.id);
 
     console.log(`[wallet-sync-endpoint] Sync result for user ${req.user.id}:`, JSON.stringify({
       synced: syncResult.synced,
@@ -1742,11 +1843,6 @@ app.get('/api/env', (req, res) => {
   res.json({ staging: IS_STAGING });
 });
 
-// Testing mode - allows skipping blockchain transactions
-app.get('/api/testing-mode', (req, res) => {
-  res.json({ available: true });
-});
-
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -1822,6 +1918,7 @@ async function start() {
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_square SMALLINT`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_found BOOLEAN DEFAULT false`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS event_squares JSONB NOT NULL DEFAULT '{}'::jsonb`);
+  await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS bonus_squares JSONB NOT NULL DEFAULT '{}'::jsonb`);
   await pool.query(`COMMENT ON TABLE games IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
@@ -2081,13 +2178,18 @@ async function start() {
       '6': 'free_kick', '18': 'injury', '27': 'penalty_save', '33': 'red_card'
     })]);
 
-    // Open final stage game with carry-over credits for refund testing
+    // Open final stage game with carry-over credits for refund testing, and 7
+// bonus squares (5 win / 2 lose) so reviewers can try both banner styles.
+// None of them sit on the ball (35), the penalty square (20), an event
+// square (1, 2, 12, 30) or an already revealed tile (0-3).
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
-      VALUES (5, $1, 6, 35, 20, $2, 4, 1, 'open', $3)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares, bonus_squares)
+      VALUES (5, $1, 6, 35, 20, $2, 4, 1, 'open', $3, $4)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['belgium'], revealedPrefix(49, 4), JSON.stringify({
       '1': 'penalty_save', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
+    }), JSON.stringify({
+      '5': 'win', '8': 'win', '15': 'lose', '22': 'win', '40': 'win', '44': 'win', '47': 'lose'
     })]);
 
     // Add carry-over credits (8 remaining, 4 t/credit = 32 t refund potential) for the staging test user
