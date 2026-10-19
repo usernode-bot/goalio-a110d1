@@ -1024,7 +1024,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       [tokensCharged]
     );
 
-    let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, houseBonus = 0;
+    let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, shotsRefunded = 0, houseBonus = 0;
     let interstitial = null, newStageIdx = null, stageCompleted = false;
     let potTopup = 0, potTopupMessage = null;
     let prizeWalletError = null, bonusWalletError = null;
@@ -1087,6 +1087,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
           );
           creditsRefunded = parseFloat(refundAmount.toFixed(2));
           if (creditsRefunded > 0) {
+            shotsRefunded = remainingCredits.reduce((sum, r) =>
+              sum + (parseFloat(r.tokens_per_credit) > 0 ? parseInt(r.remaining) : 0), 0
+            );
             try {
               await creditWallet(client, req.user.id, creditsRefunded, 'bundle_refund_final', game.id);
             } catch (err) {
@@ -1245,6 +1248,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       event: eventType ? { type: eventType, delta: eventDelta, pending: eventWalletError ? true : false } : null,
       last_won_at: potLastWonAt,
       credits_refunded: creditsRefunded,
+      shots_refunded: shotsRefunded,
       house_bonus: houseBonus,
       squares_revealed: game.total_guesses + 1,
       pot_balance: potBalance,
