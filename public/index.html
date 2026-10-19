@@ -150,6 +150,38 @@
       100% { transform: scale(2.5); opacity: 0; }
     }
 
+    /* Refund coin flight — shots paid back after winning the Final */
+    .refund-coin-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .refund-coin {
+      position: absolute; width: 18px; height: 18px; border-radius: 50%;
+      background: #fbbf24; border: 2px solid #f59e0b;
+      box-shadow: 0 0 8px rgba(251,191,36,0.6);
+      color: #0a0a0f; font-family: 'Space Mono', monospace; font-weight: 700;
+      font-size: 9px; line-height: 14px; text-align: center;
+      animation: refund-coin-wind 1.4s cubic-bezier(.4,.1,.4,1) forwards;
+      will-change: transform, opacity;
+    }
+    .refund-coin span { display: inline-block; animation: refund-coin-flutter 0.35s ease-in-out infinite alternate; }
+    @keyframes refund-coin-wind {
+      0%   { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+      35%  { transform: translate(calc(var(--tx) * 0.3 + var(--sway)), calc(var(--ty) * 0.25)) scale(1.05) rotate(-12deg); opacity: 1; }
+      70%  { transform: translate(calc(var(--tx) * 0.75 - var(--sway)), calc(var(--ty) * 0.7)) scale(0.9) rotate(10deg); opacity: 1; }
+      100% { transform: translate(var(--tx), var(--ty)) scale(0.4) rotate(0deg); opacity: 0; }
+    }
+    @keyframes refund-coin-flutter {
+      from { transform: rotateY(0deg) translateY(0); }
+      to   { transform: rotateY(180deg) translateY(-1px); }
+    }
+    .refund-summary { font-family: 'Space Mono', monospace; font-size: 0.85rem; color: #fbbf24; margin-bottom: 8px; }
+    @keyframes refund-glow-pulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(251,191,36,0.2); }
+      50% { box-shadow: 0 0 20px rgba(251,191,36,0.6), 0 0 40px rgba(251,191,36,0.2); }
+    }
+    .hud-chip.refund-glow { animation: refund-glow-pulse 0.6s ease; }
+    @media (prefers-reduced-motion: reduce) {
+      .refund-coin-layer, .refund-coin { display: none; }
+    }
+
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
     .board-zone {
       flex: 1 1 auto; min-height: auto; position: relative;
@@ -1611,6 +1643,7 @@
       Sound.playIntro();
       renderLobby();
     }
+    else if (hash === '#demo/final-refund') demoFinalRefund();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1620,6 +1653,23 @@
     else renderLobby();
   }
   window.addEventListener('hashchange', route);
+
+  // Staging demo deep link: seeds a Final-stage tournament with carried shots
+  // (server returns 404 outside staging) and opens the new Final map.
+  async function demoFinalRefund() {
+    const appEl = document.getElementById('app');
+    try {
+      const seed = await api('POST', '/api/staging/demo-final-refund');
+      if (!seed.ok) { navigate('#lobby'); return; }
+      const map = await api('POST', '/api/session/start-map');
+      if (!map.ok) { navigate('#lobby'); return; }
+      const d = await map.json();
+      state.session = { ...state.session, ...d.session, current_game_id: d.game.id };
+      navigate('#game/' + d.game.id);
+    } catch (e) {
+      if (appEl) appEl.innerHTML = `<div style="text-align:center;padding:40px;color:#888;font-family:'DM Sans',sans-serif;">Demo unavailable — open the lobby instead.</div>`;
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════
   // LOBBY
@@ -2422,6 +2472,73 @@
   // ═══════════════════════════════════════════════════════════════
   // WIN SEQUENCE
   // ═══════════════════════════════════════════════════════════════
+  // Fly refunded shots from the final win card up to the Wallet chip as coins
+  function playRefundCoins(overlay, result) {
+    const summary = overlay.querySelector('.refund-summary');
+    if (!summary) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      summary.style.opacity = '1';
+      return;
+    }
+    const count = Math.min(12, Math.max(1, result.shots_refunded || 1));
+    const originRect = summary.getBoundingClientRect();
+    const originX = originRect.left + originRect.width / 2;
+    const originY = originRect.top + originRect.height / 2;
+    let tx, ty;
+    const walletEl = document.querySelector('.wallet-val');
+    const walletChip = walletEl ? walletEl.closest('.hud-chip') : null;
+    if (walletEl) {
+      const wr = walletEl.getBoundingClientRect();
+      if (wr.width > 0 || wr.height > 0) {
+        tx = wr.left + wr.width / 2 - originX;
+        ty = wr.top + wr.height / 2 - originY;
+      }
+    }
+    if (tx === undefined) {
+      // No wallet chip found — blow the coins off the side of the screen
+      tx = window.innerWidth + 40 - originX;
+      ty = -(originY * 0.3);
+    }
+    const layer = document.createElement('div');
+    layer.className = 'refund-coin-layer';
+    overlay.appendChild(layer);
+    let ended = 0;
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      if (!summary.isConnected) return; // overlay already removed by Continue
+      summary.style.transition = 'opacity 0.4s ease';
+      summary.style.opacity = '1';
+      if (walletChip) {
+        walletChip.classList.add('refund-glow');
+        setTimeout(() => { walletChip.classList.remove('refund-glow'); }, 700);
+      }
+    };
+    for (let i = 0; i < count; i++) {
+      const coin = document.createElement('span');
+      coin.className = 'refund-coin';
+      coin.innerHTML = '<span>t</span>';
+      const jx = (Math.random() - 0.5) * 16;
+      const jy = (Math.random() - 0.5) * 16;
+      const sway = (Math.random() < 0.5 ? -1 : 1) * (40 + Math.random() * 50);
+      coin.style.left = (originX + jx - 9) + 'px';
+      coin.style.top = (originY + jy - 9) + 'px';
+      coin.style.setProperty('--tx', (tx + (Math.random() - 0.5) * 10) + 'px');
+      coin.style.setProperty('--ty', (ty + (Math.random() - 0.5) * 10) + 'px');
+      coin.style.setProperty('--sway', sway + 'px');
+      coin.style.animationDelay = (i * 110) + 'ms';
+      coin.addEventListener('animationend', () => {
+        coin.remove();
+        ended++;
+        if (ended >= count) finish();
+      });
+      layer.appendChild(coin);
+    }
+    // Fallback: show the summary even if animationend never fires
+    setTimeout(finish, count * 110 + 1400 + 300);
+  }
+
   async function runWinSequence(hitCell, idx, result) {
     clearPolls();
     const isFinal = (state.session && state.session.stage_idx >= 6) || result.interstitial === 'final_win';
@@ -2501,6 +2618,15 @@
       else if (stageIdx >= 3) resultTitle = `${theme.country_name} knocked out!`;
 
       state.pendingResult = result;
+      let refundHtml = '';
+      if (result.credits_refunded > 0) {
+        const amt = result.credits_refunded;
+        const amtStr = Number.isInteger(amt) ? `${Math.round(amt)}` : amt.toFixed(1);
+        const n = result.shots_refunded || 0;
+        const countPart = n > 0 ? (n === 1 ? '1 shot back, ' : `${n} shots back, `) : '';
+        const willFly = isFinal && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        refundHtml = `<div class="refund-summary"${willFly ? ' style="opacity:0;"' : ''}>Bundle refund: ${countPart}+${amtStr} t</div>`;
+      }
       const resultCard = document.createElement('div');
       resultCard.className = 'result-overlay';
       resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
@@ -2515,10 +2641,14 @@
           <div style="font-family:'Space Mono',monospace;color:#fbbf24;font-size:1.1rem;margin:12px 0;">+${result.prize_paid} tokens</div>
           ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;color:#fff;font-size:0.9rem;margin-bottom:4px;">⚡ Captain's Pot: +${Math.round(result.jackpot_paid)} tokens</div>` : ''}
           ${result.pot_topup > 0 ? `<div style="font-family:'DM Sans',sans-serif;color:#fbbf24;font-size:0.82rem;margin:8px 0 4px;line-height:1.3;">⚡ ${result.pot_topup} tokens added to the Captain's Pot — ${stageName(result.new_stage_idx)} odds!</div>` : ''}
-          ${result.credits_refunded > 0 ? `<div style="font-size:0.8rem;color:#888;margin-bottom:8px;">Bundle refund: +${result.credits_refunded.toFixed(1)} t</div>` : ''}
+          ${result.credits_refunded > 0 ? refundHtml : ''}
           <button class="bundle-btn btn-gold" style="width:100%;margin-top:12px;" onclick="handleInterstitial()">Continue →</button>
         </div>`;
       document.body.appendChild(resultCard);
+
+      if (isFinal && result.credits_refunded > 0) {
+        playRefundCoins(resultCard, result);
+      }
 
       if (result.new_stage_idx !== null) {
         if (state.session) state.session.stage_idx = result.new_stage_idx;
