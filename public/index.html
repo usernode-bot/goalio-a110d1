@@ -1670,7 +1670,7 @@
 
       state.session = session;
       state.next_opponent_theme = next_opponent_theme;
-      // Use the synced balance from the sidecar (via /api/session which calls getWalletBalance)
+      // The in-game balance (via /api/session, which reads player_wallets)
       state.walletBalance = wallet_balance || state.walletBalance || 1000;
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
@@ -3026,6 +3026,7 @@
         <div class="faq-section">
           <h2>${t('faq.wallet')}</h2>
           <p>${t('faq.wallet.desc')}</p>
+          <p>${t('faq.wallet.in_game')}</p>
           <p>${t('faq.wallet.bundles')}</p>
           <ul>
             <li>${t('faq.wallet.quick')}</li>
@@ -3140,7 +3141,7 @@
             <li>A ZK proof goes further: the server can prove it knows a valid pre-image for the commitment <em>without</em> revealing the position mid-game — so the proof is verifiable in real time, not just after the fact.</li>
             <li><strong>Noir</strong> (by Aztec) is a Rust-like language for writing ZK circuits that compile to both native provers and browser-runnable WASM. It would be the natural fit here: write the "ball is at position P under commitment C" circuit in Noir, generate a proof server-side per game, verify client-side in the browser before the player makes their first guess.</li>
           </ul>
-          <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee — relevant for any real-money deployment.</p>
+          <p>This upgrade would turn the game's fairness from a trust assumption into a cryptographic guarantee.</p>
 
           <h3>📋 To Do: Aztec Noir Proof Integration</h3>
           <p><strong>Status: Not yet implemented</strong></p>
@@ -3186,16 +3187,6 @@
         const d = await r.json();
         state.session = d.session;
         state.walletBalance = d.wallet_balance || 1000;
-        // Fetch the freshest wallet balance from sidecar
-        try {
-          const walletR = await api('GET', '/api/wallet/sync');
-          if (walletR.ok) {
-            const walletD = await walletR.json();
-            state.walletBalance = walletD.balance || state.walletBalance;
-          }
-        } catch (err) {
-          console.error('Failed to sync wallet balance on init:', err);
-        }
         state.potBalance = d.captain_pot_balance || 100;
         state.prevPotBalance = state.potBalance;
         // Seed from the server's most recent win so a fresh page load doesn't

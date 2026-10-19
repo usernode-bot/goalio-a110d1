@@ -109,6 +109,7 @@
   "faq.lobby.help": "Nouveau dans le jeu ? Appuyez sur \"Comment jouer ⓘ\" dans le hall pour ouvrir un panneau d'informations rapides qui explique la mécanique de base à tout moment.",
   "faq.wallet": "Portefeuille & Coups",
   "faq.wallet.desc": "Votre solde de portefeuille est votre total de jetons. Vous commencez avec 1 000 jetons et cela persiste dans tous vos tournois et sessions — vous ne le perdez pas quand vous commencez un nouveau jeu ou un nouveau tournoi.",
+  "faq.wallet.in_game": "Les jetons sont utilisables uniquement dans le jeu. Ils n'ont aucune valeur réelle et ne peuvent pas être achetés avec de l'argent, vendus ni retirés.",
   "faq.wallet.bundles": "Pour faire des coups sur le plateau, vous devez acheter un lot de crédits (coups temporaires valides pour un seul jeu). Trois tailles de lots sont disponibles, tarifées par étape pour que le coût reste à peu près constant :",
   "faq.wallet.quick": "Coup Rapide : 2 coups",
   "faq.wallet.take": "Tentez le Coup : 8 coups",
