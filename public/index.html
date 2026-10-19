@@ -316,15 +316,6 @@
        selector so it beats .tile-spawn / .tile-sparkle-flash. */
     .tile.tile-event-fade { animation: fadeout 0.6s ease-out forwards; pointer-events: none; }
 
-    /* Match event squares only: the card fades out over 5 s so the
-       portrait slice underneath shows through before the tile opens.
-       Plain misses use the tile-fall animation instead. */
-    @keyframes reveal-fade-slow {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
-    }
-    .reveal-fade-slow { animation: reveal-fade-slow 5s linear forwards; }
-
     /* Tile exit animation for goal celebration */
     @keyframes tile-exit-spin-fade {
       0% { transform: scale(1) rotateZ(0deg); opacity: 1; filter: drop-shadow(0 0 8px gold); }
@@ -1019,10 +1010,13 @@
     penalty_save:   { cls: 'good', kind: 'good', file: 'penalty-save' },
   };
 
-  // Fade a Match Event square out 2s after its graphic appears, then clear
-  // the event styling so the portrait slice shows through like an empty
+  // Tunable hold before a Match Event square fades out after its graphic appears.
+  const EVENT_TILE_HOLD_MS = 2000;
+
+  // Fade a Match Event square out after its graphic appears (2s hold), then
+  // clear the event styling so the portrait slice shows through like an empty
   // open square. No-op if the board was replaced before the timer fires.
-  function fadeEventTile(cell, delay = 2000) {
+  function fadeEventTile(cell, delay = EVENT_TILE_HOLD_MS) {
     if (!cell) return;
     setTimeout(() => {
       if (!cell.isConnected || !cell.classList.contains('tile-event')) return;
@@ -1035,7 +1029,7 @@
         if (!cell.isConnected) return;
         cell.classList.remove('tile-event-fade', 'tile-event', 'good', 'bad');
         // Style-free marker: this square was a Match Event and has faded.
-        cell.classList.add('tile-event-revealed');
+        cell.classList.add('tile-event-revealed', 'open');
         cell.style.backgroundImage = '';
       }, 600);
     }, delay);
@@ -2305,11 +2299,11 @@
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
-        // Miss. A match event square shows its graphic right away, then the
-        // card fades out slowly over 5 s so the portrait slice underneath
-        // shows through. A plain miss flips and falls off-screen.
+        // Miss. A match event square shows its graphic right away, holds for
+        // 2 s, then fades out so the portrait slice underneath shows through.
+        // A plain miss flips and falls off-screen.
         const meta = d.event && d.event.type ? EVENT_META[d.event.type] : null;
-        let revealCleanup = meta ? 5000 : 1100;
+        let revealCleanup = meta ? EVENT_TILE_HOLD_MS + 600 : 1100;
         // Show retro quip overlay with smart positioning based on tile row.
         // A Match Event replaces the random quip with its own banner, sound
         // and uncovered graphic.
@@ -2317,17 +2311,15 @@
         const tileRow = Math.floor(idx / gridCols);
         if (meta) {
           if (cell) {
-            // The event graphic is readable straight away while the tile fades
+            // The event graphic is readable straight away, then holds and fades
             cell.style.backgroundImage = `url('/images/events/${meta.file}.svg')`;
-            cell.classList.add('tile-event', meta.cls, 'reveal-fade-slow');
+            // Drop the finished spawn one-shots and their inline delay so the
+            // fade starts from the tap, not after a leftover spawn animation
+            cell.classList.remove('tile-spawn', 'tile-sparkle-flash');
+            cell.style.animationDelay = '';
+            cell.classList.add('tile-event', meta.cls);
             cell.style.pointerEvents = 'none';
-            setTimeout(() => {
-              // Clear the event styling before the fade animation ends so the
-              // graphic does not snap back when opacity returns to 1
-              cell.classList.add('open');
-              cell.classList.remove('reveal-fade-slow', 'tile-event', meta.cls);
-              cell.style.backgroundImage = '';
-            }, revealCleanup);
+            fadeEventTile(cell);
           }
           // The event banner sound plays right away with the message
           Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
@@ -2369,7 +2361,7 @@
             showRetroQuip(quip, tileRow);
           }
         }
-        document.querySelectorAll('.tile:not(.open):not(.tile-fall):not(.reveal-fade-slow)').forEach(c => c.style.pointerEvents = '');
+        document.querySelectorAll('.tile:not(.open):not(.tile-fall):not(.tile-event)').forEach(c => c.style.pointerEvents = '');
         // The fading or falling tile stays untappable until its own timeout opens it
         if (cell) cell.style.pointerEvents = 'none';
       }
