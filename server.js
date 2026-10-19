@@ -1024,7 +1024,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       [tokensCharged]
     );
 
-    let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, houseBonus = 0;
+    let prizePaid = 0, jackpotPaid = 0, creditsRefunded = 0, shotsRefunded = 0, houseBonus = 0;
     let interstitial = null, newStageIdx = null, stageCompleted = false;
     let potTopup = 0, potTopupMessage = null;
     let prizeWalletError = null, bonusWalletError = null;
@@ -1087,6 +1087,9 @@ app.post('/api/games/:id/guess', async (req, res) => {
           );
           creditsRefunded = parseFloat(refundAmount.toFixed(2));
           if (creditsRefunded > 0) {
+            // Count shots that were actually paid back (bonus shots are worth 0 tokens)
+            shotsRefunded = remainingCredits.reduce((sum, r) =>
+              sum + (parseFloat(r.tokens_per_credit) > 0 ? parseInt(r.remaining) : 0), 0);
             try {
               await creditWallet(client, req.user.id, creditsRefunded, 'bundle_refund_final', game.id);
             } catch (err) {
@@ -1245,6 +1248,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       event: eventType ? { type: eventType, delta: eventDelta, pending: eventWalletError ? true : false } : null,
       last_won_at: potLastWonAt,
       credits_refunded: creditsRefunded,
+      shots_refunded: shotsRefunded,
       house_bonus: houseBonus,
       squares_revealed: game.total_guesses + 1,
       pot_balance: potBalance,
@@ -1461,6 +1465,39 @@ app.post('/api/admin/reset-game', async (req, res) => {
 
 app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Staging-only demo state for the Final refund coin flight: gives the signed-in
+// viewer a Final-stage tournament with 8 carried shots (4 t each) so the
+// coin animation on the win card is reachable without playing six rounds.
+// The client route #demo/final-refund calls this, then start-map consolidates
+// the carried shots into a fresh Final board via carryOverShots.
+app.post('/api/staging/demo-final-refund', async (req, res) => {
+  if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
+  const client = await pool.connect();
+  try {
+    await ensureWallet(client, req.user.id, req.user.username);
+    await client.query('UPDATE player_wallets SET balance = 5000 WHERE user_id = $1', [req.user.id]);
+    await client.query(`
+      INSERT INTO tournament_sessions
+        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
+      VALUES ($1, 'brazil', 6, '{}', 0, false, NULL, 'belgium')
+      ON CONFLICT (user_id) DO UPDATE SET
+        my_team_slug = 'brazil', stage_idx = 6, played_slugs = '{}',
+        total_tokens_won = 0, session_complete = false,
+        current_game_id = NULL, next_opponent_slug = 'belgium', updated_at = NOW()
+    `, [req.user.id]);
+    await client.query('DELETE FROM game_sessions WHERE user_id = $1', [req.user.id]);
+    await client.query(`
+      INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, refunded)
+      VALUES (1, $1, 8, 0, 4, false)
+    `, [req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
 
 app.get('/api/env', (req, res) => {
   res.json({ staging: IS_STAGING });

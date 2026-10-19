@@ -130,6 +130,16 @@
       "name": "Event graphic SVG serves",
       "path": "/images/events/red-card.svg",
       "expectSelector": "svg"
+    },
+    {
+      "name": "Final refund demo seeds Final board with carried shots",
+      "path": "/#demo/final-refund",
+      "expectSelector": ".game-grid"
+    },
+    {
+      "name": "Final refund demo shows seeded wallet in HUD",
+      "path": "/#demo/final-refund",
+      "expectText": "5000 t"
     }
   ],
   "visibility": {
