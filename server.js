@@ -1373,12 +1373,14 @@ app.post('/api/games/:id/guess', async (req, res) => {
         `, [req.user.id, req.user.username, reseedFloor, reseedTier]);
       }
 
-      // Mark game completed
+      // Mark game completed. jackpot_paid is an INTEGER column and the pot
+      // balance carries decimals: store it rounded, the wallet still gets the
+      // exact amount and the win screens already display a rounded pot.
       await client.query(`
         UPDATE games SET status = 'completed', winner_user_id = $1, winner_username = $2,
           prize_paid = $3, jackpot_paid = $4, completed_at = NOW()
         WHERE id = $5
-      `, [req.user.id, req.user.username, prizePaid, jackpotPaid, game.id]);
+      `, [req.user.id, req.user.username, prizePaid, Math.round(jackpotPaid), game.id]);
 
       // Credit prize + jackpot
       await ensureWallet(client, req.user.id, req.user.username, req.user.usernode_pubkey);
@@ -1450,6 +1452,8 @@ app.post('/api/games/:id/guess', async (req, res) => {
 
         const nextOpponentSlug = sessionComplete ? null : await pickNextOpponent(client, newPlayed, tour.my_team_slug);
 
+        // total_tokens_won is an INTEGER column: round the session total while
+        // wallet and player_stats keep the exact amount.
         await client.query(`
           UPDATE tournament_sessions SET
             stage_idx = $1, played_slugs = $2,
@@ -1457,7 +1461,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
             session_complete = $4, current_game_id = NULL, next_opponent_slug = $6,
             last_won_game_id = $7, updated_at = NOW()
           WHERE user_id = $5
-        `, [updatedStage, newPlayed, wonThisRound, sessionComplete, req.user.id, nextOpponentSlug, game.id]);
+        `, [updatedStage, newPlayed, Math.round(wonThisRound), sessionComplete, req.user.id, nextOpponentSlug, game.id]);
 
         await client.query(`
           INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed, updated_at)
@@ -2204,6 +2208,13 @@ async function start() {
     // Seed house wallet with 500 tokens for testing prize payouts in real token mode
     await pool.query(`
       UPDATE house_wallet SET balance = 500, last_synced_at = NOW() WHERE id = 1
+    `);
+
+    // Staging seed: give the Captain's Pot a decimal balance (as reported in
+    // the bug) so a first-guess tournament win exercises the integer-rounding
+    // path. Kept under the house wallet's 500 so the payout really credits.
+    await pool.query(`
+      UPDATE captain_pot SET balance = 400.22 WHERE id = 1
     `);
 
   }
