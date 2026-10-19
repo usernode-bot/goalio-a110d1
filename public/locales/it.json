@@ -109,6 +109,7 @@
   "faq.lobby.help": "Nuovo al gioco? Tocca \"Come giocare ⓘ\" nella sala per aprire un pannello di informazioni rapide che spiega i meccanismi di base in qualsiasi momento.",
   "faq.wallet": "Portafoglio & Colpi",
   "faq.wallet.desc": "Il tuo saldo di portafoglio è il tuo totale di gettoni. Inizi con 1.000 gettoni e persiste in tutti i tuoi tornei e sessioni — non li perdi quando inizi un nuovo gioco o torneo.",
+  "faq.wallet.in_game": "I gettoni esistono solo dentro del gioco. Non hanno valore reale e non possono essere acquistati con denaro, venduti né ritirati.",
   "faq.wallet.bundles": "Per colpire il tabellone, devi acquistare un bundle di crediti (colpi temporanei validi per un solo gioco). Sono disponibili tre dimensioni di bundle, con prezzo per fase in modo che il costo rimanga approssimativamente costante:",
   "faq.wallet.quick": "Colpo Veloce: 2 colpi",
   "faq.wallet.take": "Prova il Colpo: 8 colpi",

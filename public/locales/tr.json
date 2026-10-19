@@ -109,6 +109,7 @@
   "faq.lobby.help": "Oyuna yeni misin? Lobideki \"Nasıl Çalışır ⓘ\" öğesine dokunarak çekirdek mekanikleri ihtiyac duyduğun zaman açıklayan hızlı bilgi panelini aç.",
   "faq.wallet": "Cüzdan ve Şutlar",
   "faq.wallet.desc": "Cüzdan bakiyesi toplam jeton sayısıdır. 1.000 jeton ile başlarsın ve tüm turnuvalar ve oturumlarında korunur — yeni bir oyun veya yeni bir turnuva başlattığında kaybetmezsin.",
+  "faq.wallet.in_game": "Jetonlar yalnızca oyun içindir. Gerçek bir değeri yoktur; parayla satın alınamaz, satılamaz veya çekilemez.",
   "faq.wallet.bundles": "Tahtada şut atmak için kredi paketi satın almak zorundasın (yalnızca bir oyun için geçerli geçici şutlar). Üç paket boyutu mevcuttur, etap başına fiyatlandırıldığında maliyet kabaca sabit kalır:",
   "faq.wallet.quick": "Hızlı Şut: 2 şut",
   "faq.wallet.take": "Bir Şut At: 8 şut",

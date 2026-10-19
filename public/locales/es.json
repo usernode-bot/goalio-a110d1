@@ -109,6 +109,7 @@
   "faq.lobby.help": "¿Nuevo en el juego? Toca \"Cómo jugar ⓘ\" en el salón para abrir un panel de información rápida que explica la mecánica central en cualquier momento.",
   "faq.wallet": "Billetera & Tiros",
   "faq.wallet.desc": "Tu saldo de billetera es tu total de fichas. Comienzas con 1,000 fichas y persisten en todos tus torneos y sesiones — no las pierdes cuando comienzas un nuevo juego o torneo.",
+  "faq.wallet.in_game": "Las fichas son solo para el juego. No tienen valor real y no se pueden comprar con dinero, vender ni retirar.",
   "faq.wallet.bundles": "Para hacer tiros en el tablero, debes comprar un paquete de créditos (tiros temporales válidos para un solo juego). Hay tres tamaños de paquetes disponibles, precios por etapa para que el costo se mantenga aproximadamente constante:",
   "faq.wallet.quick": "Tiro Rápido: 2 tiros",
   "faq.wallet.take": "Intenta el Tiro: 8 tiros",
