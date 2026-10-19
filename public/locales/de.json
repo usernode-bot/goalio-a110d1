@@ -70,7 +70,7 @@
   "celebration.scored": "Du hast ein Tor geschossen!",
   "celebration.won_cup": "Du hast die Weltmeisterschaft gewonnen!",
   "victory.you_won": "Du hast gewonnen!",
-  "victory.total_tokens": "Insgesamt Tokens gewonnen",
+  "victory.total_tokens": "Insgesamt Tokens",
   "victory.house_bonus": "Haus-Bonus: +50",
   "victory.set_display_name": "Setze deinen Ligaanzeigenamen",
   "victory.leaderboard": "🏆 Rangliste",
@@ -175,10 +175,10 @@
   "countries.norway": "Norwegen",
   "countries.germany": "Deutschland",
   "countries.mexico": "Mexiko",
-  "events.handball": "HANDBALL! {amount} verloren",
-  "events.free_kick": "FREISTOSS! {amount} gewonnen",
-  "events.injury": "SPIELER VERLETZT! {amount} verloren",
-  "events.pitch_invasion": "PLATZSTURM! {amount} verloren",
-  "events.red_card": "ROTE KARTE! {amount} verloren",
-  "events.penalty_save": "ELFMETER GEHALTEN! {amount} gewonnen"
+  "events.handball": "HANDBALL! {amount}",
+  "events.free_kick": "FREISTOSS! {amount}",
+  "events.injury": "SPIELER VERLETZT! {amount}",
+  "events.pitch_invasion": "PLATZSTURM! {amount}",
+  "events.red_card": "ROTE KARTE! {amount}",
+  "events.penalty_save": "ELFMETER GEHALTEN! {amount}"
 }

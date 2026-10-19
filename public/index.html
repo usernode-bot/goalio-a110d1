@@ -1032,7 +1032,7 @@
   const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
 
   // Match Event squares — server owns amounts and weights; this maps a type
-  // to its banner tint and file name under /images/events/.
+  // to its i18n keys, banner tint and file name under /images/events/.
   const EVENT_META = {
     handball:       { cls: 'bad',  kind: 'bad',  file: 'handball' },
     free_kick:      { cls: 'good', kind: 'good', file: 'free-kick' },
@@ -2372,10 +2372,10 @@
           }
           // The event banner sound plays right away with the message
           Sound[meta.kind === 'good' ? 'eventGood' : 'eventBad'](d.event.type);
-          // Banner shows just the signed amount, e.g. "-4 t"
+          // Banner shows the event name and the signed amount, e.g. "HANDBALL! -4 t"
           const amount = Math.abs(d.event.delta);
           const sign = d.event.delta >= 0 ? '+' : '-';
-          const msg = sign + amount + ' t';
+          const msg = t('events.' + d.event.type, { amount: sign + amount + ' t' });
           showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
           // Testing mode: server skips wallet ops, apply the delta frontend-side
           if (testingModeActive) {

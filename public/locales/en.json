@@ -175,10 +175,10 @@
   "countries.norway": "Norway",
   "countries.germany": "Germany",
   "countries.mexico": "Mexico",
-  "events.handball": "HANDBALL! {amount} lost",
-  "events.free_kick": "FREE KICK! {amount} won",
-  "events.injury": "PLAYER INJURED! {amount} lost",
-  "events.pitch_invasion": "PITCH INVASION! {amount} lost",
-  "events.red_card": "RED CARD! {amount} lost",
-  "events.penalty_save": "PENALTY SAVE! {amount} won"
+  "events.handball": "HANDBALL! {amount}",
+  "events.free_kick": "FREE KICK! {amount}",
+  "events.injury": "PLAYER INJURED! {amount}",
+  "events.pitch_invasion": "PITCH INVASION! {amount}",
+  "events.red_card": "RED CARD! {amount}",
+  "events.penalty_save": "PENALTY SAVE! {amount}"
 }
