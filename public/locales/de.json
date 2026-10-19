@@ -109,6 +109,7 @@
   "faq.lobby.help": "Neu im Spiel? Tippe auf \"Wie man spielt ⓘ\" im Warteraum, um jederzeit ein Schnellinfo-Panel zu öffnen, das die Kern-Mechanik erklärt.",
   "faq.wallet": "Brieftasche & Schüsse",
   "faq.wallet.desc": "Dein Brieftaschensaldo ist deine Gesamtmenge an Tokens. Du beginnst mit 1.000 Tokens und sie bleiben über alle deine Turniere und Sessions hinweg — du verlierst sie nicht, wenn du ein neues Spiel oder Turnier beginnst.",
+  "faq.wallet.in_game": "Token gibt es nur im Spiel. Sie haben keinen realen Wert und können nicht mit Geld gekauft, verkauft oder ausgezahlt werden.",
   "faq.wallet.bundles": "Um auf dem Spielfeld zu schießen, musst du ein Paket mit Credits kaufen (temporäre Schüsse, die nur für ein Spiel gültig sind). Es sind drei Paketgrößen verfügbar, die pro Phase bepreist sind, damit die Kosten ungefähr konstant bleiben:",
   "faq.wallet.quick": "Schneller Schuss: 2 Schüsse",
   "faq.wallet.take": "Schuss versuchen: 8 Schüsse",

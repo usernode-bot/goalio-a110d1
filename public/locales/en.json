@@ -109,6 +109,7 @@
   "faq.lobby.help": "New to the game? Tap \"How it works ⓘ\" in the lobby to open a quick info panel that explains the core mechanics any time you need a refresher.",
   "faq.wallet": "Wallet & Shots",
   "faq.wallet.desc": "Your wallet balance is your total tokens. You start with 1,000 tokens and it persists across all your tournaments and sessions — you don't lose it when you start a new game or a new tournament.",
+  "faq.wallet.in_game": "Tokens are in-game only. They have no real-world value and can't be bought with money, sold or withdrawn.",
   "faq.wallet.bundles": "To take shots on the board, you must purchase a bundle of credits (temporary shots valid for one game only). Three bundle sizes are available, priced per stage so the cost stays roughly constant:",
   "faq.wallet.quick": "Quick Shot: 2 shots",
   "faq.wallet.take": "Take A Shot: 8 shots",
