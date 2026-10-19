@@ -617,61 +617,6 @@
       text-shadow: 0 0 8px rgba(255,215,0,0.8);
     }
 
-    /* Testing Mode Toggle */
-    .testing-mode-section {
-      background: linear-gradient(135deg, rgba(20,40,20,0.9) 0%, rgba(10,30,10,0.95) 100%);
-      border: 3px solid #00FF00;
-      border-right: 3px solid #00FFFF;
-      border-bottom: 3px solid #00FFFF;
-      box-shadow:
-        0 0 20px rgba(0,255,0,0.5),
-        0 0 40px rgba(0,255,255,0.2),
-        inset 0 0 20px rgba(0,255,0,0.08);
-      padding: 20px;
-      margin: 24px 0;
-      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-    }
-
-    .testing-mode-title {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 1rem;
-      color: #00FF00;
-      margin-bottom: 12px;
-      text-shadow:
-        2px 2px 0 #00FFFF,
-        4px 4px 10px rgba(0,0,0,0.8);
-      letter-spacing: 1px;
-    }
-
-    .testing-mode-toggle {
-      display: flex;
-      gap: 12px;
-      margin: 12px 0;
-    }
-
-    .toggle-btn {
-      flex: 1;
-      padding: 12px;
-      border: 2px solid #00FFFF;
-      background: rgba(0,255,0,0.1);
-      color: #00FFFF;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 0.7rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-shadow: 0 0 8px rgba(0,255,255,0.6);
-    }
-
-    .toggle-btn.active {
-      background: linear-gradient(135deg, rgba(0,255,0,0.4), rgba(0,255,255,0.3));
-      border-color: #00FF00;
-      box-shadow: 0 0 15px rgba(0,255,0,0.6);
-      color: #00FF00;
-      text-shadow:
-        0 0 8px rgba(0,255,0,0.8),
-        1px 1px 0 #00FFFF;
-    }
-
     /* Retro Quip Overlay */
     #retro-quip-overlay {
       position: fixed;
@@ -1080,7 +1025,6 @@
     themes: [], polls: [],
     prevPotBalance: 100,
     pendingResult: null,
-    testingMode: localStorage.getItem('testingMode') === 'true',
     showingVictoryStadium: false,
   };
 
@@ -1269,6 +1213,22 @@
       this.tone(top * 0.78, t + 0.13, 0.14, 'triangle', 0.14);
       // Low buzz on the land
       this.tone(eventType === 'handball' ? 130 : 110, t + 0.3, 0.22, 'sawtooth', 0.12);
+    },
+    // Bonus square SFX — a quick rising arpeggio for a won shot, a
+    // descending triangle "wah-wah" with a low sawtooth landing for a lost
+    // one. Synth only: mute-aware, offline-safe, no files.
+    async bonusWin() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      [523, 659, 784, 1047].forEach((freq, i) => this.tone(freq, t + i * 0.07, 0.07, 'square', 0.16));
+    },
+    async bonusLose() {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      this.tone(392, t, 0.12, 'triangle', 0.14);
+      this.tone(330, t + 0.13, 0.12, 'triangle', 0.14);
+      this.tone(262, t + 0.26, 0.14, 'triangle', 0.14);
+      this.tone(98, t + 0.42, 0.2, 'sawtooth', 0.1);
     },
     introElement: null,
     playIntro() {
@@ -1710,11 +1670,8 @@
 
       state.session = session;
       state.next_opponent_theme = next_opponent_theme;
-      // In real token mode, use the synced balance from the sidecar (via /api/session which calls getWalletBalance)
-      // In demo/testing mode, use the frontend-managed 1000 tokens
-      if (!testingModeActive) {
-        state.walletBalance = wallet_balance || state.walletBalance || 1000;
-      }
+      // Use the synced balance from the sidecar (via /api/session which calls getWalletBalance)
+      state.walletBalance = wallet_balance || state.walletBalance || 1000;
       state.potBalance = captain_pot_balance || 100;
       state.prevPotBalance = state.potBalance;
       // Seed the last-won marker from the server so the first poll doesn't
@@ -1824,16 +1781,10 @@
         </div>`;
     }
 
-    const modeIndicator = `
-      <div style="padding:12px 16px;text-align:center;background:rgba(255,255,255,0.02);border-top:1px solid rgba(255,255,255,0.08);">
-        <div style="display:inline-block;background:${testingModeActive ? 'rgba(0,255,255,0.15)' : 'rgba(251,191,36,0.15)'};color:${testingModeActive ? '#00ffff' : '#fbbf24'};font-family:'Space Mono',monospace;font-size:0.7rem;font-weight:700;padding:4px 10px;border-radius:5px;border:1px solid ${testingModeActive ? 'rgba(0,255,255,0.4)' : 'rgba(251,191,36,0.4)'};letter-spacing:0.05em;text-shadow:${testingModeActive ? '0 0 6px rgba(0,255,255,0.4)' : 'none'};">${testingModeActive ? '🧪 Testing Mode' : '💰 Real Tokens'}</div>
-      </div>`;
-
     body.innerHTML = `
       ${statsRow}
       ${!inProgress ? languageSelectorHtml() : ''}
       ${mainSection}
-      ${modeIndicator}
       `;
 
     maybeAutoShowInfo();
@@ -1900,10 +1851,6 @@
   };
 
   async function doStartNewMap() {
-    // Save testing-mode carry-over credits before starting new map
-    if (testingModeActive && state.credits && state.credits.credits_remaining > 0) {
-      state._pendingTestingCarryover = { ...state.credits };
-    }
     const r = await api('POST', '/api/session/start-map');
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -1989,22 +1936,7 @@
         state.credits.credits_remaining = parseInt(state.credits.credits_remaining) || 0;
       }
 
-      // Restore testing-mode carry-over credits if available
-      if (state._pendingTestingCarryover && testingModeActive) {
-        if (!state.credits) {
-          state.credits = state._pendingTestingCarryover;
-          state.regularSessionId = state._pendingTestingCarryover.id;
-        } else {
-          state.credits.credits_remaining = (parseInt(state.credits.credits_remaining) || 0) +
-                                            (state._pendingTestingCarryover.credits_remaining || 0);
-        }
-        state._pendingTestingCarryover = null;
-      }
-
-      // In testing mode, preserve the frontend-managed balance; real mode syncs from server
-      if (!testingModeActive) {
-        state.walletBalance = d.wallet_balance;
-      }
+      state.walletBalance = d.wallet_balance;
       state.potBalance = d.captain_pot_balance;
       state.prevPotBalance = d.captain_pot_balance;
       state.squaresRevealed = d.squares_revealed;
@@ -2249,10 +2181,6 @@
       sessId = state.regularSessionId;
     }
 
-    // This shot comes out of regular credits only when no bonus shot is
-    // available (bonus shots are used first)
-    const usedRegular = bonusCredRemaining === 0 && regularCredRemaining > 0;
-
     // Only show "buy more shots" modal if both regular and bonus credits are exhausted
     if (regularCredRemaining === 0 && bonusCredRemaining === 0) {
       const p = pricingForStage(state.game.stage_idx);
@@ -2273,11 +2201,8 @@
     }
     playBlip();
 
-    // In testing mode with active credits, handle locally without session_id
-    // (the session_id was a frontend-only ID and won't exist in the DB)
     const body = { square_index: idx };
-    if (sessId && !testingModeActive) body.session_id = sessId;
-    if (testingModeActive) body.testing_mode = true;
+    if (sessId) body.session_id = sessId;
 
     // Disable board during request
     document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
@@ -2296,32 +2221,16 @@
       if (!game.revealed) game.revealed = new Array(state.gridSize || 36).fill(false);
       game.revealed[idx] = true;
       state.squaresRevealed = d.squares_revealed;
-      // In testing mode, balance is frontend-managed — never overwrite from server.
-      if (!testingModeActive) {
-        state.walletBalance = d.wallet_balance;
-      }
+      state.walletBalance = d.wallet_balance;
       state.prizePot = prizeDecay(state.squaresRevealed, state.gridSize);
 
-      // Update credits based on which session was used
-      if (d.was_bonus_shot) {
-        state.bonusCreditsAvailable = d.bonus_credits_available || 0;
-      } else if (testingModeActive) {
-        // In testing mode bought shots live only in the browser: the server
-        // finds no game_sessions row for them, so its regular_credits_remaining
-        // is always 0. Count down locally instead of trusting the server.
-        if (usedRegular && state.credits) {
-          state.credits.credits_remaining = Math.max(0, parseInt(state.credits.credits_remaining) - 1);
-        }
-      } else if (state.credits && d.regular_credits_remaining !== undefined) {
+      // Always read both shot counts and the bonus row id from the response,
+      // so free and bought shots stay apart and a won bonus shot (or a
+      // penalty free attempt on a fresh row) is spendable straight away.
+      state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+      state.bonusSessionId = d.bonus_session_id || null;
+      if (state.credits && d.regular_credits_remaining !== undefined) {
         state.credits.credits_remaining = d.regular_credits_remaining;
-      }
-      // Apply testing-mode prize and jackpot winnings to wallet
-      if (testingModeActive && d.hit) {
-        state.walletBalance = (state.walletBalance || 0) + (d.prize_paid || 0) + (d.jackpot_paid || 0);
-      }
-      // Apply testing-mode final-game refund to wallet
-      if (testingModeActive && d.credits_refunded > 0) {
-        state.walletBalance = (state.walletBalance || 0) + d.credits_refunded;
       }
 
       // If THIS player just won the jackpot, record their win timestamp so the
@@ -2377,11 +2286,6 @@
           const sign = d.event.delta >= 0 ? '+' : '-';
           const msg = t(msgKey, { amount: sign + amount + ' t' });
           showRetroQuip(msg, tileRow, meta.kind === 'good' ? 'event-good' : 'event-bad', 3500);
-          // Testing mode: server skips wallet ops, apply the delta frontend-side
-          if (testingModeActive) {
-            state.walletBalance = (state.walletBalance || 0) + d.event.delta;
-            updateHud();
-          }
         } else {
           if (cell) {
             // Plain miss — expose the empty square with a 3D flip, then gravity fall off-screen
@@ -2402,8 +2306,18 @@
             revealCleanup = cleanupTime;
             setTimeout(() => { cell.classList.add('open'); cell.classList.remove('tile-fall'); if (isFast) cell.classList.remove('reveal-fast'); cell.style.pointerEvents = 'none'; }, cleanupTime);
           }
-          const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-          showRetroQuip(quip, tileRow);
+          // A bonus square opens like a plain miss (flip and fall) but its
+          // banner replaces the random quip, with its own sound.
+          if (d.bonus_square) {
+            const win = d.bonus_square.outcome === 'win';
+            const key = win ? 'bonus.win'
+              : (d.bonus_square.delta === -1 ? 'bonus.lose' : 'bonus.lose_none');
+            if (win) Sound.bonusWin(); else Sound.bonusLose();
+            showRetroQuip(t(key), tileRow, win ? 'event-good' : 'event-bad', 3500);
+          } else {
+            const quip = QUIPS[Math.floor(Math.random() * QUIPS.length)];
+            showRetroQuip(quip, tileRow);
+          }
         }
         document.querySelectorAll('.tile:not(.open):not(.tile-fall):not(.reveal-fade-slow)').forEach(c => c.style.pointerEvents = '');
         // The fading or falling tile stays untappable until its own timeout opens it
@@ -2802,32 +2716,6 @@
       return;
     }
 
-    if (testingModeActive) {
-      // In testing mode, compute the correct cost based on actual stage pricing
-      const pricing = pricingForStage(state.game.stage_idx);
-      const cost = pricing['bundle' + size];
-
-      // Check if user has enough balance
-      if (state.walletBalance < cost) {
-        showToast('Not enough tokens — try a smaller bundle below 👇', 3000);
-        return;
-      }
-
-      // Deduct the correct cost and set up credits with proper tokens_per_credit
-      state.walletBalance = state.walletBalance - cost;
-      state.credits = {
-        id: Math.random().toString(36).substr(2, 9), // Unique frontend-only ID
-        credits_remaining: size,
-        tokens_per_credit: pricing.perShot
-      };
-      state.regularSessionId = state.credits.id;
-      updateHud();
-      updateCreditsDisplay();
-      Sound.playSuccesspurchase();
-      showToast(t('game.shots_loaded', {size: size}), 2000);
-      return;
-    }
-
     const r = await api('POST', `/api/games/${state.game.id}/bundle`, { bundle_size: size });
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -2875,7 +2763,7 @@
     modal.className = 'modal-bg';
     modal.innerHTML = `<div class="modal-box">
       <div style="font-family:'DM Sans',sans-serif;font-weight:700;margin-bottom:8px;">Leave this map?</div>
-      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Unused bundle credits will be forfeited. The map will reappear for others after a short cooldown.</p>
+      <p style="font-size:0.82rem;color:#888;margin-bottom:16px;">Your unused shots come with you to your next map. The map will reappear for others after a short cooldown.</p>
       <div style="display:flex;gap:10px;">
         <button class="bundle-btn btn-ghost" style="flex:1;" onclick="this.closest('.modal-bg').remove()">Stay</button>
         <button class="bundle-btn btn-red" style="flex:1;" onclick="confirmLeave(${id},this.closest('.modal-bg'))">Leave</button>
@@ -2886,10 +2774,6 @@
 
   window.confirmLeave = async function(id, modal) {
     if (modal) modal.remove();
-    if (testingModeActive) {
-      state.walletBalance = 1000;
-      state.credits = null;
-    }
     await api('POST', `/api/games/${id}/leave`);
     navigate('#lobby');
   };
@@ -2929,7 +2813,7 @@
     if (r.ok) {
       const d = await r.json();
       totalWon = d.session ? d.session.total_tokens_won : 0;
-      if (!testingModeActive) state.walletBalance = d.wallet_balance;
+      state.walletBalance = d.wallet_balance;
     }
     const leagueR = await api('GET', '/api/league');
     let myRank = '?', myScore = 0, username = '';
@@ -2991,10 +2875,6 @@
   };
   window.playAgain = async function() {
     stopConfetti();
-    if (testingModeActive) {
-      state.walletBalance = 1000;
-      state.credits = null;
-    }
     if (state.session) {
       await api('POST', '/api/session', { my_team_slug: state.session.my_team_slug });
       state.session = null;
@@ -3105,37 +2985,8 @@
   // ═══════════════════════════════════════════════════════════════
   // FAQ PAGE
   // ═══════════════════════════════════════════════════════════════
-  let testingModeActive = true;
-  let testingModeAvailable = false;
-
   async function renderFaq() {
     const app = document.getElementById('app');
-
-    // Check if testing mode is available
-    try {
-      const r = await api('GET', '/api/testing-mode');
-      if (r.ok) {
-        const d = await r.json();
-        testingModeAvailable = d.available;
-      }
-    } catch (e) {
-      console.error('Failed to check testing mode availability:', e);
-    }
-
-    const testingModeHtml = testingModeAvailable ? `
-        <!-- Testing Mode Toggle Section -->
-        <div class="testing-mode-section">
-          <div class="testing-mode-title">${t('testing.mode.label')}</div>
-          <p style="color:#00FF00;font-size:0.85rem;margin:0 0 12px 0;">Toggle between Testing (fake wallets) and Real Token Mode</p>
-          <div class="testing-mode-toggle">
-            <button class="toggle-btn ${testingModeActive ? '' : 'active'}" onclick="switchToRealMode()">🎮 REAL TOKENS</button>
-            <button class="toggle-btn ${testingModeActive ? 'active' : ''}" onclick="switchToTestingMode()">🧪 TEST MODE</button>
-          </div>
-          <p style="color:#00FFFF;font-size:0.8rem;margin:8px 0 0 0;text-shadow:0 0 4px rgba(0,255,255,0.6);">
-            ${testingModeActive ? t('testing.mode.description.testing') : t('testing.mode.description.real')}
-          </p>
-        </div>
-    ` : '';
 
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
@@ -3143,8 +2994,6 @@
       <div style="max-width:480px;margin:0 auto;padding:24px 16px;width:100%;">
         <h1 style="font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:700;margin-bottom:24px;">${t('faq.title')}</h1>
         ${languageSelectorHtml()}
-
-        ${testingModeHtml}
 
         <div class="faq-section">
           <h2>${t('faq.the_game')}</h2>
@@ -3310,71 +3159,12 @@
     </div>`;
   }
 
-  window.switchToTestingMode = function() {
-    testingModeActive = true;
-    state.testingMode = true;
-    localStorage.setItem('testingMode', 'true');
-    state.walletBalance = 1000;
-    showToast('🧪 Testing Mode enabled - 1000 credit fake wallets');
-    renderFaq();
-    renderLobby();
-    updateHud();
-  };
-
-  window.switchToRealMode = async function() {
-    testingModeActive = false;
-    state.testingMode = false;
-    localStorage.removeItem('testingMode');
-    showToast('💰 Real Token Mode enabled - syncing your blockchain balance...');
-
-    // Fetch real wallet balance from sidecar via sync endpoint
-    // Pass testingMode=0 to indicate we're in real mode now
-    try {
-      const r = await api('GET', '/api/wallet/sync?testingMode=0');
-      if (r.ok) {
-        const d = await r.json();
-        const syncedBalance = d.balance || 1000;
-        state.walletBalance = syncedBalance;
-        console.log('[switchToRealMode] Synced real balance from sidecar:', syncedBalance);
-
-        // Update HUD display immediately with the synced balance
-        updateHud();
-
-        if (!d.synced) {
-          console.warn('Wallet sync warning:', d.error);
-          if (d.error && d.error.includes('timeout')) {
-            showToast('Wallet sync timed out — using cached balance', 3000);
-          } else if (d.error && d.error.includes('not initialized')) {
-            showToast('Wallet not found — ensure wallet is connected', 3000);
-          }
-        } else {
-          showToast('Real wallet balance synced: ' + Math.round(syncedBalance) + ' tokens');
-        }
-      } else {
-        const e = await r.json().catch(() => ({}));
-        console.error('Wallet sync failed:', e);
-        state.walletBalance = 1000; // Fallback
-        if (e.error && e.error.includes('timeout')) {
-          showToast('Wallet sync timed out — using default balance', 3000);
-        } else {
-          showToast('Wallet sync failed — using default balance', 3000);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to fetch wallet balance:', err);
-      state.walletBalance = 1000; // Fallback
-      showToast('Wallet sync failed — using default balance', 3000);
-    }
-
-    navigate('#lobby');
-  };
-
   // ═══════════════════════════════════════════════════════════════
   // INIT
   // ═══════════════════════════════════════════════════════════════
   async function init() {
-    // Initialize testing mode from localStorage, default to true (demo/testing mode)
-    testingModeActive = localStorage.getItem('testingMode') !== 'false';
+    // Testing mode is gone: clear the stale flag left in older browsers
+    try { localStorage.removeItem('testingMode'); } catch(_) {}
 
     // Initialize i18n system
     try {
@@ -3395,20 +3185,16 @@
       if (r.ok) {
         const d = await r.json();
         state.session = d.session;
-        if (testingModeActive) {
-          state.walletBalance = 1000;
-        } else {
-          state.walletBalance = d.wallet_balance || 1000;
-          // In real mode, fetch the freshest wallet balance from sidecar
-          try {
-            const walletR = await api('GET', '/api/wallet/sync');
-            if (walletR.ok) {
-              const walletD = await walletR.json();
-              state.walletBalance = walletD.balance || state.walletBalance;
-            }
-          } catch (err) {
-            console.error('Failed to sync wallet balance on init:', err);
+        state.walletBalance = d.wallet_balance || 1000;
+        // Fetch the freshest wallet balance from sidecar
+        try {
+          const walletR = await api('GET', '/api/wallet/sync');
+          if (walletR.ok) {
+            const walletD = await walletR.json();
+            state.walletBalance = walletD.balance || state.walletBalance;
           }
+        } catch (err) {
+          console.error('Failed to sync wallet balance on init:', err);
         }
         state.potBalance = d.captain_pot_balance || 100;
         state.prevPotBalance = state.potBalance;
