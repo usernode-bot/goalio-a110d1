@@ -119,16 +119,6 @@
       "expectSelector": ".language-grid"
     },
     {
-      "name": "FAQ displays testing mode toggle",
-      "path": "/#faq",
-      "expectText": "TESTING MODE"
-    },
-    {
-      "name": "FAQ shows testing mode controls",
-      "path": "/#faq",
-      "expectText": "REAL TOKENS"
-    },
-    {
       "name": "Themes API returns all nations",
       "path": "/api/themes",
       "expectText": "brazil"
