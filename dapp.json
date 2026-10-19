@@ -62,9 +62,9 @@
       "expectSelector": ".league-table"
     },
     {
-      "name": "League page shows prize deadline",
+      "name": "League page shows collaborators invite",
       "path": "/#league",
-      "expectText": "19 July 2026"
+      "expectText": "collaborators group"
     },
     {
       "name": "FAQ page renders",
