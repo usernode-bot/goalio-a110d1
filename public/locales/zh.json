@@ -181,5 +181,17 @@
   "events.penalty_save": "扑出点球!{amount}",
   "bonus.win": "奖励格！+1 次射门",
   "bonus.lose": "奖励格！-1 次射门",
-  "bonus.lose_none": "奖励格！没有可失去的射门"
+  "bonus.lose_none": "奖励格！没有可失去的射门",
+  "penalty_kick.title": "点球",
+  "penalty_kick.sub": "选择方向，让力度停在金色区域，进球可得 +50 t",
+  "penalty_kick.left": "左",
+  "penalty_kick.centre": "中",
+  "penalty_kick.right": "右",
+  "penalty_kick.power": "力度",
+  "penalty_kick.shoot": "射门",
+  "penalty_kick.goal": "进球！",
+  "penalty_kick.saved": "被扑出！",
+  "penalty_kick.weak": "力度不足",
+  "penalty_kick.reward": "+{amount} t 已加入你的钱包和联赛积分",
+  "penalty_kick.continue": "继续"
 }

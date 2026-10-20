@@ -132,6 +132,16 @@
       "expectSelector": "svg"
     },
     {
+      "name": "Penalty kick demo opens the kick overlay",
+      "path": "/#demo/penalty-kick",
+      "expectText": "Penalty Kick"
+    },
+    {
+      "name": "Penalty kick demo shows pitch and aim buttons",
+      "path": "/#demo/penalty-kick",
+      "expectSelector": ".pk-pitch"
+    },
+    {
       "name": "Final refund demo seeds Final board with carried shots",
       "path": "/#demo/final-refund",
       "expectSelector": ".game-grid"

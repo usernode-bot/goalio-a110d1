@@ -181,5 +181,17 @@
   "events.penalty_save": "ELFMETER GEHALTEN! {amount}",
   "bonus.win": "BONUSFELD! +1 SCHUSS",
   "bonus.lose": "BONUSFELD! -1 SCHUSS",
-  "bonus.lose_none": "BONUSFELD! KEINE SCHÜSSE ZUM VERLIEREN"
+  "bonus.lose_none": "BONUSFELD! KEINE SCHÜSSE ZUM VERLIEREN",
+  "penalty_kick.title": "Elfmeter",
+  "penalty_kick.sub": "Wähle eine Seite, stoppe die Kraft im goldenen Bereich und triff für +50 t",
+  "penalty_kick.left": "Links",
+  "penalty_kick.centre": "Mitte",
+  "penalty_kick.right": "Rechts",
+  "penalty_kick.power": "Kraft",
+  "penalty_kick.shoot": "Schießen",
+  "penalty_kick.goal": "TOR!",
+  "penalty_kick.saved": "GEHALTEN!",
+  "penalty_kick.weak": "Nicht genug Kraft",
+  "penalty_kick.reward": "+{amount} t zu deiner Brieftasche und Ligapunktzahl hinzugefügt",
+  "penalty_kick.continue": "Weiter"
 }

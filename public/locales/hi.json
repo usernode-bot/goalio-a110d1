@@ -181,5 +181,17 @@
   "events.penalty_save": "पेनल्टी बचाया! {amount}",
   "bonus.win": "बोनस वर्ग! +1 शॉट",
   "bonus.lose": "बोनस वर्ग! -1 शॉट",
-  "bonus.lose_none": "बोनस वर्ग! खोने के लिए कोई शॉट नहीं"
+  "bonus.lose_none": "बोनस वर्ग! खोने के लिए कोई शॉट नहीं",
+  "penalty_kick.title": "पेनल्टी किक",
+  "penalty_kick.sub": "एक तरफ़ चुनें, पावर को सुनहरे क्षेत्र में रोकें और +50 t के लिए गोल करें",
+  "penalty_kick.left": "बाएँ",
+  "penalty_kick.centre": "मध्य",
+  "penalty_kick.right": "दाएँ",
+  "penalty_kick.power": "पावर",
+  "penalty_kick.shoot": "शूट करें",
+  "penalty_kick.goal": "गोल!",
+  "penalty_kick.saved": "बचाया गया!",
+  "penalty_kick.weak": "पर्याप्त पावर नहीं",
+  "penalty_kick.reward": "+{amount} t आपके वॉलेट और लीग स्कोर में जोड़े गए",
+  "penalty_kick.continue": "जारी रखें"
 }

@@ -181,5 +181,17 @@
   "events.penalty_save": "PENALTI KURTARILDI! {amount}",
   "bonus.win": "BONUS KARE! +1 ŞUT",
   "bonus.lose": "BONUS KARE! -1 ŞUT",
-  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK"
+  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK",
+  "penalty_kick.title": "Penaltı",
+  "penalty_kick.sub": "Bir yön seç, gücü altın bölgede durdur ve +50 t için gol at",
+  "penalty_kick.left": "Sol",
+  "penalty_kick.centre": "Orta",
+  "penalty_kick.right": "Sağ",
+  "penalty_kick.power": "Güç",
+  "penalty_kick.shoot": "Şut çek",
+  "penalty_kick.goal": "GOL!",
+  "penalty_kick.saved": "KURTARILDI!",
+  "penalty_kick.weak": "Yeterli güç yok",
+  "penalty_kick.reward": "+{amount} t cüzdanına ve lig puanına eklendi",
+  "penalty_kick.continue": "Devam"
 }

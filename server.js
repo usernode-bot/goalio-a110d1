@@ -3,6 +3,7 @@ const compression = require('compression');
 const path = require('path');
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,6 +16,13 @@ const pool = new Pool({
 const USERNODE_JWT_PUBLIC_KEY = process.env.USERNODE_JWT_PUBLIC_KEY;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const HOUSE_BONUS_TOKENS = 50;
+
+// Penalty kick mini-game: free bonus shot on every other stage (odd indexes:
+// Group Match 2, Round of 16, Semi-Final). A goal needs an aim the keeper did
+// not pick and power in the strong zone (the top of the gauge).
+const PENALTY_KICK_BONUS = 50;
+const PENALTY_KICK_STRONG_MIN = 60;
+const isPenaltyKickStage = (stageIdx) => Number(stageIdx) % 2 === 1;
 
 const PUBLIC_API_PATHS = new Set(['/health', '/api/league', '/api/session', '/api/themes', '/api/captain-pot', '/api/env', '/api/admin/check', '/api/admin/reset-game', '/favicon.ico']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/games/'];
@@ -630,6 +638,7 @@ app.get('/api/games/:id', async (req, res) => {
     let credRows = [];
     let bonusCreditsAvailable = 0;
     let walletBalance = 1000;
+    let penaltyKickDue = false;
     if (req.user) {
       const { rows } = await client.query(`
         SELECT id, credits_total, credits_used, tokens_per_credit, is_bonus_credit,
@@ -646,6 +655,15 @@ app.get('/api/games/:id', async (req, res) => {
         .reduce((sum, row) => sum + (row.credits_total - row.credits_used), 0);
       await ensureWallet(client, req.user.id, req.user.username);
       walletBalance = await getWalletBalance(client, req.user.id);
+
+      // One free penalty kick per odd-stage game, until it has been taken.
+      if (game.status === 'active' && isPenaltyKickStage(game.stage_idx)) {
+        const { rows: pkRows } = await client.query(
+          'SELECT 1 FROM penalty_kicks WHERE game_id = $1 AND user_id = $2 LIMIT 1',
+          [game.id, req.user.id]
+        );
+        penaltyKickDue = pkRows.length === 0;
+      }
     }
 
     const { rows: potRows } = await client.query(
@@ -688,6 +706,7 @@ app.get('/api/games/:id', async (req, res) => {
       pricing,
       penalty_square: game.penalty_square,
       penalty_found: game.penalty_found,
+      penalty_kick_due: penaltyKickDue,
       bonus_credits_available: bonusCreditsAvailable
     });
   } catch (err) {
@@ -806,6 +825,102 @@ app.post('/api/games/:id/bundle', async (req, res) => {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Bundle endpoint error:', err.message);
     res.status(500).json({ error: 'Bundle purchase failed' });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/games/:id/penalty-kick — the free penalty kick mini-game on
+// every other stage. The keeper side and the scoring rule live here so the
+// client cannot rig them; the one-row-per-(game,user) key caps the reward at
+// one kick per match, whatever the client retries.
+app.post('/api/games/:id/penalty-kick', async (req, res) => {
+  const { aim, power } = req.body;
+  if (!['left', 'centre', 'right'].includes(aim)) {
+    return res.status(400).json({ error: 'Invalid aim' });
+  }
+  const powerVal = Number.parseInt(power, 10);
+  if (!Number.isInteger(powerVal) || powerVal < 0 || powerVal > 100) {
+    return res.status(400).json({ error: 'Invalid power' });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Lock the game row (same checks as the guess handler)
+    const { rows: gameRows } = await client.query(
+      'SELECT id, status, active_player_id, stage_idx FROM games WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    if (!gameRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    const game = gameRows[0];
+    if (game.status !== 'active') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Game not active' });
+    }
+    if (game.active_player_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Not your game' });
+    }
+    if (!isPenaltyKickStage(game.stage_idx)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'No penalty kick at this stage' });
+    }
+
+    await ensureWallet(client, req.user.id, req.user.username);
+
+    // ON CONFLICT DO NOTHING: a second kick for the same game is refused, so
+    // double taps and replays cannot repeat the bonus.
+    const keeper = ['left', 'centre', 'right'][crypto.randomInt(3)];
+    const scored = aim !== keeper && powerVal >= PENALTY_KICK_STRONG_MIN;
+    const { rowCount: inserted } = await client.query(`
+      INSERT INTO penalty_kicks (game_id, user_id, aim, keeper, power, scored, bonus)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT DO NOTHING
+    `, [game.id, req.user.id, aim, keeper, powerVal, scored, scored ? PENALTY_KICK_BONUS : 0]);
+    if (!inserted) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Penalty kick already taken' });
+    }
+
+    let walletBalance;
+    if (scored) {
+      // Wallet + league score + tournament total, credited together.
+      walletBalance = await creditWallet(client, req.user.id, PENALTY_KICK_BONUS, 'penalty_kick', game.id);
+      await client.query(
+        'UPDATE tournament_sessions SET total_tokens_won = total_tokens_won + $2, updated_at = NOW() WHERE user_id = $1',
+        [req.user.id, PENALTY_KICK_BONUS]
+      );
+      await client.query(`
+        INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed, updated_at)
+        VALUES ($1, $2, $2, $3, 0, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          total_tokens_won = player_stats.total_tokens_won + $3,
+          username = $2, updated_at = NOW()
+      `, [req.user.id, req.user.username, PENALTY_KICK_BONUS]);
+    } else {
+      walletBalance = await getWalletBalance(client, req.user.id);
+    }
+
+    await client.query('COMMIT');
+
+    res.json({
+      scored,
+      aim,
+      keeper,
+      power: powerVal,
+      weak: powerVal < PENALTY_KICK_STRONG_MIN,
+      bonus: scored ? PENALTY_KICK_BONUS : 0,
+      wallet_balance: walletBalance
+    });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Penalty kick error:', err);
+    res.status(500).json({ error: err.message });
   } finally {
     client.release();
   }
@@ -1472,6 +1587,32 @@ app.use(express.static(path.join(__dirname, 'public')));
 // coin animation on the win card is reachable without playing six rounds.
 // The client route #demo/final-refund calls this, then start-map consolidates
 // the carried shots into a fresh Final board via carryOverShots.
+app.post('/api/staging/demo-penalty-kick', async (req, res) => {
+  if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
+  const client = await pool.connect();
+  try {
+    await ensureWallet(client, req.user.id, req.user.username);
+    await client.query('UPDATE player_wallets SET balance = 5000 WHERE user_id = $1', [req.user.id]);
+    // Stage 1 = Group Match 2, the first penalty-kick stage (every other game).
+    await client.query(`
+      INSERT INTO tournament_sessions
+        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
+      VALUES ($1, 'brazil', 1, '{brazil}', 0, false, NULL, 'spain')
+      ON CONFLICT (user_id) DO UPDATE SET
+        my_team_slug = 'brazil', stage_idx = 1, played_slugs = '{brazil}',
+        total_tokens_won = 0, session_complete = false,
+        current_game_id = NULL, next_opponent_slug = 'spain', updated_at = NOW()
+    `, [req.user.id]);
+    await client.query('DELETE FROM game_sessions WHERE user_id = $1', [req.user.id]);
+    await client.query('DELETE FROM penalty_kicks WHERE user_id = $1', [req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.post('/api/staging/demo-final-refund', async (req, res) => {
   if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
   const client = await pool.connect();
@@ -1610,6 +1751,19 @@ async function start() {
   )`);
   await pool.query(`ALTER TABLE game_sessions ADD COLUMN IF NOT EXISTS is_bonus_credit BOOLEAN DEFAULT false`);
   await pool.query(`COMMENT ON TABLE game_sessions IS 'staging:private'`);
+
+  await pool.query(`CREATE TABLE IF NOT EXISTS penalty_kicks (
+    game_id INTEGER NOT NULL REFERENCES games(id),
+    user_id INTEGER NOT NULL,
+    aim VARCHAR(8) NOT NULL,
+    keeper VARCHAR(8) NOT NULL,
+    power SMALLINT NOT NULL,
+    scored BOOLEAN NOT NULL,
+    bonus INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (game_id, user_id)
+  )`);
+  await pool.query(`COMMENT ON TABLE penalty_kicks IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS tournament_sessions (
     id SERIAL PRIMARY KEY,
