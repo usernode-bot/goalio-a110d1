@@ -1302,7 +1302,8 @@ app.get('/api/league', async (req, res) => {
     const { rows: rankRows } = await pool.query(`
       SELECT user_id, username,
              COALESCE(display_name, username) AS display_name,
-             total_tokens_won, sessions_completed
+             total_tokens_won, sessions_completed,
+             RANK() OVER (ORDER BY total_tokens_won DESC) AS rank
       FROM player_stats
       ORDER BY total_tokens_won DESC
       LIMIT 20
@@ -1751,6 +1752,19 @@ async function start() {
     await pool.query(`
       INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
       VALUES (-1, 'staging-test-user', 'staging-test-user', 0, 0)
+      ON CONFLICT (user_id) DO NOTHING
+    `);
+
+    // Fake leaderboard players, with a deliberate tie at 1,200, so the Top 20
+    // table and the shared rank numbering are visible in staging without
+    // playing games. Rankings only.
+    await pool.query(`
+      INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
+      VALUES
+        (-11, 'staging-striker',    'Staging Striker',    1850, 6),
+        (-12, 'staging-midfielder', 'Staging Midfielder', 1200, 4),
+        (-13, 'staging-winger',     'Staging Winger',     1200, 4),
+        (-14, 'staging-keeper',     'Staging Keeper',      940, 3)
       ON CONFLICT (user_id) DO NOTHING
     `);
 

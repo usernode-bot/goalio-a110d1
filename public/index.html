@@ -3047,13 +3047,14 @@
 
     let rows = d.rankings.map((r, i) => `
       <tr class="${d.current_player && d.current_player.user_id == r.user_id ? 'my-row' : ''}">
-        <td class="league-rank">#${i+1}</td>
+        <td class="league-rank">#${r.rank}</td>
         <td class="league-name">${r.display_name || r.username}</td>
         <td class="league-score">${Math.round(r.total_tokens_won).toLocaleString()} t</td>
       </tr>`).join('');
 
     let myRow = '';
-    if (d.current_player && d.current_player.rank > 20) {
+    const myRowInList = d.current_player && d.rankings.some(r => d.current_player.user_id == r.user_id);
+    if (d.current_player && !myRowInList) {
       myRow = `<tr><td colspan="3" style="padding:4px;border-top:1px solid rgba(255,255,255,0.1);"></td></tr>
         <tr class="my-row"><td class="league-rank">#${d.current_player.rank}</td>
           <td class="league-name">${d.current_player.display_name || d.current_player.username} (you)</td>

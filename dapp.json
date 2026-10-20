@@ -107,6 +107,11 @@
       "expectText": "rankings"
     },
     {
+      "name": "League API gives tied players the same rank",
+      "path": "/api/league",
+      "expectText": "\"rank\":\"2\""
+    },
+    {
       "name": "Wallet API returns balance",
       "path": "/api/wallet",
       "expectText": "balance"
