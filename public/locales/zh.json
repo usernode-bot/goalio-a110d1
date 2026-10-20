@@ -191,5 +191,19 @@
   "penalty_kick.saved": "扑出！",
   "penalty_kick.weak": "力量不足",
   "penalty_kick.reward": "+{amount} t 已加入你的钱包和联赛积分",
-  "penalty_kick.continue": "继续"
+  "penalty_kick.continue": "继续",
+  "penalty.title": "点球！",
+  "penalty.subtitle": "选择射门位置。进球可赢得 {n} 次免费射门。",
+  "penalty.goal": "进球！+{n} 次免费射门",
+  "penalty.saved": "扑出！",
+  "penalty.continue": "继续",
+  "penalty.close": "关闭",
+  "penalty.zone_0": "左上",
+  "penalty.zone_1": "中上",
+  "penalty.zone_2": "右上",
+  "penalty.zone_3": "左下",
+  "penalty.zone_4": "中下",
+  "penalty.zone_5": "右下",
+  "penalty.found_toast": "你发现了一个点球格！你赢得了 {n} 次免费射门！",
+  "penalty.failed": "射门未能发送。它仍在这张地图上等待。"
 }

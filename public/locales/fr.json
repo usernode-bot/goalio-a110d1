@@ -191,5 +191,19 @@
   "penalty_kick.saved": "ARRÊTÉ !",
   "penalty_kick.weak": "Pas assez de puissance",
   "penalty_kick.reward": "+{amount} t ajoutés à ton portefeuille et à ton score de ligue",
-  "penalty_kick.continue": "Continuer"
+  "penalty_kick.continue": "Continuer",
+  "penalty.title": "PENALTY !",
+  "penalty.subtitle": "Choisis ton coin. Marque pour gagner {n} tirs gratuits.",
+  "penalty.goal": "BUT ! +{n} tirs gratuits",
+  "penalty.saved": "ARRÊTÉ !",
+  "penalty.continue": "Continuer",
+  "penalty.close": "Fermer",
+  "penalty.zone_0": "En haut à gauche",
+  "penalty.zone_1": "En haut au milieu",
+  "penalty.zone_2": "En haut à droite",
+  "penalty.zone_3": "En bas à gauche",
+  "penalty.zone_4": "En bas au milieu",
+  "penalty.zone_5": "En bas à droite",
+  "penalty.found_toast": "Tu as trouvé une case penalty ! Tu as gagné {n} tirs gratuits !",
+  "penalty.failed": "Le tir n'a pas pu être envoyé. Il attend toujours sur cette carte."
 }

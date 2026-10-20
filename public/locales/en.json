@@ -191,5 +191,19 @@
   "penalty_kick.saved": "SAVED!",
   "penalty_kick.weak": "Not enough power",
   "penalty_kick.reward": "+{amount} t added to your wallet and league score",
-  "penalty_kick.continue": "Continue"
+  "penalty_kick.continue": "Continue",
+  "penalty.title": "PENALTY!",
+  "penalty.subtitle": "Pick your spot. Score to win {n} free attempts.",
+  "penalty.goal": "GOAL! +{n} free attempts",
+  "penalty.saved": "SAVED!",
+  "penalty.continue": "Continue",
+  "penalty.close": "Close",
+  "penalty.zone_0": "Top left",
+  "penalty.zone_1": "Top middle",
+  "penalty.zone_2": "Top right",
+  "penalty.zone_3": "Bottom left",
+  "penalty.zone_4": "Bottom middle",
+  "penalty.zone_5": "Bottom right",
+  "penalty.found_toast": "You found a penalty square! You won {n} free attempts!",
+  "penalty.failed": "The kick could not be sent. It is still waiting on this map."
 }

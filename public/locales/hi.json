@@ -191,5 +191,19 @@
   "penalty_kick.saved": "बचाया!",
   "penalty_kick.weak": "पर्याप्त पावर नहीं",
   "penalty_kick.reward": "+{amount} t आपके वॉलेट और लीग स्कोर में जोड़े गए",
-  "penalty_kick.continue": "जारी रखें"
+  "penalty_kick.continue": "जारी रखें",
+  "penalty.title": "पेनल्टी!",
+  "penalty.subtitle": "अपना कोना चुनें। गोल करें और {n} मुफ़्त शॉट जीतें।",
+  "penalty.goal": "गोल! +{n} मुफ़्त शॉट",
+  "penalty.saved": "बचाया गया!",
+  "penalty.continue": "जारी रखें",
+  "penalty.close": "बंद करें",
+  "penalty.zone_0": "ऊपर बाएँ",
+  "penalty.zone_1": "ऊपर मध्य",
+  "penalty.zone_2": "ऊपर दाएँ",
+  "penalty.zone_3": "नीचे बाएँ",
+  "penalty.zone_4": "नीचे मध्य",
+  "penalty.zone_5": "नीचे दाएँ",
+  "penalty.found_toast": "आपको एक पेनल्टी खाना मिला! आपने {n} मुफ़्त शॉट जीते!",
+  "penalty.failed": "शॉट भेजा नहीं जा सका। यह इस मैप पर अभी भी प्रतीक्षा में है।"
 }

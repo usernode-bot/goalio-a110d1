@@ -191,5 +191,19 @@
   "penalty_kick.saved": "GEHALTEN!",
   "penalty_kick.weak": "Nicht genug Kraft",
   "penalty_kick.reward": "+{amount} t zu deiner Wallet und deiner Liga-Punktzahl hinzugefügt",
-  "penalty_kick.continue": "Weiter"
+  "penalty_kick.continue": "Weiter",
+  "penalty.title": "ELFER!",
+  "penalty.subtitle": "Wähle deine Ecke. Triff, um {n} Freischüsse zu gewinnen.",
+  "penalty.goal": "TOR! +{n} Freischüsse",
+  "penalty.saved": "GEHALTEN!",
+  "penalty.continue": "Weiter",
+  "penalty.close": "Schließen",
+  "penalty.zone_0": "Oben links",
+  "penalty.zone_1": "Oben Mitte",
+  "penalty.zone_2": "Oben rechts",
+  "penalty.zone_3": "Unten links",
+  "penalty.zone_4": "Unten Mitte",
+  "penalty.zone_5": "Unten rechts",
+  "penalty.found_toast": "Du hast ein Elfmeterfeld gefunden! Du hast {n} Freischüsse gewonnen!",
+  "penalty.failed": "Der Schuss konnte nicht gesendet werden. Er wartet weiter auf dieser Karte."
 }

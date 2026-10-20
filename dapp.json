@@ -57,6 +57,11 @@
       "expectSelector": ".mute-btn"
     },
     {
+      "name": "Game board shows stadium backdrop",
+      "path": "/#game/2",
+      "expectSelector": ".stadium"
+    },
+    {
       "name": "League page renders",
       "path": "/#league",
       "expectSelector": ".league-table"
@@ -125,6 +130,16 @@
       "name": "Game API exposes revealed events",
       "path": "/api/games/2",
       "expectText": "events"
+    },
+    {
+      "name": "Penalty demo opens the kick screen",
+      "path": "/#demo/penalty",
+      "expectText": "Pick your spot"
+    },
+    {
+      "name": "Game API exposes pending penalty",
+      "path": "/api/games/2",
+      "expectText": "pending_penalty"
     },
     {
       "name": "Event graphic SVG serves",

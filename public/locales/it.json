@@ -191,5 +191,19 @@
   "penalty_kick.saved": "PARATA!",
   "penalty_kick.weak": "Potenza insufficiente",
   "penalty_kick.reward": "+{amount} t aggiunti al portafoglio e al punteggio della lega",
-  "penalty_kick.continue": "Continua"
+  "penalty_kick.continue": "Continua",
+  "penalty.title": "RIGORE!",
+  "penalty.subtitle": "Scegli il tuo angolo. Segna per vincere {n} tiri gratuiti.",
+  "penalty.goal": "GOL! +{n} tiri gratuiti",
+  "penalty.saved": "PARATA!",
+  "penalty.continue": "Continua",
+  "penalty.close": "Chiudi",
+  "penalty.zone_0": "In alto a sinistra",
+  "penalty.zone_1": "In alto al centro",
+  "penalty.zone_2": "In alto a destra",
+  "penalty.zone_3": "In basso a sinistra",
+  "penalty.zone_4": "In basso al centro",
+  "penalty.zone_5": "In basso a destra",
+  "penalty.found_toast": "Hai trovato una casella rigore! Hai vinto {n} tiri gratuiti!",
+  "penalty.failed": "Il tiro non è stato inviato. È ancora in attesa su questa mappa."
 }
