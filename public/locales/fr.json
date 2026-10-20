@@ -181,5 +181,17 @@
   "events.penalty_save": "ARRÊT DE PENALTY ! {amount}",
   "bonus.win": "CASE BONUS ! +1 TIR",
   "bonus.lose": "CASE BONUS ! -1 TIR",
-  "bonus.lose_none": "CASE BONUS ! AUCUN TIR À PERDRE"
+  "bonus.lose_none": "CASE BONUS ! AUCUN TIR À PERDRE",
+  "penalty_kick.title": "Penalty",
+  "penalty_kick.sub": "Choisis un côté, arrête la puissance dans la zone dorée et marque pour +50 t",
+  "penalty_kick.left": "Gauche",
+  "penalty_kick.centre": "Centre",
+  "penalty_kick.right": "Droite",
+  "penalty_kick.power": "Puissance",
+  "penalty_kick.shoot": "Tirer",
+  "penalty_kick.goal": "BUT !",
+  "penalty_kick.saved": "ARRÊTÉ !",
+  "penalty_kick.weak": "Pas assez de puissance",
+  "penalty_kick.reward": "+{amount} t ajoutés à ton portefeuille et à ton score de ligue",
+  "penalty_kick.continue": "Continuer"
 }

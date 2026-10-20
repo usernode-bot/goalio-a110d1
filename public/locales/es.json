@@ -181,5 +181,17 @@
   "events.penalty_save": "¡PENALTI PARADO! {amount}",
   "bonus.win": "¡CASILLA BONUS! +1 TIRO",
   "bonus.lose": "¡CASILLA BONUS! -1 TIRO",
-  "bonus.lose_none": "¡CASILLA BONUS! NO HAY TIROS QUE PERDER"
+  "bonus.lose_none": "¡CASILLA BONUS! NO HAY TIROS QUE PERDER",
+  "penalty_kick.title": "Penalti",
+  "penalty_kick.sub": "Elige un lado, detén la potencia en la zona dorada y marca para +50 t",
+  "penalty_kick.left": "Izquierda",
+  "penalty_kick.centre": "Centro",
+  "penalty_kick.right": "Derecha",
+  "penalty_kick.power": "Potencia",
+  "penalty_kick.shoot": "Chutar",
+  "penalty_kick.goal": "¡GOL!",
+  "penalty_kick.saved": "¡PARADA!",
+  "penalty_kick.weak": "Falta potencia",
+  "penalty_kick.reward": "+{amount} t añadidos a tu cartera y a tu puntuación de la liga",
+  "penalty_kick.continue": "Continuar"
 }

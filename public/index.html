@@ -912,6 +912,36 @@
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; }
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
+    /* Penalty kick mini-game */
+    .pk-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 16px; width: 352px; max-width: 94vw; max-height: 96vh; overflow-y: auto; text-align: center; }
+    .pk-title { font-family: 'Space Mono', monospace; font-weight: 700; color: #fbbf24; letter-spacing: 0.18em; text-transform: uppercase; font-size: 1rem; }
+    .pk-sub { font-size: 0.8rem; color: #aaa; margin: 4px 0 12px; font-family: 'DM Sans', sans-serif; }
+    .pk-pitch { position: relative; height: 320px; border-radius: 12px; background: linear-gradient(180deg, #14532d, #166534 60%, #15803d); overflow: hidden; }
+    .pk-goal { position: absolute; left: 40px; right: 40px; top: 24px; height: 110px; border: 4px solid #fff; border-bottom: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px), repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px); }
+    .pk-keeper { position: absolute; top: 60px; left: 50%; width: 34px; height: 70px; margin-left: -17px; border-radius: 14px 14px 6px 6px; background: #e23b4e; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); transition: all 0.45s ease-out; }
+    .pk-keeper.dive-left, .pk-keeper.dive-right { top: 84px; width: 70px; height: 30px; margin-left: -35px; border-radius: 14px; }
+    .pk-keeper.dive-left { transform: translateX(-104px); }
+    .pk-keeper.dive-right { transform: translateX(104px); }
+    .pk-box-line { position: absolute; left: 20px; right: 20px; top: 134px; border-top: 2px solid rgba(255,255,255,0.5); }
+    .pk-ball { position: absolute; bottom: 40px; left: 50%; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; background: #fff; box-shadow: inset -4px -4px 0 rgba(0,0,0,0.15); transition: all 0.6s ease-out; }
+    .pk-ball.shot-left, .pk-ball.shot-right, .pk-ball.shot-centre { bottom: auto; top: 48px; width: 22px; height: 22px; margin-left: -11px; }
+    .pk-ball.shot-left { left: 76px; }
+    .pk-ball.shot-centre { left: 50%; }
+    .pk-ball.shot-right { left: calc(100% - 76px); }
+    .pk-aim { position: absolute; bottom: 76px; left: 50%; width: 4px; height: 120px; margin-left: -62px; background: rgba(251,191,36,0.85); border-radius: 2px; transform: rotate(-28deg); transform-origin: bottom center; transition: transform 0.15s ease-out; }
+    .pk-aim.aim-centre { transform: rotate(0deg); }
+    .pk-aim.aim-right { transform: rotate(28deg); margin-left: 58px; }
+    .pk-power-label { position: absolute; right: 10px; bottom: 180px; font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #fbbf24; text-transform: uppercase; }
+    .pk-power { position: absolute; right: 18px; bottom: 24px; width: 18px; height: 150px; border-radius: 9px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.2); overflow: hidden; }
+    .pk-power-band { position: absolute; left: 0; right: 0; top: 0; height: 40%; background: rgba(251,191,36,0.35); }
+    .pk-power-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: linear-gradient(0deg, #f59e0b, #ffce4a); }
+    .pk-power.is-strong .pk-power-fill { background: linear-gradient(0deg, #fbbf24, #ffe08a); }
+    .pk-aims { display: flex; gap: 8px; margin: 12px 0 10px; }
+    .pk-aims .bundle-btn { flex: 1; padding: 8px 0; }
+    .pk-result { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 2rem; color: #fbbf24; letter-spacing: 0.1em; margin-top: 12px; }
+    .pk-result.pk-saved { color: #ef4444; }
+    .pk-result-sub { font-size: 0.85rem; color: #ccc; margin: 4px 0 12px; font-family: 'DM Sans', sans-serif; }
+
     /* Language Selector */
     .language-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
     .language-btn { padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; min-width: 0; overflow-wrap: anywhere; transition: all 0.15s; }
@@ -1056,6 +1086,7 @@
     prevPotBalance: 100,
     pendingResult: null,
     showingVictoryStadium: false,
+    penaltyKickDue: false,
   };
 
   // ═══════════════════════════════════════════════════════════════
@@ -1642,6 +1673,7 @@
       renderLobby();
     }
     else if (hash === '#demo/final-refund') demoFinalRefund();
+    else if (hash === '#demo/penalty-kick') demoPenaltyKick();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1663,6 +1695,25 @@
       if (!map.ok) { navigate('#lobby'); return; }
       const d = await map.json();
       state.session = { ...state.session, ...d.session, current_game_id: d.game.id };
+      navigate('#game/' + d.game.id);
+    } catch (e) {
+      if (appEl) appEl.innerHTML = `<div style="text-align:center;padding:40px;color:#888;font-family:'DM Sans',sans-serif;">Demo unavailable — open the lobby instead.</div>`;
+    }
+  }
+
+  // Staging demo deep link: seeds a Group Match 2 tournament (server returns
+  // 404 outside staging), opens the new map and taps the first square so the
+  // penalty kick shows the way a real first tap would.
+  async function demoPenaltyKick() {
+    const appEl = document.getElementById('app');
+    try {
+      const seed = await api('POST', '/api/staging/demo-penalty-kick');
+      if (!seed.ok) { navigate('#lobby'); return; }
+      const map = await api('POST', '/api/session/start-map');
+      if (!map.ok) { navigate('#lobby'); return; }
+      const d = await map.json();
+      state.session = { ...state.session, ...d.session, current_game_id: d.game.id };
+      state.openPenaltyKickOnLoad = true;
       navigate('#game/' + d.game.id);
     } catch (e) {
       if (appEl) appEl.innerHTML = `<div style="text-align:center;padding:40px;color:#888;font-family:'DM Sans',sans-serif;">Demo unavailable — open the lobby instead.</div>`;
@@ -1993,6 +2044,7 @@
       state.gridSize = d.grid_size || gridSizeForStage(d.game.stage_idx);
       state.gridCols = d.grid_cols || gridColsForStage(d.game.stage_idx);
       state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+      state.penaltyKickDue = !!d.penalty_kick_due;
       if (d.pricing) state.pricing = d.pricing;
 
       // If game is completed, go back to lobby
@@ -2001,6 +2053,14 @@
       renderGameBody();
       setupGamePolls(id);
       startKeepalive(id);
+
+      // #demo/penalty-kick lands here after starting a Group Match 2 map and
+      // taps a square for the viewer, so the kick is on screen.
+      if (state.openPenaltyKickOnLoad) {
+        state.openPenaltyKickOnLoad = false;
+        const idx = (state.game.revealed || []).findIndex(r => !r);
+        if (state.penaltyKickDue && idx >= 0) setTimeout(() => { if (state.game && state.game.status === 'active') onCellClick(idx); }, 600);
+      }
     } catch(e) {
       console.error('Game load error', e);
     }
@@ -2210,6 +2270,130 @@
     }, holdMs || 1500);
   }
 
+  // Penalty kick mini-game. Resolves once Continue is tapped (or the overlay
+  // is dismissed after a failed request) so the square tap can carry on.
+  const PK_STRONG_MIN = 60;
+  function runPenaltyKick() {
+    return new Promise((resolve) => {
+      let aim = 'left';
+      let power = 0;
+      let rafId = null;
+      let shooting = false;
+      let done = false;
+      let closed = false;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-bg';
+      overlay.innerHTML = `<div class="modal-box pk-box">
+        <div class="pk-title">${t('penalty_kick.title')}</div>
+        <div class="pk-sub">${t('penalty_kick.sub')}</div>
+        <div class="pk-pitch">
+          <div class="pk-goal"></div>
+          <div class="pk-keeper"></div>
+          <div class="pk-box-line"></div>
+          <div class="pk-aim aim-left"></div>
+          <div class="pk-ball"></div>
+          <div class="pk-power-label">${t('penalty_kick.power')}</div>
+          <div class="pk-power"><div class="pk-power-band"></div><div class="pk-power-fill"></div></div>
+        </div>
+        <div class="pk-aims">
+          <button type="button" class="bundle-btn btn-ghost on" data-aim="left">◀ ${t('penalty_kick.left')}</button>
+          <button type="button" class="bundle-btn btn-ghost" data-aim="centre">${t('penalty_kick.centre')}</button>
+          <button type="button" class="bundle-btn btn-ghost" data-aim="right">${t('penalty_kick.right')} ▶</button>
+        </div>
+        <div class="pk-result" style="display:none;"></div>
+        <div class="pk-result-sub" style="display:none;"></div>
+        <button type="button" class="bundle-btn btn-gold pk-shoot" style="width:100%;">${t('penalty_kick.shoot')}</button>
+      </div>`;
+      document.body.appendChild(overlay);
+
+      const keeper = overlay.querySelector('.pk-keeper');
+      if (state.gameTheme && state.gameTheme.accent_colour) keeper.style.background = state.gameTheme.accent_colour;
+      const gauge = overlay.querySelector('.pk-power');
+      const fill = overlay.querySelector('.pk-power-fill');
+      const arrow = overlay.querySelector('.pk-aim');
+      const shootBtn = overlay.querySelector('.pk-shoot');
+      const resultEl = overlay.querySelector('.pk-result');
+      const subEl = overlay.querySelector('.pk-result-sub');
+
+      function close() {
+        if (closed) return;
+        closed = true;
+        if (rafId) cancelAnimationFrame(rafId);
+        overlay.remove();
+        resolve();
+      }
+
+      // Power pulses 0 → 100 → 0 over 1.2 s; the top 40% is the gold zone.
+      const cycleMs = 1200;
+      const startedAt = performance.now();
+      function tick(now) {
+        const p = ((now - startedAt) % cycleMs) / cycleMs;
+        power = Math.round((p < 0.5 ? p * 2 : (1 - p) * 2) * 100);
+        fill.style.height = power + '%';
+        gauge.classList.toggle('is-strong', power >= PK_STRONG_MIN);
+        rafId = requestAnimationFrame(tick);
+      }
+      rafId = requestAnimationFrame(tick);
+
+      overlay.querySelectorAll('[data-aim]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (shooting) return;
+          aim = btn.dataset.aim;
+          overlay.querySelectorAll('[data-aim]').forEach(b => b.classList.toggle('on', b === btn));
+          arrow.className = 'pk-aim aim-' + aim;
+        });
+      });
+
+      shootBtn.addEventListener('click', async () => {
+        if (done) { close(); return; }
+        if (shooting) return;
+        shooting = true;
+        if (rafId) cancelAnimationFrame(rafId);
+        fill.style.height = power + '%';
+        overlay.querySelectorAll('[data-aim]').forEach(b => { b.disabled = true; });
+        shootBtn.disabled = true;
+
+        let d;
+        try {
+          const r = await api('POST', `/api/games/${state.game.id}/penalty-kick`, { aim, power });
+          if (!r.ok) {
+            const e = await r.json().catch(() => ({}));
+            showToast(e.error || t('penalty_kick.title'));
+            close();
+            return;
+          }
+          d = await r.json();
+        } catch (e) {
+          showToast(t('penalty_kick.title'));
+          close();
+          return;
+        }
+
+        overlay.querySelector('.pk-ball').classList.add('shot-' + d.aim);
+        keeper.classList.add('dive-' + d.keeper);
+        await new Promise(r => setTimeout(r, 650));
+
+        if (d.scored) {
+          resultEl.textContent = t('penalty_kick.goal');
+          subEl.textContent = t('penalty_kick.reward', { amount: d.bonus });
+          subEl.style.display = 'block';
+          if (d.wallet_balance !== undefined) { state.walletBalance = d.wallet_balance; updateHud(); }
+          Sound.bonusWin();
+        } else {
+          resultEl.textContent = t('penalty_kick.saved');
+          resultEl.classList.add('pk-saved');
+          if (d.weak) { subEl.textContent = t('penalty_kick.weak'); subEl.style.display = 'block'; }
+          Sound.bonusLose();
+        }
+        resultEl.style.display = 'block';
+        shootBtn.textContent = t('penalty_kick.continue');
+        shootBtn.disabled = false;
+        done = true;
+      });
+    });
+  }
+
   window.onCellClick = async function(idx) {
     const game = state.game;
     if (!game || game.status !== 'active') return;
@@ -2247,6 +2431,19 @@
       document.body.appendChild(modal);
       return;
     }
+
+    // Every other stage: the first square tapped opens the penalty kick first,
+    // for a free shot at 50 bonus tokens. The square then opens as usual.
+    if (state.penaltyKickDue) {
+      document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = 'none');
+      try {
+        await runPenaltyKick();
+      } finally {
+        state.penaltyKickDue = false;
+        document.querySelectorAll('.tile').forEach(c => c.style.pointerEvents = '');
+      }
+    }
+
     playBlip();
 
     const body = { square_index: idx };
@@ -3318,8 +3515,10 @@
         // fire a phantom "just won" broadcast on the first poll.
         state.potLastWonAt = d.last_won_at || null;
 
-        // If active game in session, go straight there
-        if (d.session && d.session.current_game_id && !d.session.session_complete) {
+        // If active game in session, go straight there (demo deep links start
+        // their own map, so they go through route() instead)
+        if (d.session && d.session.current_game_id && !d.session.session_complete &&
+            !(location.hash || '').startsWith('#demo/')) {
           navigate('#game/' + d.session.current_game_id);
           return;
         }

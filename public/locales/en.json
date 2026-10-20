@@ -181,5 +181,17 @@
   "events.penalty_save": "PENALTY SAVE! {amount}",
   "bonus.win": "BONUS SQUARE! +1 SHOT",
   "bonus.lose": "BONUS SQUARE! -1 SHOT",
-  "bonus.lose_none": "BONUS SQUARE! NO SHOTS TO LOSE"
+  "bonus.lose_none": "BONUS SQUARE! NO SHOTS TO LOSE",
+  "penalty_kick.title": "Penalty Kick",
+  "penalty_kick.sub": "Pick a side, stop the power in the gold zone and score for +50 t",
+  "penalty_kick.left": "Left",
+  "penalty_kick.centre": "Centre",
+  "penalty_kick.right": "Right",
+  "penalty_kick.power": "Power",
+  "penalty_kick.shoot": "Shoot",
+  "penalty_kick.goal": "GOAL!",
+  "penalty_kick.saved": "SAVED!",
+  "penalty_kick.weak": "Not enough power",
+  "penalty_kick.reward": "+{amount} t added to your wallet and league score",
+  "penalty_kick.continue": "Continue"
 }

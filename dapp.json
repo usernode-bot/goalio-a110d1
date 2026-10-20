@@ -140,6 +140,16 @@
       "name": "Final refund demo shows seeded wallet in HUD",
       "path": "/#demo/final-refund",
       "expectText": "5000 t"
+    },
+    {
+      "name": "Penalty kick opens on the first tap in Group Match 2",
+      "path": "/#demo/penalty-kick",
+      "expectSelector": ".pk-box"
+    },
+    {
+      "name": "Penalty kick shows the power gauge and shoot action",
+      "path": "/#demo/penalty-kick",
+      "expectText": "Shoot"
     }
   ],
   "visibility": {

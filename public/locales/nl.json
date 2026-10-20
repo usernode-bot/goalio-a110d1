@@ -181,5 +181,17 @@
   "events.penalty_save": "PENALTY GEKEERD! {amount}",
   "bonus.win": "BONUSVAK! +1 SCHOT",
   "bonus.lose": "BONUSVAK! -1 SCHOT",
-  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN"
+  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN",
+  "penalty_kick.title": "Penalty",
+  "penalty_kick.sub": "Kies een kant, stop de kracht in de gouden zone en scoor voor +50 t",
+  "penalty_kick.left": "Links",
+  "penalty_kick.centre": "Midden",
+  "penalty_kick.right": "Rechts",
+  "penalty_kick.power": "Kracht",
+  "penalty_kick.shoot": "Schieten",
+  "penalty_kick.goal": "DOELPUNT!",
+  "penalty_kick.saved": "GESTOPT!",
+  "penalty_kick.weak": "Niet genoeg kracht",
+  "penalty_kick.reward": "+{amount} t toegevoegd aan je wallet en leaguescore",
+  "penalty_kick.continue": "Doorgaan"
 }

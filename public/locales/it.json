@@ -181,5 +181,17 @@
   "events.penalty_save": "RIGORE PARATO! {amount}",
   "bonus.win": "CASELLA BONUS! +1 TIRO",
   "bonus.lose": "CASELLA BONUS! -1 TIRO",
-  "bonus.lose_none": "CASELLA BONUS! NIENTE TIRI DA PERDERE"
+  "bonus.lose_none": "CASELLA BONUS! NIENTE TIRI DA PERDERE",
+  "penalty_kick.title": "Rigore",
+  "penalty_kick.sub": "Scegli un lato, ferma la potenza nella zona oro e segna per +50 t",
+  "penalty_kick.left": "Sinistra",
+  "penalty_kick.centre": "Centro",
+  "penalty_kick.right": "Destra",
+  "penalty_kick.power": "Potenza",
+  "penalty_kick.shoot": "Tira",
+  "penalty_kick.goal": "GOL!",
+  "penalty_kick.saved": "PARATA!",
+  "penalty_kick.weak": "Potenza insufficiente",
+  "penalty_kick.reward": "+{amount} t aggiunti al portafoglio e al punteggio della lega",
+  "penalty_kick.continue": "Continua"
 }
