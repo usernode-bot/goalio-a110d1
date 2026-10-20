@@ -195,5 +195,12 @@
   "penalty.zone_4": "नीचे मध्य",
   "penalty.zone_5": "नीचे दाएँ",
   "penalty.found_toast": "आपको एक पेनल्टी खाना मिला! आपने {n} मुफ़्त शॉट जीते!",
-  "penalty.failed": "शॉट भेजा नहीं जा सका। यह इस मैप पर अभी भी प्रतीक्षा में है।"
+  "penalty.failed": "शॉट भेजा नहीं जा सका। यह इस मैप पर अभी भी प्रतीक्षा में है।",
+  "penalty.keeper_title": "बचाओ!",
+  "penalty.keeper_subtitle": "अपनी दिशा चुनें। बचाव करें और {n} मुफ़्त शॉट जीतें।",
+  "penalty.dive_0": "बाएँ",
+  "penalty.dive_1": "बीच",
+  "penalty.dive_2": "दाएँ",
+  "penalty.keeper_saved": "बचा लिया! +{n} मुफ़्त शॉट",
+  "penalty.conceded": "गोल हो गया!"
 }

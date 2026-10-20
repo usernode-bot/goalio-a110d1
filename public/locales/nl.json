@@ -195,5 +195,12 @@
   "penalty.zone_4": "Midden onder",
   "penalty.zone_5": "Rechtsonder",
   "penalty.found_toast": "Je vond een strafschopplek! Je hebt {n} gratis schoten gewonnen!",
-  "penalty.failed": "De trap kon niet worden verstuurd. Hij wacht nog op deze kaart."
+  "penalty.failed": "De trap kon niet worden verstuurd. Hij wacht nog op deze kaart.",
+  "penalty.keeper_title": "REDDEN!",
+  "penalty.keeper_subtitle": "Kies een kant. Red de bal en win {n} gratis schoten.",
+  "penalty.dive_0": "Links",
+  "penalty.dive_1": "Midden",
+  "penalty.dive_2": "Rechts",
+  "penalty.keeper_saved": "GEREDD! +{n} gratis schoten",
+  "penalty.conceded": "TEGENTREFFER!"
 }

@@ -195,5 +195,12 @@
   "penalty.zone_4": "In basso al centro",
   "penalty.zone_5": "In basso a destra",
   "penalty.found_toast": "Hai trovato una casella rigore! Hai vinto {n} tiri gratuiti!",
-  "penalty.failed": "Il tiro non è stato inviato. È ancora in attesa su questa mappa."
+  "penalty.failed": "Il tiro non è stato inviato. È ancora in attesa su questa mappa.",
+  "penalty.keeper_title": "PARA!",
+  "penalty.keeper_subtitle": "Scegli un lato. Para il tiro per vincere {n} tiri gratuiti.",
+  "penalty.dive_0": "Sinistra",
+  "penalty.dive_1": "Centro",
+  "penalty.dive_2": "Destra",
+  "penalty.keeper_saved": "PARATA! +{n} tiri gratuiti",
+  "penalty.conceded": "GOL SUBITO!"
 }

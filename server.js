@@ -155,6 +155,11 @@ function buildEventSquares(footballSquare, gridSize) {
 // Free attempts a scored penalty kick pays, by board size.
 const PENALTY_BONUS_BY_GRID = { 16: 2, 25: 3, 36: 3, 49: 5 };
 
+// Each kick is either taken ('taker') or kept ('keeper'), about half and half.
+function rollPenaltyRole() {
+  return Math.random() < 0.5 ? 'keeper' : 'taker';
+}
+
 // Build the penalty squares for a fresh board: about one per ten squares
 // (rounded to the nearest whole number, never fewer than one), drawn from the
 // squares that are neither the ball nor a match event square. Returns an
@@ -312,14 +317,15 @@ function parseJsonColumn(value, fallback) {
 // A pending kick reopens on the next board load instead of being lost.
 async function getPendingPenalty(client, gameId, userId, gridSize) {
   const { rows } = await client.query(`
-    SELECT square_index FROM penalty_kicks
+    SELECT square_index, role FROM penalty_kicks
     WHERE game_id = $1 AND user_id = $2 AND kicked_at IS NULL
     ORDER BY created_at ASC, id ASC LIMIT 1
   `, [gameId, userId]);
   if (!rows.length) return null;
   return {
     square_index: rows[0].square_index,
-    bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSize] || 2
+    bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSize] || 2,
+    role: rows[0].role || 'taker'
   };
 }
 
@@ -1005,16 +1011,18 @@ app.post('/api/games/:id/guess', async (req, res) => {
     const penaltySquares = parseJsonColumn(game.penalty_squares, []);
     let isPenaltyHit = false;
     let penaltyBonusOnGoal = 0;
+    let penaltyRole = 'taker';
     if (!isHit && Array.isArray(penaltySquares) && penaltySquares.includes(square_index)) {
       const { rows: kickRows } = await client.query(`
-        INSERT INTO penalty_kicks (game_id, square_index, user_id, username)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO penalty_kicks (game_id, square_index, user_id, username, role)
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (game_id, square_index) DO NOTHING
-        RETURNING id
-      `, [game.id, square_index, req.user.id, req.user.username]);
+        RETURNING id, role
+      `, [game.id, square_index, req.user.id, req.user.username, rollPenaltyRole()]);
       if (kickRows.length) {
         isPenaltyHit = true;
         penaltyBonusOnGoal = PENALTY_BONUS_BY_GRID[gridSize] || 2;
+        penaltyRole = kickRows[0].role || 'taker';
       }
     }
 
@@ -1325,7 +1333,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       prize_pending: prizeWalletError ? true : false,
       bonus_pending: bonusWalletError ? true : false,
       is_penalty_hit: isPenaltyHit,
-      penalty: isPenaltyHit ? { square_index, bonus_on_goal: penaltyBonusOnGoal } : null,
+      penalty: isPenaltyHit ? { square_index, bonus_on_goal: penaltyBonusOnGoal, role: penaltyRole } : null,
       was_bonus_shot: wasBonusShot,
       bonus_credits_awarded: 0,
       bonus_credits_available: updatedBonusCreditsAvailable,
@@ -1343,11 +1351,14 @@ app.post('/api/games/:id/guess', async (req, res) => {
 });
 
 // POST /api/games/:id/penalty-kick
-// Settle the pending kick on an uncovered penalty square. The server rolls the
-// keeper's dive: aiming at a different zone is a goal and pays the board's
-// free attempts, the keeper's zone is a save and pays nothing.
+// Settle the pending kick on an uncovered penalty square. As taker (the
+// default for rows from before roles existed), the server rolls the keeper's
+// dive: aiming at a different zone is a goal and pays the board's free
+// attempts, the keeper's zone is a save and pays nothing. As keeper, the
+// server rolls where the ball goes: a dive that covers the ball's column is
+// a save and pays the same free attempts.
 app.post('/api/games/:id/penalty-kick', async (req, res) => {
-  const { square_index, zone } = req.body;
+  const { square_index, zone, dive } = req.body;
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -1363,9 +1374,7 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
 
     const penaltySquares = parseJsonColumn(game.penalty_squares, []);
     const squareIdx = parseInt(square_index, 10);
-    const aim = parseInt(zone, 10);
-    if (!Number.isInteger(aim) || aim < 0 || aim > 5 ||
-        !Number.isInteger(squareIdx) || !Array.isArray(penaltySquares) || !penaltySquares.includes(squareIdx)) {
+    if (!Number.isInteger(squareIdx) || !Array.isArray(penaltySquares) || !penaltySquares.includes(squareIdx)) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'Invalid kick' });
     }
@@ -1396,17 +1405,33 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
       return res.status(409).json({ error: 'Already kicked' });
     }
 
+    // The aim (taker) or dive (keeper) is only read once the role is known.
+    const asKeeper = (kick.role || 'taker') === 'keeper';
+    const aim = parseInt(zone, 10);
+    const diveIdx = parseInt(dive, 10);
+    if (asKeeper
+      ? !Number.isInteger(diveIdx) || diveIdx < 0 || diveIdx > 2
+      : !Number.isInteger(aim) || aim < 0 || aim > 5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Invalid kick' });
+    }
+
     const gridSize = gridSizeForStage(game.stage_idx);
-    const keeperZone = Math.floor(Math.random() * 6);
-    const scored = aim !== keeperZone;
-    const award = scored ? (PENALTY_BONUS_BY_GRID[gridSize] || 2) : 0;
-    if (scored) await addBonusShots(client, game.id, req.user.id, award);
+    // zone is always where the ball ended up: the aim as taker, a roll as
+    // keeper. keeper_zone is 3 + dive for the keeper's own dive, so the dive
+    // animation lands on the bottom spot of the chosen column (Middle stays).
+    const ballZone = asKeeper ? Math.floor(Math.random() * 6) : aim;
+    const keeperZone = asKeeper ? 3 + diveIdx : Math.floor(Math.random() * 6);
+    const won = asKeeper ? ballZone % 3 === diveIdx : aim !== keeperZone;
+    const scored = !won;
+    const award = won ? (PENALTY_BONUS_BY_GRID[gridSize] || 2) : 0;
+    if (won) await addBonusShots(client, game.id, req.user.id, award);
 
     await client.query(`
       UPDATE penalty_kicks
       SET zone = $1, keeper_zone = $2, scored = $3, bonus_awarded = $4, kicked_at = NOW()
       WHERE id = $5
-    `, [aim, keeperZone, scored, award, kick.id]);
+    `, [ballZone, keeperZone, scored, award, kick.id]);
     await client.query('UPDATE games SET last_active_at = NOW() WHERE id = $1', [game.id]);
 
     await client.query('COMMIT');
@@ -1429,7 +1454,8 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
 
     res.json({
       scored,
-      zone: aim,
+      role: kick.role || 'taker',
+      zone: ballZone,
       keeper_zone: keeperZone,
       bonus_credits_awarded: award,
       bonus_credits_available: bonusCreditsAvailable,
@@ -1701,18 +1727,25 @@ app.post('/api/staging/demo-penalty', async (req, res) => {
     // Reuse any earlier demo row so the deep link can be opened more than once.
     // The tournament session is left alone: claiming a current map here would
     // stop the other demo links (and a real start-match) from opening a board.
+    // The role rolls fresh, or can be pinned to 'taker' or 'keeper' so the
+    // keeper screen is reachable on demand.
+    const requestedRole = req.body ? req.body.role : null;
+    const kickRole = requestedRole === 'taker' || requestedRole === 'keeper'
+      ? requestedRole
+      : rollPenaltyRole();
     await client.query(`
-      INSERT INTO penalty_kicks (game_id, square_index, user_id, username)
-      VALUES (1, $1, $2, $3)
+      INSERT INTO penalty_kicks (game_id, square_index, user_id, username, role)
+      VALUES (1, $1, $2, $3, $4)
       ON CONFLICT (game_id, square_index) DO UPDATE SET
-        user_id = $2, username = $3, zone = NULL, keeper_zone = NULL,
+        user_id = $2, username = $3, role = $4, zone = NULL, keeper_zone = NULL,
         scored = NULL, bonus_awarded = 0, kicked_at = NULL
-    `, [square, req.user.id, req.user.username]);
+    `, [square, req.user.id, req.user.username, kickRole]);
     await client.query('COMMIT');
     res.json({
       game_id: 1,
       square_index: square,
-      bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSizeForStage(game.stage_idx || 0)] || 2
+      bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSizeForStage(game.stage_idx || 0)] || 2,
+      role: kickRole
     });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
@@ -1825,6 +1858,9 @@ async function start() {
     kicked_at TIMESTAMPTZ,
     UNIQUE (game_id, square_index)
   )`);
+  // Append-only role of each kick: 'taker' or 'keeper'. Rows from before
+  // roles existed stay NULL and play as 'taker' everywhere.
+  await pool.query(`ALTER TABLE penalty_kicks ADD COLUMN IF NOT EXISTS role VARCHAR(8)`);
   await pool.query(`COMMENT ON TABLE penalty_kicks IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
