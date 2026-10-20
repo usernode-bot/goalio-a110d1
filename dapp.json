@@ -57,6 +57,11 @@
       "expectSelector": ".mute-btn"
     },
     {
+      "name": "Game board shows stadium backdrop",
+      "path": "/#game/2",
+      "expectSelector": ".stadium"
+    },
+    {
       "name": "League page renders",
       "path": "/#league",
       "expectSelector": ".league-table"
