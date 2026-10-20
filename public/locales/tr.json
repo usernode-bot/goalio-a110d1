@@ -181,5 +181,19 @@
   "events.penalty_save": "PENALTI KURTARILDI! {amount}",
   "bonus.win": "BONUS KARE! +1 ŞUT",
   "bonus.lose": "BONUS KARE! -1 ŞUT",
-  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK"
+  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK",
+  "penalty.title": "PENALTI!",
+  "penalty.subtitle": "Köşeni seç. Gol atarsan {n} bedava şut kazanırsın.",
+  "penalty.goal": "GOL! +{n} bedava şut",
+  "penalty.saved": "KURTARILDI!",
+  "penalty.continue": "Devam",
+  "penalty.close": "Kapat",
+  "penalty.zone_0": "Sol üst",
+  "penalty.zone_1": "Orta üst",
+  "penalty.zone_2": "Sağ üst",
+  "penalty.zone_3": "Sol alt",
+  "penalty.zone_4": "Orta alt",
+  "penalty.zone_5": "Sağ alt",
+  "penalty.found_toast": "Bir penaltı karesi buldun! {n} bedava şut kazandın!",
+  "penalty.failed": "Şut gönderilemedi. Bu haritada hâlâ bekliyor."
 }

@@ -127,6 +127,16 @@
       "expectText": "events"
     },
     {
+      "name": "Penalty demo opens the kick screen",
+      "path": "/#demo/penalty",
+      "expectText": "Pick your spot"
+    },
+    {
+      "name": "Game API exposes pending penalty",
+      "path": "/api/games/2",
+      "expectText": "pending_penalty"
+    },
+    {
       "name": "Event graphic SVG serves",
       "path": "/images/events/red-card.svg",
       "expectSelector": "svg"
