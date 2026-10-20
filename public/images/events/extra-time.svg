@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- official's board -->
+  <rect x="26" y="26" width="48" height="40" rx="4" fill="#222" stroke="#00FFFF" stroke-width="3"/>
+  <!-- added minutes -->
+  <text x="50" y="56" font-size="26" text-anchor="middle" fill="#34d399" font-family="monospace" font-weight="bold">+3</text>
+  <!-- handle -->
+  <rect x="45" y="66" width="10" height="16" rx="2" fill="#f0c040"/>
+</svg>

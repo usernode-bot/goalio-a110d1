@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- offside line on the turf -->
+  <path d="M18 78 L82 78" stroke="#00FFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 4"/>
+  <!-- flag pole -->
+  <path d="M38 80 L38 20" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <!-- pennant, pink over gold -->
+  <path d="M40 22 L74 32 L40 44 Z" fill="#FF1493"/>
+  <path d="M40 32 L64 39 L40 44 Z" fill="#f0c040"/>
+  <rect x="34" y="76" width="8" height="6" rx="2" fill="#f0c040"/>
+</svg>

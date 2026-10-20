@@ -964,17 +964,17 @@
     .pk-zone:hover, .pk-zone:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
     .pk-zone:disabled { cursor: default; }
     .pk-zone.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; }
-    .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 40px; height: 54px; margin-left: -20px; pointer-events: none; transform-origin: 50% 70%; transform: rotate(0deg); transition: left 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, bottom 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, transform 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s; }
+    .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 56px; height: 76px; margin-left: -28px; pointer-events: none; transform-origin: 50% 70%; transform: rotate(0deg); transition: left 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, bottom 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, transform 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s; }
     .pk-keeper > span { position: absolute; display: block; }
-    .pk-keeper-head { left: 13px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: #f0f0f5; }
-    .pk-keeper-torso { left: 10px; top: 15px; width: 20px; height: 20px; border-radius: 6px 6px 3px 3px; background: #22c55e; }
-    .pk-keeper-arm { top: 16px; width: 6px; height: 18px; border-radius: 3px; background: #22c55e; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
-    .pk-keeper-arm::after { content: ''; position: absolute; left: -1px; bottom: -6px; width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; }
-    .pk-keeper-arm.left { left: 8px; transform: rotate(55deg); }
-    .pk-keeper-arm.right { right: 8px; transform: rotate(-55deg); }
-    .pk-keeper-leg { top: 34px; width: 7px; height: 19px; border-radius: 3px; background: #14532d; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
-    .pk-keeper-leg.left { left: 11px; transform: rotate(18deg); }
-    .pk-keeper-leg.right { right: 11px; transform: rotate(-18deg); }
+    .pk-keeper-head { left: 18px; top: 0; width: 20px; height: 20px; border-radius: 50%; background: #f0f0f5; }
+    .pk-keeper-torso { left: 14px; top: 21px; width: 28px; height: 28px; border-radius: 8px 8px 4px 4px; background: #22c55e; }
+    .pk-keeper-arm { top: 22px; width: 8px; height: 25px; border-radius: 4px; background: #22c55e; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
+    .pk-keeper-arm::after { content: ''; position: absolute; left: -1.5px; bottom: -8px; width: 11px; height: 11px; border-radius: 50%; background: #fbbf24; }
+    .pk-keeper-arm.left { left: 11px; transform: rotate(55deg); }
+    .pk-keeper-arm.right { right: 11px; transform: rotate(-55deg); }
+    .pk-keeper-leg { top: 48px; width: 10px; height: 27px; border-radius: 4px; background: #14532d; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
+    .pk-keeper-leg.left { left: 15px; transform: rotate(18deg); }
+    .pk-keeper-leg.right { right: 15px; transform: rotate(-18deg); }
     .pk-keeper.diving { transform: rotate(var(--pk-dive, 0deg)); }
     .pk-keeper.diving .pk-keeper-arm.left { transform: rotate(165deg); }
     .pk-keeper.diving .pk-keeper-arm.right { transform: rotate(-165deg); }
@@ -1088,7 +1088,10 @@
     injury:         { cls: 'bad',  kind: 'bad',  file: 'injury' },
     pitch_invasion: { cls: 'bad',  kind: 'bad',  file: 'pitch-invasion' },
     red_card:       { cls: 'bad',  kind: 'bad',  file: 'red-card' },
-    penalty_save:   { cls: 'good', kind: 'good', file: 'penalty-save' },
+    disallowed_goal: { cls: 'bad', kind: 'bad',  file: 'disallowed-goal' },
+    throw_in:        { cls: 'bad', kind: 'bad',  file: 'throw-in' },
+    offside:         { cls: 'bad', kind: 'bad',  file: 'offside' },
+    extra_time:      { cls: 'good', kind: 'good', file: 'extra-time' },
   };
 
   // How long a Match Event square keeps its graphic before fading (tunable).
@@ -1305,12 +1308,12 @@
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
     },
     // Match Event SFX — rising two-tone fanfare for wins, descending
-    // whistle-then-buzz for losses. Varies per event so the six don't
+    // whistle-then-buzz for losses. Varies per event so the nine don't
     // sound identical. Synth only: mute-aware, offline-safe, no files.
     async eventGood(eventType) {
       const ctx = await this.ensure(); if (!ctx) return;
       const t = ctx.currentTime;
-      const base = eventType === 'penalty_save' ? 587 : eventType === 'free_kick' ? 523 : 494;
+      const base = eventType === 'extra_time' ? 587 : eventType === 'free_kick' ? 523 : 494;
       this.tone(base, t, 0.09, 'square', 0.16);
       this.tone(base * 1.25, t + 0.09, 0.09, 'square', 0.16);
       this.tone(base * 1.5, t + 0.18, 0.16, 'square', 0.18);
@@ -1319,11 +1322,13 @@
       const ctx = await this.ensure(); if (!ctx) return;
       const t = ctx.currentTime;
       // Descending whistle
-      const top = eventType === 'red_card' ? 880 : eventType === 'injury' ? 740 : 830;
+      const top = eventType === 'red_card' ? 880 : eventType === 'injury' ? 740
+        : eventType === 'disallowed_goal' ? 784 : eventType === 'offside' ? 700
+        : eventType === 'throw_in' ? 660 : 830;
       this.tone(top, t, 0.12, 'triangle', 0.14);
       this.tone(top * 0.78, t + 0.13, 0.14, 'triangle', 0.14);
       // Low buzz on the land
-      this.tone(eventType === 'handball' ? 130 : 110, t + 0.3, 0.22, 'sawtooth', 0.12);
+      this.tone(eventType === 'handball' ? 130 : eventType === 'throw_in' ? 150 : 110, t + 0.3, 0.22, 'sawtooth', 0.12);
     },
     // Bonus square SFX — a quick rising arpeggio for a won shot, a
     // descending triangle "wah-wah" with a low sawtooth landing for a lost

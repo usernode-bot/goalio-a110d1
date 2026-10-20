@@ -109,14 +109,27 @@ function potTierName(tier) {
 //   weighted EV per event square ≈ -0.7 × perShot, ≈ -0.35 × perShot per miss
 //   at ~50% event density.
 const EVENT_TYPES = {
-  handball:       { weight: 0.20, multiplier: -2, kind: 'bad'  },
-  free_kick:      { weight: 0.20, multiplier:  3, kind: 'good' },
-  injury:         { weight: 0.15, multiplier: -3, kind: 'bad'  },
-  pitch_invasion: { weight: 0.15, multiplier: -3, kind: 'bad'  },
-  red_card:       { weight: 0.15, multiplier: -4, kind: 'bad'  },
-  penalty_save:   { weight: 0.15, multiplier:  4, kind: 'good' },
+  handball:        { weight: 0.15, multiplier: -2, kind: 'bad'  },
+  free_kick:       { weight: 0.20, multiplier:  3, kind: 'good' },
+  injury:          { weight: 0.10, multiplier: -3, kind: 'bad'  },
+  pitch_invasion:  { weight: 0.10, multiplier: -3, kind: 'bad'  },
+  red_card:        { weight: 0.10, multiplier: -4, kind: 'bad'  },
+  disallowed_goal: { weight: 0.08, multiplier: -4, kind: 'bad'  },
+  offside:         { weight: 0.07, multiplier: -3, kind: 'bad'  },
+  throw_in:        { weight: 0.05, multiplier: -1, kind: 'bad'  },
+  extra_time:      { weight: 0.15, multiplier:  4, kind: 'good' },
 };
 const EVENT_WEIGHT_TOTAL = Object.values(EVENT_TYPES).reduce((s, e) => s + e.weight, 0);
+
+// Event types no longer drawn, mapped to their replacement so boards
+// created before the swap keep paying out.
+const LEGACY_EVENT_TYPES = { penalty_save: 'extra_time' };
+function normalizeEventSquares(map) {
+  if (!map || typeof map !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(map).map(([idx, type]) => [idx, LEGACY_EVENT_TYPES[type] || type])
+  );
+}
 
 function eventAmountForStage(stageIdx, multiplier) {
   return Math.max(1, Math.round(pricingForStage(stageIdx).perShot * Math.abs(multiplier)));
@@ -673,6 +686,7 @@ app.get('/api/games/:id', async (req, res) => {
     if (typeof game.event_squares === 'string') {
       try { game.event_squares = JSON.parse(game.event_squares); } catch { game.event_squares = {}; }
     }
+    game.event_squares = normalizeEventSquares(game.event_squares);
 
     let credRows = [];
     let bonusCreditsAvailable = 0;
@@ -891,6 +905,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
     if (typeof game.event_squares === 'string') {
       try { game.event_squares = JSON.parse(game.event_squares); } catch { game.event_squares = {}; }
     }
+    game.event_squares = normalizeEventSquares(game.event_squares);
     const gridSize = gridSizeForStage(game.stage_idx);
 
     if (square_index >= gridSize) {
@@ -2041,7 +2056,7 @@ async function start() {
       VALUES (1, $1, 0, 11, 7, $2, $3, 6, 2, 'open', $4)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['brazil'], JSON.stringify([7, 14]), revealedPrefix(16, 6), JSON.stringify({
-      '1': 'free_kick', '4': 'handball', '9': 'red_card', '13': 'penalty_save'
+      '1': 'free_kick', '4': 'handball', '9': 'red_card', '13': 'extra_time'
     })]);
 
     // Game 2 — semi-final (stage 5, 6×6 = 36 tiles), 20 revealed, penalty FOUND
@@ -2054,7 +2069,7 @@ async function start() {
       VALUES (2, $1, 5, 32, 21, $2, true, $3, 20, 4, 'open', $4)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['france'], JSON.stringify([21, 25, 30, 33]), revealedPrefix(36, 20), JSON.stringify({
-      '0': 'free_kick', '3': 'handball', '7': 'red_card', '11': 'penalty_save',
+      '0': 'free_kick', '3': 'handball', '7': 'red_card', '11': 'disallowed_goal',
       '15': 'injury', '19': 'pitch_invasion', '23': 'free_kick', '28': 'handball', '34': 'red_card'
     })]);
 
@@ -2066,7 +2081,7 @@ async function start() {
       VALUES (3, $1, 3, 20, 16, $2, $3, 14, 6, 'open', $4)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['argentina'], JSON.stringify([16, 22, 24]), revealedPrefix(25, 14), JSON.stringify({
-      '2': 'handball', '5': 'penalty_save', '8': 'red_card', '17': 'free_kick'
+      '2': 'handball', '5': 'offside', '8': 'red_card', '17': 'free_kick'
     })]);
 
     // Sequence fixup so next insert gets id > 3
@@ -2080,7 +2095,7 @@ async function start() {
       VALUES (4, $1, 6, 40, 25, $2, $3, 18, 'completed', 'Staging Kaiser', 96, NOW(), $4)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['germany'], JSON.stringify([25, 3, 10, 44, 46]), new Array(49).fill(true), JSON.stringify({
-      '6': 'free_kick', '18': 'injury', '27': 'penalty_save', '33': 'red_card'
+      '6': 'free_kick', '18': 'injury', '27': 'throw_in', '33': 'red_card'
     })]);
 
     // Open final stage game with carry-over credits for refund testing, and 7
@@ -2092,7 +2107,7 @@ async function start() {
       VALUES (5, $1, 6, 35, 20, $2, $3, 4, 1, 'open', $4, $5)
       ON CONFLICT (id) DO NOTHING
     `, [themeMap['belgium'], JSON.stringify([20, 10, 26, 38, 45]), revealedPrefix(49, 4), JSON.stringify({
-      '1': 'penalty_save', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
+      '1': 'extra_time', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
     }), JSON.stringify({
       '5': 'win', '8': 'win', '15': 'lose', '22': 'win', '40': 'win', '44': 'win', '47': 'lose'
     })]);
