@@ -1302,7 +1302,8 @@ app.get('/api/league', async (req, res) => {
     const { rows: rankRows } = await pool.query(`
       SELECT user_id, username,
              COALESCE(display_name, username) AS display_name,
-             total_tokens_won, sessions_completed
+             total_tokens_won, sessions_completed,
+             RANK() OVER (ORDER BY total_tokens_won DESC) AS rank
       FROM player_stats
       ORDER BY total_tokens_won DESC
       LIMIT 20
@@ -1753,6 +1754,23 @@ async function start() {
       VALUES (-1, 'staging-test-user', 'staging-test-user', 0, 0)
       ON CONFLICT (user_id) DO NOTHING
     `);
+
+    // Fake leaderboard entries with a two-way tie (Staging Penalty Pro and
+    // Staging Top Bins on 1200) so shared leaderboard positions are visible.
+    const stagingLeaders = [
+      [-101, 'Staging Goal Machine', 1850],
+      [-102, 'Staging Penalty Pro', 1200],
+      [-103, 'Staging Top Bins', 1200],
+      [-104, 'Staging Nutmeg 99', 940],
+      [-105, 'Staging Keeper Kid', 610]
+    ];
+    for (const [uid, name, tokens] of stagingLeaders) {
+      await pool.query(`
+        INSERT INTO player_stats (user_id, username, display_name, total_tokens_won, sessions_completed)
+        VALUES ($1, $2, $3, $4, 1)
+        ON CONFLICT (user_id) DO UPDATE SET total_tokens_won = $4
+      `, [uid, `staging-leader-${-uid}`, name, tokens]);
+    }
 
     // 3 open staging game boards
     // We need theme IDs — fetch them
