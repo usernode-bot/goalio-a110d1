@@ -956,7 +956,7 @@
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
     /* Penalty kick screen */
-    .pk-close { position: absolute; top: 6px; right: 10px; background: none; border: none; color: #aaa; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+    .pk-close { position: absolute; top: 0; right: 0; background: none; border: none; color: #aaa; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
     .pk-close:hover { color: #f0f0f5; }
     .modal-box.penalty-box { position: relative; width: 94%; max-width: 360px; }
     .pk-title { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 1.5rem; color: #fbbf24; letter-spacing: 0.04em; }
@@ -967,7 +967,7 @@
     .pk-zone:disabled { cursor: default; }
     .pk-zone:disabled:hover { background: transparent; border-color: rgba(255,255,255,0.18); outline: none; }
     .pk-dive-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 10px; }
-    .pk-dive { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 8px 0; border-radius: 10px; border: 1px solid rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); color: #fbbf24; cursor: pointer; }
+    .pk-dive { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 8px 0; min-height: 44px; border-radius: 10px; border: 1px solid rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); color: #fbbf24; cursor: pointer; }
     .pk-dive:hover, .pk-dive:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
     .pk-dive:disabled { cursor: default; opacity: 0.6; }
     .pk-dive.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; opacity: 1; }
@@ -1770,17 +1770,11 @@
       if (!seed.ok) { navigate('#lobby'); return; }
       const d = await seed.json();
       state.session = { ...state.session, current_game_id: d.game_id };
+      // The seed already knows which game and kick it left, so the kick screen
+      // opens right away and stays over the board while that board loads.
+      state.game = { ...(state.game || {}), id: d.game_id };
       navigate('#game/' + d.game_id);
-      // Open as soon as the board behind it has loaded, so a screenshot taken
-      // right after the board appears still catches the kick screen.
-      const open = () => {
-        if (state.game && String(state.game.id) === String(d.game_id)) {
-          openPenaltyKick(d.square_index, d.bonus_on_goal, d.role);
-        } else {
-          setTimeout(open, 150);
-        }
-      };
-      setTimeout(open, 150);
+      openPenaltyKick(d.square_index, d.bonus_on_goal, d.role);
     } catch (e) {
       navigate('#lobby');
     }
@@ -2229,7 +2223,7 @@
       <div class="game-footer">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
           <div id="hint-bar" class="font-dm" style="font-size:10px;color:#b0b0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
-          <span class="font-dm" style="font-size:10px;color:#fbbf24;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
+          <span class="font-dm" style="font-size:10px;color:#fbbf24;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
 
