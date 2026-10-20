@@ -198,5 +198,12 @@
   "penalty.zone_4": "中下",
   "penalty.zone_5": "右下",
   "penalty.found_toast": "你发现了一个点球格！你赢得了 {n} 次免费射门！",
-  "penalty.failed": "射门未能发送。它仍在这张地图上等待。"
+  "penalty.failed": "射门未能发送。它仍在这张地图上等待。",
+  "penalty.keeper_title": "扑出它！",
+  "penalty.keeper_subtitle": "选择一侧。扑出即可赢得 {n} 次免费射门。",
+  "penalty.dive_0": "左",
+  "penalty.dive_1": "中",
+  "penalty.dive_2": "右",
+  "penalty.keeper_saved": "扑出！+{n} 次免费射门",
+  "penalty.conceded": "失球！"
 }

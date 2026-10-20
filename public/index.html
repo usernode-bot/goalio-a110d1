@@ -522,11 +522,13 @@
       padding: 10px 16px; background: rgba(10,10,15,0.12); backdrop-filter: blur(14px) saturate(1.2);
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .header-logo-block { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
+    .header-logo-block { display: flex; flex-direction: column; justify-content: center; min-height: 44px; text-decoration: none; line-height: 1.1; }
     .header-logo-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fbbf24; letter-spacing: -0.5px; }
     .header-logo-sub { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.55rem; color: #fbbf24; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-top: 1px; }
     .header-btns { display: flex; align-items: center; gap: 2px; }
     .header-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; min-height: 44px; box-sizing: border-box;
       font-family: 'DM Sans', sans-serif; font-size: 1rem; padding: 6px 10px;
       background: none; border: none; color: #aaa; cursor: pointer; border-radius: 6px; transition: color 0.15s, background 0.15s;
     }
@@ -954,7 +956,7 @@
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
     /* Penalty kick screen */
-    .pk-close { position: absolute; top: 6px; right: 10px; background: none; border: none; color: #aaa; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0 4px; }
+    .pk-close { position: absolute; top: 0; right: 0; background: none; border: none; color: #aaa; font-size: 1.6rem; line-height: 1; cursor: pointer; padding: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
     .pk-close:hover { color: #f0f0f5; }
     .modal-box.penalty-box { position: relative; width: 94%; max-width: 360px; }
     .pk-title { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 1.5rem; color: #fbbf24; letter-spacing: 0.04em; }
@@ -963,6 +965,12 @@
     .pk-zone { border: 1px dashed rgba(255,255,255,0.18); background: transparent; padding: 0; cursor: pointer; }
     .pk-zone:hover, .pk-zone:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
     .pk-zone:disabled { cursor: default; }
+    .pk-zone:disabled:hover { background: transparent; border-color: rgba(255,255,255,0.18); outline: none; }
+    .pk-dive-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 10px; }
+    .pk-dive { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 8px 0; min-height: 44px; border-radius: 10px; border: 1px solid rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); color: #fbbf24; cursor: pointer; }
+    .pk-dive:hover, .pk-dive:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
+    .pk-dive:disabled { cursor: default; opacity: 0.6; }
+    .pk-dive.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; opacity: 1; }
     .pk-zone.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; }
     .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 56px; height: 76px; margin-left: -28px; pointer-events: none; transform-origin: 50% 70%; transform: rotate(0deg); transition: left 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, bottom 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, transform 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s; }
     .pk-keeper > span { position: absolute; display: block; }
@@ -1729,6 +1737,7 @@
     }
     else if (hash === '#demo/final-refund') demoFinalRefund();
     else if (hash === '#demo/penalty') demoPenaltyKick();
+    else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1759,14 +1768,18 @@
   // Staging demo deep link: leaves a penalty kick waiting on the staging group
   // board (server returns 404 outside staging) and opens the board with the
   // kick screen up, so the screen is reachable without guessing blind.
-  async function demoPenaltyKick() {
+  async function demoPenaltyKick(role) {
     try {
-      const seed = await api('POST', '/api/staging/demo-penalty');
+      // Each demo link shows one role; the real kick rolls its own.
+      const seed = await api('POST', '/api/staging/demo-penalty', { role: role || 'taker' });
       if (!seed.ok) { navigate('#lobby'); return; }
       const d = await seed.json();
       state.session = { ...state.session, current_game_id: d.game_id };
+      // The seed already knows which game and kick it left, so the kick screen
+      // opens right away and stays over the board while that board loads.
+      state.game = { ...(state.game || {}), id: d.game_id };
       navigate('#game/' + d.game_id);
-      setTimeout(() => openPenaltyKick(d.square_index, d.bonus_on_goal), 1000);
+      openPenaltyKick(d.square_index, d.bonus_on_goal, d.role);
     } catch (e) {
       navigate('#lobby');
     }
@@ -1775,12 +1788,34 @@
   // ═══════════════════════════════════════════════════════════════
   // LOBBY
   // ═══════════════════════════════════════════════════════════════
+  // Loading shell: the header shows at once and the wallet/pot tiles keep
+  // their shape as grey placeholders while /api/session is fetched.
+  const LOBBY_LOADING_CSS = `
+    .lobby-skeleton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); animation: lobby-skeleton-pulse 1.4s ease-in-out infinite; }
+    @keyframes lobby-skeleton-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+    .lobby-spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(251,191,36,0.25); border-top-color: #fbbf24; animation: lobby-spin 0.8s linear infinite; }
+    @keyframes lobby-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .lobby-skeleton { animation: none; } .lobby-spinner { animation-duration: 2.4s; } }
+  `;
+  if (!document.getElementById('lobby-loading-css')) {
+    const s = document.createElement('style');
+    s.id = 'lobby-loading-css';
+    s.textContent = LOBBY_LOADING_CSS;
+    document.head.appendChild(s);
+  }
+
   async function renderLobby() {
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
       <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:12px 16px 20px;width:100%;">
-        <div style="text-align:center;padding:40px 0;color:#555;">Loading...</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div class="hud-chip lobby-skeleton" style="flex:1;height:52px;"></div>
+          <div class="hud-chip lobby-skeleton" style="flex:1;height:52px;"></div>
+        </div>
+        <div style="display:flex;justify-content:center;padding:32px 0;" role="status" aria-label="Loading">
+          <div class="lobby-spinner"></div>
+        </div>
       </div>
     </div>`;
     await loadLobby();
@@ -1790,19 +1825,10 @@
     const body = document.getElementById('lobby-body');
     function showLobbyError(msg, isAuth) {
       console.error('Lobby error:', msg);
-      const tokenDebug = isAuth ? (() => {
-        const tok = getToken();
-        const hasSS = (() => { try { return !!sessionStorage.getItem('usernode_token'); } catch(_) { return false; } })();
-        const hasLS = (() => { try { return !!localStorage.getItem('usernode_token'); } catch(_) { return false; } })();
-        return `<p style="margin-top:12px;font-size:0.7rem;font-family:monospace;color:#71717a;">
-          token in memory: ${tok ? '✓' : '✗'} &nbsp;|&nbsp;
-          sessionStorage: ${hasSS ? '✓' : '✗'} &nbsp;|&nbsp;
-          localStorage: ${hasLS ? '✓' : '✗'}
-        </p>
-        <p style="margin-top:8px;font-size:0.75rem;color:#a1a1aa;font-family:'DM Sans',sans-serif;">Sign in via Usernode to play.</p>`;
-      })() : '';
       if (body) body.innerHTML = `<div style="text-align:center;padding:40px;font-family:'DM Sans',sans-serif;">
-        <p style="color:#f87171;">Error loading lobby: ${msg}</p>${tokenDebug}
+        <p style="color:#ccc;margin-bottom:16px;">Couldn't load the game. Check your connection and try again.</p>
+        <button class="bundle-btn btn-gold" style="min-height:44px;padding:10px 18px;" onclick="loadLobby()">Try again</button>
+        ${isAuth ? `<p style="margin-top:12px;font-size:0.75rem;color:#a1a1aa;">Sign in via Usernode to play.</p>` : ''}
       </div>`;
     }
     try {
@@ -2116,7 +2142,7 @@
       const pendingPenalty = d.pending_penalty || null;
       if (pendingPenalty) {
         setTimeout(() => {
-          openPenaltyKick(pendingPenalty.square_index, pendingPenalty.bonus_on_goal);
+          openPenaltyKick(pendingPenalty.square_index, pendingPenalty.bonus_on_goal, pendingPenalty.role);
         }, 3000);
       }
     } catch(e) {
@@ -2201,8 +2227,8 @@
       </div>
       <div class="game-footer">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
-          <div id="hint-bar" class="font-dm" style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
-          <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
+          <div id="hint-bar" class="font-dm" style="font-size:10px;color:#b0b0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
+          <span class="font-dm" style="font-size:10px;color:#fbbf24;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;display:inline-flex;align-items:center;justify-content:flex-end;min-width:44px;min-height:44px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
 
@@ -2419,8 +2445,9 @@
         if (cell) cell.classList.add('open');
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
         const bonusOnGoal = d.penalty ? d.penalty.bonus_on_goal : 0;
+        const penaltyRole = d.penalty ? d.penalty.role : undefined;
         try {
-          openPenaltyKick(idx, bonusOnGoal);
+          openPenaltyKick(idx, bonusOnGoal, penaltyRole);
         } catch (e) {
           console.error('Penalty screen failed', e);
           showToast(t('penalty.found_toast', { n: bonusOnGoal }));
@@ -2667,19 +2694,23 @@
   const PK_DIVE_ROTATION = [-55, 0, 55, -55, 0, 55];
   const PK_LAND_ROTATION = [-75, 0, 75, -80, 0, 80];
 
-  function openPenaltyKick(squareIdx, bonusOnGoal) {
+  function openPenaltyKick(squareIdx, bonusOnGoal, role) {
     if (!state.game) return;
     if (document.querySelector('.penalty-modal')) return;
     const n = bonusOnGoal || 0;
+    const asKeeper = role === 'keeper';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-bg penalty-modal';
     overlay.innerHTML = `<div class="modal-box penalty-box">
       <button class="pk-close" aria-label="${t('penalty.close')}">×</button>
-      <div class="pk-title">${t('penalty.title')}</div>
-      <div class="pk-sub">${t('penalty.subtitle', { n })}</div>
+      <div class="pk-title">${asKeeper ? t('penalty.keeper_title') : t('penalty.title')}</div>
+      <div class="pk-sub">${asKeeper ? t('penalty.keeper_subtitle', { n }) : t('penalty.subtitle', { n })}</div>
+      ${asKeeper ? `<div class="pk-dive-row">
+        ${[0, 1, 2].map(dv => `<button class="pk-dive" data-dive="${dv}">${t('penalty.dive_' + dv)}</button>`).join('')}
+      </div>` : ''}
       <div class="pk-goal">
-        ${[0, 1, 2, 3, 4, 5].map(z => `<button class="pk-zone" data-zone="${z}" aria-label="${t('penalty.zone_' + z)}"></button>`).join('')}
+        ${[0, 1, 2, 3, 4, 5].map(z => `<button class="pk-zone" data-zone="${z}" aria-label="${t('penalty.zone_' + z)}"${asKeeper ? ' disabled tabindex="-1"' : ''}></button>`).join('')}
         <div class="pk-keeper" aria-hidden="true">
           <span class="pk-keeper-arm left"></span><span class="pk-keeper-arm right"></span>
           <span class="pk-keeper-leg left"></span><span class="pk-keeper-leg right"></span>
@@ -2697,6 +2728,7 @@
     const ballEl = overlay.querySelector('.pk-ball');
     const keeperEl = overlay.querySelector('.pk-keeper');
     const zones = Array.from(overlay.querySelectorAll('.pk-zone'));
+    const dives = Array.from(overlay.querySelectorAll('.pk-dive'));
     const resultEl = overlay.querySelector('.pk-result');
     const actionsEl = overlay.querySelector('.pk-actions');
     overlay.querySelector('.pk-close').addEventListener('click', () => overlay.remove());
@@ -2712,18 +2744,23 @@
     };
 
     let kicking = false;
-    const takeKick = async (zoneIdx) => {
+    // As taker the player aims at a zone; as keeper they pick a side to dive
+    // to and the server rolls where the ball goes.
+    const takeKick = async (zoneIdx, diveIdx) => {
       if (kicking) return;
       kicking = true;
       zones.forEach(z => { z.disabled = true; });
-      zones[zoneIdx].classList.add('aim');
+      dives.forEach(b => { b.disabled = true; });
+      if (asKeeper) dives[diveIdx].classList.add('aim');
+      else zones[zoneIdx].classList.add('aim');
       const closeBtn = overlay.querySelector('.pk-close');
       if (closeBtn) closeBtn.style.display = 'none';
 
       const gameId = state.game.id;
       let d;
       try {
-        const r = await api('POST', `/api/games/${gameId}/penalty-kick`, { square_index: squareIdx, zone: zoneIdx });
+        const body = asKeeper ? { square_index: squareIdx, dive: diveIdx } : { square_index: squareIdx, zone: zoneIdx };
+        const r = await api('POST', `/api/games/${gameId}/penalty-kick`, body);
         if (!r.ok) {
           const e = await r.json().catch(() => ({}));
           overlay.remove();
@@ -2739,8 +2776,8 @@
         return;
       }
 
-      // The ball flies to the chosen zone, the keeper dives to his.
-      aimAt(ballEl, zones[zoneIdx]);
+      // The ball flies to the zone the server gives, the keeper dives to his.
+      aimAt(ballEl, zones[d.zone]);
       const keeperZone = Number.isInteger(d.keeper_zone) ? d.keeper_zone : 0;
       keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[keeperZone] || 0}deg`);
       keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[keeperZone] || 0}deg`);
@@ -2758,8 +2795,9 @@
       }
       updateHud();
 
-      if (d.scored) {
-        resultEl.innerHTML = `<div class="refund-summary">${t('penalty.goal', { n: d.bonus_credits_awarded })}</div>`;
+      const won = asKeeper ? !d.scored : d.scored;
+      if (won) {
+        resultEl.innerHTML = `<div class="refund-summary">${asKeeper ? t('penalty.keeper_saved', { n: d.bonus_credits_awarded }) : t('penalty.goal', { n: d.bonus_credits_awarded })}</div>`;
         Sound.bonusWin();
         playRefundCoins(overlay, { shots_refunded: d.bonus_credits_awarded }, '.shots-val');
         const shotsChip = document.querySelector('.shots-val');
@@ -2768,7 +2806,7 @@
           setTimeout(() => shotsChip.closest('.hud-chip').classList.remove('refund-glow'), 700);
         }
       } else {
-        resultEl.textContent = t('penalty.saved');
+        resultEl.textContent = asKeeper ? t('penalty.conceded') : t('penalty.saved');
         Sound.bonusLose();
       }
 
@@ -2778,13 +2816,17 @@
       btn.textContent = t('penalty.continue');
       btn.addEventListener('click', () => {
         overlay.remove();
-        if (d.pending_penalty) openPenaltyKick(d.pending_penalty.square_index, d.pending_penalty.bonus_on_goal);
+        if (d.pending_penalty) openPenaltyKick(d.pending_penalty.square_index, d.pending_penalty.bonus_on_goal, d.pending_penalty.role);
       });
       actionsEl.appendChild(btn);
       btn.focus();
     };
 
-    zones.forEach(z => z.addEventListener('click', () => takeKick(parseInt(z.dataset.zone, 10))));
+    if (asKeeper) {
+      dives.forEach(b => b.addEventListener('click', () => takeKick(null, parseInt(b.dataset.dive, 10))));
+    } else {
+      zones.forEach(z => z.addEventListener('click', () => takeKick(parseInt(z.dataset.zone, 10))));
+    }
   }
   window.openPenaltyKick = openPenaltyKick;
 
@@ -3537,6 +3579,10 @@
   async function init() {
     // Testing mode is gone: clear the stale flag left in older browsers
     try { localStorage.removeItem('testingMode'); } catch(_) {}
+
+    // Paint the lobby's loading shell at once, so the header and placeholders
+    // show while i18n, themes and the session are fetched.
+    if (!location.hash || location.hash === '#lobby') route();
 
     // Initialize i18n system
     try {

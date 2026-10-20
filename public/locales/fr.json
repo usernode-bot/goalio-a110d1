@@ -198,5 +198,12 @@
   "penalty.zone_4": "En bas au milieu",
   "penalty.zone_5": "En bas à droite",
   "penalty.found_toast": "Tu as trouvé une case penalty ! Tu as gagné {n} tirs gratuits !",
-  "penalty.failed": "Le tir n'a pas pu être envoyé. Il attend toujours sur cette carte."
+  "penalty.failed": "Le tir n'a pas pu être envoyé. Il attend toujours sur cette carte.",
+  "penalty.keeper_title": "ARRÊTE-LE !",
+  "penalty.keeper_subtitle": "Choisis un côté. Arrête le tir pour gagner {n} tirs gratuits.",
+  "penalty.dive_0": "Gauche",
+  "penalty.dive_1": "Milieu",
+  "penalty.dive_2": "Droite",
+  "penalty.keeper_saved": "ARRÊTÉ ! +{n} tirs gratuits",
+  "penalty.conceded": "BUT ENCAISSÉ !"
 }

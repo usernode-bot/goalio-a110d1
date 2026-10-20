@@ -198,5 +198,12 @@
   "penalty.zone_4": "Abajo centro",
   "penalty.zone_5": "Abajo derecha",
   "penalty.found_toast": "¡Encontraste una casilla de penalti! ¡Ganaste {n} tiros gratis!",
-  "penalty.failed": "No se pudo enviar el tiro. Sigue esperando en este mapa."
+  "penalty.failed": "No se pudo enviar el tiro. Sigue esperando en este mapa.",
+  "penalty.keeper_title": "¡PÁRALO!",
+  "penalty.keeper_subtitle": "Elige un lado. Páralo para ganar {n} tiros gratis.",
+  "penalty.dive_0": "Izquierda",
+  "penalty.dive_1": "Centro",
+  "penalty.dive_2": "Derecha",
+  "penalty.keeper_saved": "¡PARADA! +{n} tiros gratis",
+  "penalty.conceded": "¡GOL EN CONTRA!"
 }

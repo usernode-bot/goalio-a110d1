@@ -198,5 +198,12 @@
   "penalty.zone_4": "Bottom middle",
   "penalty.zone_5": "Bottom right",
   "penalty.found_toast": "You found a penalty square! You won {n} free attempts!",
-  "penalty.failed": "The kick could not be sent. It is still waiting on this map."
+  "penalty.failed": "The kick could not be sent. It is still waiting on this map.",
+  "penalty.keeper_title": "SAVE IT!",
+  "penalty.keeper_subtitle": "Pick a side. Save it to win {n} free attempts.",
+  "penalty.dive_0": "Left",
+  "penalty.dive_1": "Middle",
+  "penalty.dive_2": "Right",
+  "penalty.keeper_saved": "SAVED! +{n} free attempts",
+  "penalty.conceded": "CONCEDED!"
 }

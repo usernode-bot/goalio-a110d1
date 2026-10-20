@@ -198,5 +198,12 @@
   "penalty.zone_4": "Unten Mitte",
   "penalty.zone_5": "Unten rechts",
   "penalty.found_toast": "Du hast ein Elfmeterfeld gefunden! Du hast {n} Freischüsse gewonnen!",
-  "penalty.failed": "Der Schuss konnte nicht gesendet werden. Er wartet weiter auf dieser Karte."
+  "penalty.failed": "Der Schuss konnte nicht gesendet werden. Er wartet weiter auf dieser Karte.",
+  "penalty.keeper_title": "HALT IHN!",
+  "penalty.keeper_subtitle": "Wähle eine Seite. Halte ihn, um {n} Freischüsse zu gewinnen.",
+  "penalty.dive_0": "Links",
+  "penalty.dive_1": "Mitte",
+  "penalty.dive_2": "Rechts",
+  "penalty.keeper_saved": "GEHALTEN! +{n} Freischüsse",
+  "penalty.conceded": "GEGENTOR!"
 }
