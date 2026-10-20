@@ -2293,7 +2293,9 @@
   // Goal mouth and ball, as percentages of the pitch box. Keep in step with
   // .pk-goal, .pk-keeper and .pk-ball in the stylesheet.
   const PK_GOAL = { left: 12.5, width: 75, top: 7.5, height: 34.375 };
-  const PK_BALL = { x: 50, y: 82.8 };
+  // How far the keeper's arms reach either side of him, as a share of the
+  // goal mouth. A goal is drawn clear of this so it never looks like a save.
+  const PK_KEEPER_REACH = 14;
   function runPenaltyKick() {
     return new Promise((resolve) => {
       let aimX = 50;
@@ -2462,26 +2464,34 @@
           return;
         }
 
+        // The server sends one outcome for the whole result: the text, the
+        // ball's path, the sound and the wallet all read this same value, so
+        // a save can never be shown as a goal or the other way round.
+        const outcome = d.outcome === 'goal' ? 'goal' : 'saved';
         const keeperX = typeof d.keeper_x === 'number' ? d.keeper_x : 50;
         keeper.style.left = goalPoint(keeperX, 0).x + '%';
         if (d.keeper === 'left' || d.keeper === 'right') keeper.classList.add('dive-' + d.keeper);
 
         let landing;
-        if (d.weak) {
-          const p = goalPoint(d.aim_x, d.aim_y);
-          landing = { x: (PK_BALL.x + p.x) / 2, y: (PK_BALL.y + p.y) / 2 };
-        } else if (d.scored) {
-          landing = goalPoint(d.aim_x, d.aim_y);
+        if (outcome === 'saved') {
+          // He got a hand to it: the ball stops at the keeper's hands.
+          landing = goalPoint(keeperX, Math.max(20, Math.min(80, d.aim_y)));
         } else {
-          const dir = d.aim_x < keeperX ? -1 : 1;
-          landing = goalPoint(keeperX + dir * 13, Math.max(20, Math.min(80, d.aim_y)));
+          // Into the net, and never drawn on the keeper, so a goal can't look
+          // like a save. Shots close to him are pushed clear of his reach.
+          let x = d.aim_x;
+          if (Math.abs(x - keeperX) < PK_KEEPER_REACH) {
+            x = x <= keeperX ? keeperX - PK_KEEPER_REACH : keeperX + PK_KEEPER_REACH;
+            x = Math.max(2, Math.min(98, x));
+          }
+          landing = goalPoint(x, d.aim_y);
         }
         ballEl.classList.add('is-shot');
         ballEl.style.left = landing.x + '%';
         ballEl.style.top = landing.y + '%';
         await new Promise(r => setTimeout(r, 650));
 
-        if (d.scored) {
+        if (outcome === 'goal') {
           resultEl.textContent = t('penalty_kick.goal');
           subEl.textContent = t('penalty_kick.reward', { amount: d.bonus });
           subEl.style.display = 'block';
@@ -2490,7 +2500,8 @@
         } else {
           resultEl.textContent = t('penalty_kick.saved');
           resultEl.classList.add('pk-saved');
-          if (d.weak) { subEl.textContent = t('penalty_kick.weak'); subEl.style.display = 'block'; }
+          subEl.textContent = t('penalty_kick.weak');
+          subEl.style.display = 'block';
           Sound.bonusLose();
         }
         resultEl.style.display = 'block';

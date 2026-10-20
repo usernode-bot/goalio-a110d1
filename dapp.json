@@ -147,9 +147,9 @@
       "expectSelector": ".pk-box"
     },
     {
-      "name": "Penalty kick shows the power gauge and shoot action",
+      "name": "Penalty kick shows the power gauge and shoot button",
       "path": "/#demo/penalty-kick",
-      "expectText": "Shoot"
+      "expectSelector": ".pk-power, .pk-shoot"
     },
     {
       "name": "Penalty kick aims by dragging on the pitch",

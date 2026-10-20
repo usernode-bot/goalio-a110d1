@@ -772,8 +772,11 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
     // The keeper commits first and can only stop a shot on his own side. If he
     // dives the other way the ball goes in whatever the power. When he guesses
     // right, a shot below the strong-power mark is saved for lack of power.
-    const weak = keeper === aim && power < PENALTY_KICK_STRONG_MIN;
-    const scored = !weak;
+    // `outcome` is the one value the response, the client animation and the
+    // wallet credit all read, so a save can never be shown or paid as a goal.
+    const outcome = keeper === aim && power < PENALTY_KICK_STRONG_MIN ? 'saved' : 'goal';
+    const scored = outcome === 'goal';
+    const weak = outcome === 'saved';
     const bonus = scored ? PENALTY_KICK_BONUS : 0;
 
     const { rowCount } = await client.query(`
@@ -804,7 +807,7 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
     const walletBalance = await getWalletBalance(client, req.user.id);
 
     await client.query('COMMIT');
-    res.json({ scored, aim, aim_x, aim_y, keeper, keeper_x: keeperX, power, weak, bonus, wallet_balance: walletBalance });
+    res.json({ outcome, scored, aim, aim_x, aim_y, keeper, keeper_x: keeperX, power, weak, bonus, wallet_balance: walletBalance });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Penalty kick error:', err.message);
