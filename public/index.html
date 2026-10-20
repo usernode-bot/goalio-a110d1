@@ -3035,13 +3035,6 @@
   function renderLeagueBody(d) {
     const body = document.getElementById('league-body');
     if (!body) return;
-    const now = new Date();
-    const deadline = new Date('2026-07-19T00:00:00Z');
-    const diff = deadline - now;
-    const days = Math.floor(diff / 86400000);
-    const hrs = Math.floor((diff % 86400000) / 3600000);
-    const mins = Math.floor((diff % 3600000) / 60000);
-    const countdown = diff > 0 ? `${days}d ${hrs}h ${mins}m` : 'Tournament ended';
 
     const myUserId = null; // can't get from league endpoint without auth
 
@@ -3065,7 +3058,6 @@
       <div style="background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:16px;margin-bottom:20px;font-family:'DM Sans',sans-serif;">
         <div style="font-family:'Press Start 2P',monospace;font-size:0.65rem;color:#FFD700;margin-bottom:4px;text-shadow:1px 1px 0 #FF1493,2px 2px 0 #00FFFF,3px 3px 8px rgba(0,0,0,0.8);letter-spacing:1px;">LEAGUE PRIZE</div>
         <div style="font-size:clamp(0.85rem, 2.5vw, 1rem);line-height:clamp(1.4, 2vw, 1.5);color:#f0f0f5;">Get involved with improving and updating this game. Join the collaborators group.</div>
-        <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#888;margin-top:8px;">⏱ ${countdown} remaining</div>
       </div>
       <div class="faq-retro-container" style="padding:20px;margin-bottom:20px;">
         <div class="faq-retro-title" style="margin-bottom:16px;">Top 20</div>
