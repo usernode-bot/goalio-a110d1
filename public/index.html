@@ -180,6 +180,7 @@
     .hud-chip.refund-glow { animation: refund-glow-pulse 0.6s ease; }
     @media (prefers-reduced-motion: reduce) {
       .refund-coin-layer, .refund-coin { display: none; }
+      .pk-keeper, .pk-keeper-arm, .pk-ball { transition-duration: 0.01s; }
     }
 
     /* Game board — board dominates, all 64 tiles always visible, no scroll */
@@ -924,28 +925,35 @@
     .pk-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 16px; width: 352px; max-width: 94vw; max-height: 96vh; overflow-y: auto; text-align: center; }
     .pk-title { font-family: 'Space Mono', monospace; font-weight: 700; color: #fbbf24; letter-spacing: normal; font-size: 1rem; }
     .pk-sub { font-size: 0.8rem; color: #aaa; margin: 4px 0 12px; font-family: 'DM Sans', sans-serif; }
-    .pk-pitch { position: relative; height: 320px; border-radius: 12px; background: linear-gradient(180deg, #14532d, #166534 60%, #15803d); overflow: hidden; }
-    .pk-goal { position: absolute; left: 40px; right: 40px; top: 24px; height: 110px; border: 4px solid #fff; border-bottom: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px), repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px); }
-    .pk-keeper { position: absolute; top: 60px; left: 50%; width: 34px; height: 70px; margin-left: -17px; border-radius: 14px 14px 6px 6px; background: #e23b4e; box-shadow: 0 0 0 2px rgba(0,0,0,0.3); transition: all 0.45s ease-out; }
-    .pk-keeper.dive-left, .pk-keeper.dive-right { top: 84px; width: 70px; height: 30px; margin-left: -35px; border-radius: 14px; }
-    .pk-keeper.dive-left { transform: translateX(-104px); }
-    .pk-keeper.dive-right { transform: translateX(104px); }
-    .pk-box-line { position: absolute; left: 20px; right: 20px; top: 134px; border-top: 2px solid rgba(255,255,255,0.5); }
-    .pk-ball { position: absolute; bottom: 40px; left: 50%; width: 30px; height: 30px; margin-left: -15px; border-radius: 50%; background: #fff; box-shadow: inset -4px -4px 0 rgba(0,0,0,0.15); transition: all 0.6s ease-out; }
-    .pk-ball.shot-left, .pk-ball.shot-right, .pk-ball.shot-centre { bottom: auto; top: 48px; width: 22px; height: 22px; margin-left: -11px; }
-    .pk-ball.shot-left { left: 76px; }
-    .pk-ball.shot-centre { left: 50%; }
-    .pk-ball.shot-right { left: calc(100% - 76px); }
-    .pk-aim { position: absolute; bottom: 76px; left: 50%; width: 4px; height: 120px; margin-left: -62px; background: rgba(251,191,36,0.85); border-radius: 2px; transform: rotate(-28deg); transform-origin: bottom center; transition: transform 0.15s ease-out; }
-    .pk-aim.aim-centre { transform: rotate(0deg); }
-    .pk-aim.aim-right { transform: rotate(28deg); margin-left: 58px; }
-    .pk-power-label { position: absolute; right: 10px; bottom: 180px; font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #fbbf24; }
+    .pk-pitch { position: relative; height: 320px; border-radius: 12px; background: linear-gradient(180deg, #14532d, #166534 60%, #15803d); overflow: hidden; touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+    .pk-pitch:focus-visible { outline: 2px solid #fbbf24; outline-offset: 2px; }
+    .pk-goal { position: absolute; left: 12.5%; right: 12.5%; top: 7.5%; height: 34.375%; border: 4px solid #fff; border-bottom: none; background: repeating-linear-gradient(0deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px), repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 1px, transparent 1px 10px); }
+    .pk-keeper { --pk-kit: #e23b4e; position: absolute; left: 50%; top: 41.875%; width: 52px; height: 86px; transform: translate(-50%, -100%); transform-origin: 50% 92%; transition: left 0.55s ease-out, transform 0.55s ease-out; }
+    .pk-keeper > div { position: absolute; }
+    .pk-keeper-head { top: 0; left: 50%; width: 17px; height: 17px; margin-left: -8.5px; border-radius: 50%; background: linear-gradient(#2b2118 0 6px, #e8b98f 6px); box-shadow: 0 1px 0 rgba(0,0,0,0.25); }
+    .pk-keeper-body { top: 15px; left: 50%; width: 28px; height: 38px; margin-left: -14px; border-radius: 9px 9px 5px 5px; background: var(--pk-kit); box-shadow: inset 0 -7px 0 rgba(0,0,0,0.15); }
+    .pk-keeper-arm { top: 20px; width: 7px; height: 31px; border-radius: 3px; background: var(--pk-kit); box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25); transform-origin: 50% 4px; transition: transform 0.4s ease-out; }
+    .pk-keeper-arm::after { content: ''; position: absolute; bottom: -4px; left: -2px; width: 11px; height: 11px; border-radius: 50%; background: #26263a; box-shadow: 0 0 0 1.5px #f4f4f5; }
+    .pk-keeper-arm.arm-left { left: 50%; margin-left: -19px; transform: rotate(38deg); }
+    .pk-keeper-arm.arm-right { left: 50%; margin-left: 12px; transform: rotate(-38deg); }
+    .pk-keeper-leg { top: 51px; width: 9px; height: 33px; border-radius: 3px; background: #1b1b2b; }
+    .pk-keeper-leg.leg-left { left: 50%; margin-left: -10px; transform: rotate(7deg); }
+    .pk-keeper-leg.leg-right { left: 50%; margin-left: 1px; transform: rotate(-7deg); }
+    .pk-keeper.dive-left { transform: translate(-50%, -100%) rotate(-70deg); }
+    .pk-keeper.dive-right { transform: translate(-50%, -100%) rotate(70deg); }
+    .pk-keeper.dive-left .arm-left, .pk-keeper.dive-left .arm-right { transform: rotate(140deg); }
+    .pk-keeper.dive-right .arm-left, .pk-keeper.dive-right .arm-right { transform: rotate(-140deg); }
+    .pk-box-line { position: absolute; left: 6.25%; right: 6.25%; top: 41.875%; border-top: 2px solid rgba(255,255,255,0.5); }
+    .pk-ball { position: absolute; left: 50%; top: 82.8%; width: 30px; height: 30px; border-radius: 50%; background: #fff; box-shadow: inset -4px -4px 0 rgba(0,0,0,0.15); transform: translate(-50%, -50%); transition: left 0.6s ease-out, top 0.6s ease-out, width 0.6s ease-out, height 0.6s ease-out; }
+    .pk-ball.is-shot { width: 20px; height: 20px; }
+    .pk-aim-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; transition: opacity 0.2s ease-out; }
+    .pk-aim-line { stroke: rgba(251,191,36,0.85); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 6 5; }
+    .pk-aim-dot { fill: rgba(251,191,36,0.25); stroke: #fbbf24; stroke-width: 2.5; }
+    .pk-power-label { position: absolute; right: 10px; bottom: 4px; font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #fbbf24; }
     .pk-power { position: absolute; right: 18px; bottom: 24px; width: 18px; height: 150px; border-radius: 9px; background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.2); overflow: hidden; }
     .pk-power-band { position: absolute; left: 0; right: 0; top: 0; height: 40%; background: rgba(251,191,36,0.35); }
     .pk-power-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0%; background: linear-gradient(0deg, #f59e0b, #ffce4a); }
     .pk-power.is-strong .pk-power-fill { background: linear-gradient(0deg, #fbbf24, #ffe08a); }
-    .pk-aims { display: flex; gap: 8px; margin: 12px 0 10px; }
-    .pk-aims .bundle-btn { flex: 1; padding: 8px 0; }
     .pk-result { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 2rem; color: #fbbf24; letter-spacing: 0.1em; margin-top: 12px; }
     .pk-result.pk-saved { color: #ef4444; }
     .pk-result-sub { font-size: 0.85rem; color: #ccc; margin: 4px 0 12px; font-family: 'DM Sans', sans-serif; }
@@ -2277,10 +2285,17 @@
 
   // Penalty kick mini-game. Resolves once Continue is tapped (or the overlay
   // is dismissed after a failed request) so the square tap can carry on.
+  // The player aims with a finger anywhere on the pitch: the arrow and target
+  // follow the touch inside the goal mouth.
   const PK_STRONG_MIN = 60;
+  // Goal mouth and ball, as percentages of the pitch box. Keep in step with
+  // .pk-goal, .pk-keeper and .pk-ball in the stylesheet.
+  const PK_GOAL = { left: 12.5, width: 75, top: 7.5, height: 34.375 };
+  const PK_BALL = { x: 50, y: 82.8 };
   function runPenaltyKick() {
     return new Promise((resolve) => {
-      let aim = 'left';
+      let aimX = 50;
+      let aimY = 50;
       let power = 0;
       let rafId = null;
       let shooting = false;
@@ -2292,19 +2307,24 @@
       overlay.innerHTML = `<div class="modal-box pk-box">
         <div class="pk-title">${t('penalty_kick.title')}</div>
         <div class="pk-sub">${t('penalty_kick.sub')}</div>
-        <div class="pk-pitch">
+        <div class="pk-pitch" tabindex="0" role="group" aria-label="${t('penalty_kick.title')}: ${t('penalty_kick.sub')}">
           <div class="pk-goal"></div>
-          <div class="pk-keeper"></div>
+          <div class="pk-keeper">
+            <div class="pk-keeper-head"></div>
+            <div class="pk-keeper-body"></div>
+            <div class="pk-keeper-arm arm-left"></div>
+            <div class="pk-keeper-arm arm-right"></div>
+            <div class="pk-keeper-leg leg-left"></div>
+            <div class="pk-keeper-leg leg-right"></div>
+          </div>
           <div class="pk-box-line"></div>
-          <div class="pk-aim aim-left"></div>
+          <svg class="pk-aim-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line class="pk-aim-line" x1="50" y1="82.8" x2="50" y2="25" vector-effect="non-scaling-stroke"/>
+            <circle class="pk-aim-dot" cx="50" cy="25" r="1.8" vector-effect="non-scaling-stroke"/>
+          </svg>
           <div class="pk-ball"></div>
           <div class="pk-power-label">${t('penalty_kick.power')}</div>
           <div class="pk-power"><div class="pk-power-band"></div><div class="pk-power-fill"></div></div>
-        </div>
-        <div class="pk-aims">
-          <button type="button" class="bundle-btn btn-ghost on" data-aim="left">${t('penalty_kick.left')}</button>
-          <button type="button" class="bundle-btn btn-ghost" data-aim="centre">${t('penalty_kick.centre')}</button>
-          <button type="button" class="bundle-btn btn-ghost" data-aim="right">${t('penalty_kick.right')}</button>
         </div>
         <div class="pk-result" style="display:none;"></div>
         <div class="pk-result-sub" style="display:none;"></div>
@@ -2312,14 +2332,69 @@
       </div>`;
       document.body.appendChild(overlay);
 
+      const pitchEl = overlay.querySelector('.pk-pitch');
+      const goalEl = overlay.querySelector('.pk-goal');
       const keeper = overlay.querySelector('.pk-keeper');
-      if (state.gameTheme && state.gameTheme.accent_colour) keeper.style.background = state.gameTheme.accent_colour;
+      const ballEl = overlay.querySelector('.pk-ball');
+      if (state.gameTheme && state.gameTheme.accent_colour) keeper.style.setProperty('--pk-kit', state.gameTheme.accent_colour);
       const gauge = overlay.querySelector('.pk-power');
       const fill = overlay.querySelector('.pk-power-fill');
-      const arrow = overlay.querySelector('.pk-aim');
+      const lineEl = overlay.querySelector('.pk-aim-line');
+      const dotEl = overlay.querySelector('.pk-aim-dot');
+      const aimSvg = overlay.querySelector('.pk-aim-svg');
       const shootBtn = overlay.querySelector('.pk-shoot');
       const resultEl = overlay.querySelector('.pk-result');
       const subEl = overlay.querySelector('.pk-result-sub');
+
+      // Goal-mouth percentages → pitch percentages.
+      function goalPoint(x, y) {
+        return {
+          x: PK_GOAL.left + (x * PK_GOAL.width) / 100,
+          y: PK_GOAL.top + (y * PK_GOAL.height) / 100
+        };
+      }
+      function renderAim() {
+        const p = goalPoint(aimX, aimY);
+        lineEl.setAttribute('x2', p.x.toFixed(2));
+        lineEl.setAttribute('y2', p.y.toFixed(2));
+        dotEl.setAttribute('cx', p.x.toFixed(2));
+        dotEl.setAttribute('cy', p.y.toFixed(2));
+        dotEl.setAttribute('r', (1.4 + power / 110).toFixed(2));
+      }
+
+      function aimFromPointer(e) {
+        const r = goalEl.getBoundingClientRect();
+        if (!r.width || !r.height) return;
+        aimX = Math.max(0, Math.min(100, ((e.clientX - r.left) / r.width) * 100));
+        aimY = Math.max(0, Math.min(100, ((e.clientY - r.top) / r.height) * 100));
+        renderAim();
+      }
+
+      let dragging = false;
+      pitchEl.addEventListener('pointerdown', (e) => {
+        if (shooting) return;
+        e.preventDefault();
+        dragging = true;
+        if (pitchEl.setPointerCapture) pitchEl.setPointerCapture(e.pointerId);
+        aimFromPointer(e);
+      });
+      pitchEl.addEventListener('pointermove', (e) => {
+        if (!dragging || shooting) return;
+        aimFromPointer(e);
+      });
+      pitchEl.addEventListener('pointerup', () => { dragging = false; });
+      pitchEl.addEventListener('pointercancel', () => { dragging = false; });
+      pitchEl.addEventListener('keydown', (e) => {
+        if (shooting) return;
+        const step = e.shiftKey ? 10 : 4;
+        const moves = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        const m = moves[e.key];
+        if (!m) return;
+        e.preventDefault();
+        aimX = Math.max(0, Math.min(100, aimX + m[0] * step));
+        aimY = Math.max(0, Math.min(100, aimY + m[1] * step));
+        renderAim();
+      });
 
       function close() {
         if (closed) return;
@@ -2337,18 +2412,10 @@
         power = Math.round((p < 0.5 ? p * 2 : (1 - p) * 2) * 100);
         fill.style.height = power + '%';
         gauge.classList.toggle('is-strong', power >= PK_STRONG_MIN);
+        renderAim();
         rafId = requestAnimationFrame(tick);
       }
       rafId = requestAnimationFrame(tick);
-
-      overlay.querySelectorAll('[data-aim]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          if (shooting) return;
-          aim = btn.dataset.aim;
-          overlay.querySelectorAll('[data-aim]').forEach(b => b.classList.toggle('on', b === btn));
-          arrow.className = 'pk-aim aim-' + aim;
-        });
-      });
 
       shootBtn.addEventListener('click', async () => {
         if (done) { close(); return; }
@@ -2356,12 +2423,13 @@
         shooting = true;
         if (rafId) cancelAnimationFrame(rafId);
         fill.style.height = power + '%';
-        overlay.querySelectorAll('[data-aim]').forEach(b => { b.disabled = true; });
+        aimSvg.style.opacity = '0';
         shootBtn.disabled = true;
 
+        const payload = { aim_x: Math.round(aimX), aim_y: Math.round(aimY), power };
         let d;
         try {
-          const r = await api('POST', `/api/games/${state.game.id}/penalty-kick`, { aim, power });
+          const r = await api('POST', `/api/games/${state.game.id}/penalty-kick`, payload);
           if (!r.ok) {
             const e = await r.json().catch(() => ({}));
             showToast(e.error || t('penalty_kick.title'));
@@ -2375,8 +2443,23 @@
           return;
         }
 
-        overlay.querySelector('.pk-ball').classList.add('shot-' + d.aim);
-        keeper.classList.add('dive-' + d.keeper);
+        const keeperX = typeof d.keeper_x === 'number' ? d.keeper_x : 50;
+        keeper.style.left = goalPoint(keeperX, 0).x + '%';
+        if (d.keeper === 'left' || d.keeper === 'right') keeper.classList.add('dive-' + d.keeper);
+
+        let landing;
+        if (d.weak) {
+          const p = goalPoint(d.aim_x, d.aim_y);
+          landing = { x: (PK_BALL.x + p.x) / 2, y: (PK_BALL.y + p.y) / 2 };
+        } else if (d.scored) {
+          landing = goalPoint(d.aim_x, d.aim_y);
+        } else {
+          const dir = d.aim_x < keeperX ? -1 : 1;
+          landing = goalPoint(keeperX + dir * 13, Math.max(20, Math.min(80, d.aim_y)));
+        }
+        ballEl.classList.add('is-shot');
+        ballEl.style.left = landing.x + '%';
+        ballEl.style.top = landing.y + '%';
         await new Promise(r => setTimeout(r, 650));
 
         if (d.scored) {

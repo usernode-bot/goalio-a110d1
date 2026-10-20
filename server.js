@@ -21,7 +21,11 @@ const HOUSE_BONUS_TOKENS = 50;
 // Semi-Final) offers one free kick on the first square tapped in the match.
 const PENALTY_KICK_BONUS = 50;
 const PENALTY_KICK_STRONG_MIN = 60;
+// The keeper picks a position across the goal mouth (percent, 0 = left post,
+// 100 = right post) and covers PENALTY_KICK_REACH percent either side of it.
 const PENALTY_KICK_SIDES = ['left', 'centre', 'right'];
+const PENALTY_KICK_KEEPER_X = { left: 36, centre: 50, right: 64 };
+const PENALTY_KICK_REACH = 14;
 function isPenaltyKickStage(stageIdx) {
   return Number.isInteger(stageIdx) && stageIdx >= 0 && stageIdx % 2 === 1;
 }
@@ -722,10 +726,15 @@ app.get('/api/games/:id', async (req, res) => {
 
 // POST /api/games/:id/penalty-kick
 // One free kick per player per match. The keeper and the outcome are decided
-// here; the client only reports the aim and the power it stopped at.
+// here; the client only reports where it aimed in the goal mouth (aim_x: 0 =
+// left post, 100 = right post; aim_y: 0 = crossbar, 100 = ground) and the
+// power it stopped at.
 app.post('/api/games/:id/penalty-kick', async (req, res) => {
-  const { aim, power } = req.body || {};
-  if (!PENALTY_KICK_SIDES.includes(aim)) {
+  const { aim_x, aim_y, power } = req.body || {};
+  if (!Number.isInteger(aim_x) || aim_x < 0 || aim_x > 100) {
+    return res.status(400).json({ error: 'Invalid aim' });
+  }
+  if (!Number.isInteger(aim_y) || aim_y < 0 || aim_y > 100) {
     return res.status(400).json({ error: 'Invalid aim' });
   }
   if (!Number.isInteger(power) || power < 0 || power > 100) {
@@ -758,15 +767,18 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
     }
 
     const keeper = PENALTY_KICK_SIDES[crypto.randomInt(PENALTY_KICK_SIDES.length)];
-    const scored = aim !== keeper && power >= PENALTY_KICK_STRONG_MIN;
+    const keeperX = PENALTY_KICK_KEEPER_X[keeper];
     const weak = power < PENALTY_KICK_STRONG_MIN;
+    const reached = Math.abs(aim_x - keeperX) < PENALTY_KICK_REACH;
+    const scored = !weak && !reached;
     const bonus = scored ? PENALTY_KICK_BONUS : 0;
+    const aim = aim_x < 100 / 3 ? 'left' : aim_x > 200 / 3 ? 'right' : 'centre';
 
     const { rowCount } = await client.query(`
-      INSERT INTO penalty_kicks (game_id, user_id, aim, keeper, power, scored, bonus)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO penalty_kicks (game_id, user_id, aim, aim_x, aim_y, keeper, power, scored, bonus)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (game_id, user_id) DO NOTHING
-    `, [game.id, req.user.id, aim, keeper, power, scored, bonus]);
+    `, [game.id, req.user.id, aim, aim_x, aim_y, keeper, power, scored, bonus]);
     if (!rowCount) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Penalty kick already taken' });
@@ -790,7 +802,7 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
     const walletBalance = await getWalletBalance(client, req.user.id);
 
     await client.query('COMMIT');
-    res.json({ scored, aim, keeper, power, weak, bonus, wallet_balance: walletBalance });
+    res.json({ scored, aim, aim_x, aim_y, keeper, keeper_x: keeperX, power, weak, bonus, wallet_balance: walletBalance });
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Penalty kick error:', err.message);
@@ -1727,6 +1739,8 @@ async function start() {
     game_id INTEGER NOT NULL REFERENCES games(id),
     user_id INTEGER NOT NULL,
     aim VARCHAR(8) NOT NULL,
+    aim_x SMALLINT NOT NULL DEFAULT 50,
+    aim_y SMALLINT NOT NULL DEFAULT 50,
     keeper VARCHAR(8) NOT NULL,
     power SMALLINT NOT NULL,
     scored BOOLEAN NOT NULL,
@@ -1734,6 +1748,8 @@ async function start() {
     created_at TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (game_id, user_id)
   )`);
+  await pool.query(`ALTER TABLE penalty_kicks ADD COLUMN IF NOT EXISTS aim_x SMALLINT NOT NULL DEFAULT 50`);
+  await pool.query(`ALTER TABLE penalty_kicks ADD COLUMN IF NOT EXISTS aim_y SMALLINT NOT NULL DEFAULT 50`);
   await pool.query(`COMMENT ON TABLE penalty_kicks IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
@@ -1845,6 +1861,7 @@ async function start() {
   // Wipe all player/game rows on every staging boot so the seed below always
   // starts from a clean slate. Themes, captain_pot, and game_stats are kept.
   if (IS_STAGING) {
+    await pool.query(`DELETE FROM penalty_kicks`);
     await pool.query(`DELETE FROM guesses`);
     await pool.query(`DELETE FROM game_sessions`);
     // tournament_sessions references games (current_game_id / last_won_game_id),

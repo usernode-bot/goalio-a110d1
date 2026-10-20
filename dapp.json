@@ -150,6 +150,11 @@
       "name": "Penalty kick shows the power gauge and shoot action",
       "path": "/#demo/penalty-kick",
       "expectText": "Shoot"
+    },
+    {
+      "name": "Penalty kick aims by dragging on the pitch",
+      "path": "/#demo/penalty-kick",
+      "expectSelector": ".pk-pitch .pk-goal"
     }
   ],
   "visibility": {
