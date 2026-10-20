@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+  <!-- White pitch markings seen from behind the goal, far side at the top.
+       Stretched to fill, so each stroke uses vector-effect to stay even. -->
+  <g fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="5">
+    <line x1="0" y1="130" x2="1000" y2="130" vector-effect="non-scaling-stroke"/>
+    <!-- centre circle, flattened by perspective -->
+    <ellipse cx="500" cy="130" rx="190" ry="42" vector-effect="non-scaling-stroke"/>
+    <!-- penalty area, tapered toward the far edge -->
+    <path d="M175,600 L320,400 L680,400 L825,600" vector-effect="non-scaling-stroke"/>
+    <!-- six-yard box -->
+    <path d="M330,600 L405,487 L595,487 L670,600" vector-effect="non-scaling-stroke"/>
+    <!-- penalty arc -->
+    <path d="M390,400 A150,52 0 0 0 610,400" vector-effect="non-scaling-stroke"/>
+  </g>
+  <!-- penalty spot -->
+  <ellipse cx="500" cy="455" rx="10" ry="4" fill="rgba(255,255,255,0.75)"/>
+  <!-- centre spot -->
+  <ellipse cx="500" cy="130" rx="8" ry="3.5" fill="rgba(255,255,255,0.75)"/>
+</svg>

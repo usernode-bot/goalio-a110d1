@@ -209,6 +209,51 @@
     }
     /* Full-height game container using small viewport height to stay within visible area on mobile */
     .game-screen { display: flex; flex-direction: column; height: 100vh; height: 100svh; overflow: hidden; position: relative; }
+
+    /* Stadium backdrop — game board only, sits behind header, board and footer */
+    .stadium { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; transition: opacity .45s; }
+    .stadium.is-hidden { opacity: 0; }
+    .stadium-stands {
+      position: absolute; left: 0; right: 0; top: 0; height: 36%;
+      background-image:
+        radial-gradient(ellipse 42% 55% at 16% 0%, rgba(255,250,225,0.5), rgba(255,250,225,0) 65%),
+        radial-gradient(ellipse 42% 55% at 84% 0%, rgba(255,250,225,0.5), rgba(255,250,225,0) 65%),
+        url('/images/stadium/stands.svg'),
+        linear-gradient(180deg, #0d1020 0%, #101326 60%, #151830 100%);
+      background-size: auto, auto, auto 100%, 100% 100%;
+      background-repeat: repeat, repeat, repeat-x, no-repeat;
+    }
+    /* Faint opponent-colour wash over the stand + haze fading into the pitch */
+    .stadium-stands::after {
+      content: ''; position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, var(--accent-soft) 0%, rgba(0,0,0,0) 55%),
+        linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(8,10,18,0.55) 100%);
+      opacity: 0.6;
+    }
+    .stadium-pitch {
+      position: absolute; left: 0; right: 0; top: 34%; bottom: 0;
+      background-image:
+        radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(6,8,14,0.55) 100%),
+        url('/images/stadium/pitch-lines.svg'),
+        repeating-linear-gradient(180deg, #2f7d32 0 64px, #3a8f3d 64px 128px);
+      background-size: 100% 100%, 100% 100%, auto;
+    }
+    @media (min-width: 481px) {
+      .stadium-pitch {
+        background-image:
+          radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0) 40%, rgba(6,8,14,0.55) 100%),
+          url('/images/stadium/pitch-lines.svg'),
+          repeating-linear-gradient(90deg, #2f7d32 0 80px, #3a8f3d 80px 160px);
+        background-size: 100% 100%, 100% 100%, auto;
+      }
+    }
+    /* Goal frame centred on the stand/pitch seam, peeking around the board */
+    .stadium-goal {
+      position: absolute; left: 50%; top: -6%; transform: translateX(-50%);
+      width: 52%; height: 12%;
+      background: url('/images/stadium/goal.svg') no-repeat center / contain;
+    }
     .portrait {
       position: absolute; inset: 0; z-index: 0;
       display: block; width: 100%; height: 100%;
@@ -1961,6 +2006,10 @@
   async function renderGame(id) {
     const app = document.getElementById('app');
     app.innerHTML = `<div class="game-screen">
+      <div class="stadium" aria-hidden="true">
+        <div class="stadium-stands"></div>
+        <div class="stadium-pitch"><div class="stadium-goal"></div></div>
+      </div>
       ${renderHeader()}
       <div id="game-body" style="flex:1;display:flex;flex-direction:column;overflow:visible;position:relative;z-index:2;">
         <div style="text-align:center;padding:40px;color:#555;">Loading game...</div>
@@ -2015,6 +2064,7 @@
     if (flagBgEl) {
       flagBgEl.style.backgroundImage = `url('/images/themes/${theme.slug}.png'), ${flagGradient(theme.accent_colour)}`;
     }
+    document.querySelector('.stadium')?.classList.remove('is-hidden');
     document.documentElement.style.setProperty('--accent', theme.accent_colour);
     document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
 
@@ -2553,6 +2603,7 @@
     if (flagBgEl) {
       flagBgEl.style.setProperty('--overlay-opacity', '0');
     }
+    document.querySelector('.stadium')?.classList.add('is-hidden');
 
     playGoalCelebration(accentColor, isFinal);
 

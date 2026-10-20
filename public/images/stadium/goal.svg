@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200" preserveAspectRatio="none">
+  <!-- Goal frame seen from behind: two posts, crossbar, light net lattice -->
+  <g stroke="rgba(255,255,255,0.28)" stroke-width="1.5" fill="none">
+    <!-- net: verticals -->
+    <line x1="40"  y1="30" x2="40"  y2="200"/>
+    <line x1="80"  y1="28" x2="80"  y2="200"/>
+    <line x1="120" y1="26" x2="120" y2="200"/>
+    <line x1="160" y1="25" x2="160" y2="200"/>
+    <line x1="200" y1="24" x2="200" y2="200"/>
+    <line x1="240" y1="24" x2="240" y2="200"/>
+    <line x1="280" y1="24" x2="280" y2="200"/>
+    <line x1="320" y1="25" x2="320" y2="200"/>
+    <line x1="360" y1="26" x2="360" y2="200"/>
+    <line x1="400" y1="28" x2="400" y2="200"/>
+    <line x1="440" y1="30" x2="440" y2="200"/>
+    <!-- net: diagonals both ways -->
+    <path d="M16,30 L484,200 M16,60 L484,200 M16,90 L484,200 M16,120 L484,200 M16,150 L484,200 M16,180 L484,200"/>
+    <path d="M484,30 L16,200 M484,60 L16,200 M484,90 L16,200 M484,120 L16,200 M484,150 L16,200 M484,180 L16,200"/>
+  </g>
+  <!-- frame: posts and crossbar -->
+  <g stroke="rgba(255,255,255,0.9)" stroke-width="10" fill="none" stroke-linecap="round">
+    <line x1="18" y1="26" x2="18" y2="200"/>
+    <line x1="482" y1="26" x2="482" y2="200"/>
+    <line x1="14" y1="26" x2="486" y2="26"/>
+  </g>
+</svg>
