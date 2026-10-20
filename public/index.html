@@ -522,11 +522,13 @@
       padding: 10px 16px; background: rgba(10,10,15,0.12); backdrop-filter: blur(14px) saturate(1.2);
       border-bottom: 1px solid rgba(255,255,255,0.06);
     }
-    .header-logo-block { display: flex; flex-direction: column; text-decoration: none; line-height: 1.1; }
+    .header-logo-block { display: flex; flex-direction: column; justify-content: center; min-height: 44px; text-decoration: none; line-height: 1.1; }
     .header-logo-title { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fbbf24; letter-spacing: -0.5px; }
     .header-logo-sub { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 0.55rem; color: #fbbf24; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.8; margin-top: 1px; }
     .header-btns { display: flex; align-items: center; gap: 2px; }
     .header-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; min-height: 44px; box-sizing: border-box;
       font-family: 'DM Sans', sans-serif; font-size: 1rem; padding: 6px 10px;
       background: none; border: none; color: #aaa; cursor: pointer; border-radius: 6px; transition: color 0.15s, background 0.15s;
     }
@@ -1769,7 +1771,16 @@
       const d = await seed.json();
       state.session = { ...state.session, current_game_id: d.game_id };
       navigate('#game/' + d.game_id);
-      setTimeout(() => openPenaltyKick(d.square_index, d.bonus_on_goal, d.role), 1000);
+      // Open as soon as the board behind it has loaded, so a screenshot taken
+      // right after the board appears still catches the kick screen.
+      const open = () => {
+        if (state.game && String(state.game.id) === String(d.game_id)) {
+          openPenaltyKick(d.square_index, d.bonus_on_goal, d.role);
+        } else {
+          setTimeout(open, 150);
+        }
+      };
+      setTimeout(open, 150);
     } catch (e) {
       navigate('#lobby');
     }
@@ -1778,12 +1789,34 @@
   // ═══════════════════════════════════════════════════════════════
   // LOBBY
   // ═══════════════════════════════════════════════════════════════
+  // Loading shell: the header shows at once and the wallet/pot tiles keep
+  // their shape as grey placeholders while /api/session is fetched.
+  const LOBBY_LOADING_CSS = `
+    .lobby-skeleton { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); animation: lobby-skeleton-pulse 1.4s ease-in-out infinite; }
+    @keyframes lobby-skeleton-pulse { 0%,100% { opacity: 0.55; } 50% { opacity: 0.9; } }
+    .lobby-spinner { width: 28px; height: 28px; border-radius: 50%; border: 3px solid rgba(251,191,36,0.25); border-top-color: #fbbf24; animation: lobby-spin 0.8s linear infinite; }
+    @keyframes lobby-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .lobby-skeleton { animation: none; } .lobby-spinner { animation-duration: 2.4s; } }
+  `;
+  if (!document.getElementById('lobby-loading-css')) {
+    const s = document.createElement('style');
+    s.id = 'lobby-loading-css';
+    s.textContent = LOBBY_LOADING_CSS;
+    document.head.appendChild(s);
+  }
+
   async function renderLobby() {
     const app = document.getElementById('app');
     app.innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
       <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:12px 16px 20px;width:100%;">
-        <div style="text-align:center;padding:40px 0;color:#555;">Loading...</div>
+        <div style="display:flex;gap:10px;margin-bottom:14px;">
+          <div class="hud-chip lobby-skeleton" style="flex:1;height:52px;"></div>
+          <div class="hud-chip lobby-skeleton" style="flex:1;height:52px;"></div>
+        </div>
+        <div style="display:flex;justify-content:center;padding:32px 0;" role="status" aria-label="Loading">
+          <div class="lobby-spinner"></div>
+        </div>
       </div>
     </div>`;
     await loadLobby();
@@ -1793,19 +1826,10 @@
     const body = document.getElementById('lobby-body');
     function showLobbyError(msg, isAuth) {
       console.error('Lobby error:', msg);
-      const tokenDebug = isAuth ? (() => {
-        const tok = getToken();
-        const hasSS = (() => { try { return !!sessionStorage.getItem('usernode_token'); } catch(_) { return false; } })();
-        const hasLS = (() => { try { return !!localStorage.getItem('usernode_token'); } catch(_) { return false; } })();
-        return `<p style="margin-top:12px;font-size:0.7rem;font-family:monospace;color:#71717a;">
-          token in memory: ${tok ? '✓' : '✗'} &nbsp;|&nbsp;
-          sessionStorage: ${hasSS ? '✓' : '✗'} &nbsp;|&nbsp;
-          localStorage: ${hasLS ? '✓' : '✗'}
-        </p>
-        <p style="margin-top:8px;font-size:0.75rem;color:#a1a1aa;font-family:'DM Sans',sans-serif;">Sign in via Usernode to play.</p>`;
-      })() : '';
       if (body) body.innerHTML = `<div style="text-align:center;padding:40px;font-family:'DM Sans',sans-serif;">
-        <p style="color:#f87171;">Error loading lobby: ${msg}</p>${tokenDebug}
+        <p style="color:#ccc;margin-bottom:16px;">Couldn't load the game. Check your connection and try again.</p>
+        <button class="bundle-btn btn-gold" style="min-height:44px;padding:10px 18px;" onclick="loadLobby()">Try again</button>
+        ${isAuth ? `<p style="margin-top:12px;font-size:0.75rem;color:#a1a1aa;">Sign in via Usernode to play.</p>` : ''}
       </div>`;
     }
     try {
@@ -2204,8 +2228,8 @@
       </div>
       <div class="game-footer">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:1px 0;">
-          <div id="hint-bar" class="font-dm" style="font-size:10px;color:#666;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
-          <span class="font-dm" style="font-size:10px;color:#3a3a50;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
+          <div id="hint-bar" class="font-dm" style="font-size:10px;color:#b0b0b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;">${initialHint}</div>
+          <span class="font-dm" style="font-size:10px;color:#fbbf24;cursor:pointer;text-decoration:underline;flex-shrink:0;margin-left:8px;" onclick="leaveMap(${game.id})">Leave Map</span>
         </div>
       </div>`;
 
@@ -3556,6 +3580,10 @@
   async function init() {
     // Testing mode is gone: clear the stale flag left in older browsers
     try { localStorage.removeItem('testingMode'); } catch(_) {}
+
+    // Paint the lobby's loading shell at once, so the header and placeholders
+    // show while i18n, themes and the session are fetched.
+    if (!location.hash || location.hash === '#lobby') route();
 
     // Initialize i18n system
     try {
