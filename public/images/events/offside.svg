@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- raised linesman's flag -->
+  <path d="M38 78 L38 30" stroke="white" stroke-width="4" stroke-linecap="round"/>
+  <path d="M38 26 L60 18 L60 40 L38 34 Z" fill="#FF1493"/>
+  <path d="M38 26 L38 34 L48 30 Z" fill="#f0c040"/>
+  <!-- offside line -->
+  <path d="M20 72 L80 56" fill="none" stroke="#00FFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 5"/>
+  <!-- attacking player behind the line -->
+  <circle cx="72" cy="46" r="5" fill="white"/>
+  <path d="M68 50 L72 62 L76 50 Z" fill="#222"/>
+</svg>

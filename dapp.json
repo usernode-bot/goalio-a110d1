@@ -147,6 +147,16 @@
       "expectSelector": "svg"
     },
     {
+      "name": "New event graphic SVG serves",
+      "path": "/images/events/extra-time.svg",
+      "expectSelector": "svg"
+    },
+    {
+      "name": "Penalty save event replaced by new types",
+      "path": "/api/games/2",
+      "expectText": "disallowed_goal"
+    },
+    {
       "name": "Final refund demo seeds Final board with carried shots",
       "path": "/#demo/final-refund",
       "expectSelector": ".game-grid"

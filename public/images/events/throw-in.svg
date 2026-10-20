@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- hands holding the ball up -->
+  <path d="M30 34 Q28 26 36 24 L44 28 L44 36 Q36 40 30 34 Z" fill="#f0c040"/>
+  <path d="M70 34 Q72 26 64 24 L56 28 L56 36 Q64 40 70 34 Z" fill="#f0c040"/>
+  <!-- ball above the head -->
+  <circle cx="50" cy="30" r="12" fill="white" stroke="#222" stroke-width="2"/>
+  <path d="M50 20 L55 25 L50 30 L45 25 Z" fill="#111"/>
+  <path d="M60 32 L54 34 L57 38 Z" fill="#111"/>
+  <!-- throw arc -->
+  <path d="M34 44 Q50 52 66 44" fill="none" stroke="#00FFFF" stroke-width="3" stroke-linecap="round" stroke-dasharray="4 4"/>
+  <!-- touchline -->
+  <path d="M18 78 L82 78" stroke="white" stroke-width="4" stroke-linecap="round"/>
+</svg>

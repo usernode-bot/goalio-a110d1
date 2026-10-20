@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="rgba(10,10,30,0.82)"/>
+  <circle cx="50" cy="50" r="45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <!-- goal frame -->
+  <path d="M22 66 L22 32 L78 32 L78 66" fill="none" stroke="#f0c040" stroke-width="4"/>
+  <!-- net -->
+  <path d="M30 40 L30 66 M40 40 L40 66 M50 40 L50 66 M60 40 L60 66 M70 40 L70 66 M24 48 L76 48 M24 58 L76 58" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>
+  <!-- ball in the net -->
+  <circle cx="50" cy="58" r="9" fill="white" stroke="#222" stroke-width="2"/>
+  <path d="M50 51 L53 55 L50 59 L47 55 Z" fill="#111"/>
+  <!-- disallowed cross -->
+  <path d="M28 24 L72 70 M72 24 L28 70" stroke="#FF1493" stroke-width="7" stroke-linecap="round"/>
+</svg>
