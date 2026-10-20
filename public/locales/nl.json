@@ -181,5 +181,19 @@
   "events.penalty_save": "PENALTY GEKEERD! {amount}",
   "bonus.win": "BONUSVAK! +1 SCHOT",
   "bonus.lose": "BONUSVAK! -1 SCHOT",
-  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN"
+  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN",
+  "penalty.title": "PENALTY!",
+  "penalty.subtitle": "Kies je hoek. Scoor om {n} gratis schoten te winnen.",
+  "penalty.goal": "DOELPUNT! +{n} gratis schoten",
+  "penalty.saved": "GEPAKT!",
+  "penalty.continue": "Doorgaan",
+  "penalty.close": "Sluiten",
+  "penalty.zone_0": "Linksboven",
+  "penalty.zone_1": "Midden boven",
+  "penalty.zone_2": "Rechtsboven",
+  "penalty.zone_3": "Linksonder",
+  "penalty.zone_4": "Midden onder",
+  "penalty.zone_5": "Rechtsonder",
+  "penalty.found_toast": "Je vond een strafschopplek! Je hebt {n} gratis schoten gewonnen!",
+  "penalty.failed": "De trap kon niet worden verstuurd. Hij wacht nog op deze kaart."
 }

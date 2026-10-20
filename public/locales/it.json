@@ -181,5 +181,19 @@
   "events.penalty_save": "RIGORE PARATO! {amount}",
   "bonus.win": "CASELLA BONUS! +1 TIRO",
   "bonus.lose": "CASELLA BONUS! -1 TIRO",
-  "bonus.lose_none": "CASELLA BONUS! NIENTE TIRI DA PERDERE"
+  "bonus.lose_none": "CASELLA BONUS! NIENTE TIRI DA PERDERE",
+  "penalty.title": "RIGORE!",
+  "penalty.subtitle": "Scegli il tuo angolo. Segna per vincere {n} tiri gratuiti.",
+  "penalty.goal": "GOL! +{n} tiri gratuiti",
+  "penalty.saved": "PARATA!",
+  "penalty.continue": "Continua",
+  "penalty.close": "Chiudi",
+  "penalty.zone_0": "In alto a sinistra",
+  "penalty.zone_1": "In alto al centro",
+  "penalty.zone_2": "In alto a destra",
+  "penalty.zone_3": "In basso a sinistra",
+  "penalty.zone_4": "In basso al centro",
+  "penalty.zone_5": "In basso a destra",
+  "penalty.found_toast": "Hai trovato una casella rigore! Hai vinto {n} tiri gratuiti!",
+  "penalty.failed": "Il tiro non è stato inviato. È ancora in attesa su questa mappa."
 }

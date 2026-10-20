@@ -181,5 +181,19 @@
   "events.penalty_save": "¡PENALTI PARADO! {amount}",
   "bonus.win": "¡CASILLA BONUS! +1 TIRO",
   "bonus.lose": "¡CASILLA BONUS! -1 TIRO",
-  "bonus.lose_none": "¡CASILLA BONUS! NO HAY TIROS QUE PERDER"
+  "bonus.lose_none": "¡CASILLA BONUS! NO HAY TIROS QUE PERDER",
+  "penalty.title": "¡PENALTI!",
+  "penalty.subtitle": "Elige tu esquina. Marca para ganar {n} tiros gratis.",
+  "penalty.goal": "¡GOL! +{n} tiros gratis",
+  "penalty.saved": "¡PARADA!",
+  "penalty.continue": "Continuar",
+  "penalty.close": "Cerrar",
+  "penalty.zone_0": "Arriba izquierda",
+  "penalty.zone_1": "Arriba centro",
+  "penalty.zone_2": "Arriba derecha",
+  "penalty.zone_3": "Abajo izquierda",
+  "penalty.zone_4": "Abajo centro",
+  "penalty.zone_5": "Abajo derecha",
+  "penalty.found_toast": "¡Encontraste una casilla de penalti! ¡Ganaste {n} tiros gratis!",
+  "penalty.failed": "No se pudo enviar el tiro. Sigue esperando en este mapa."
 }
