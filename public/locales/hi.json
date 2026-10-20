@@ -184,6 +184,7 @@
   "bonus.lose_none": "बोनस वर्ग! खोने के लिए कोई शॉट नहीं",
   "penalty_kick.title": "पेनल्टी किक",
   "penalty_kick.sub": "निशाना लगाने के लिए मैदान पर खींचें, गोल्ड ज़ोन में पावर रोकें और +50 t के लिए गोल करें",
+  "penalty_kick.time_left": "{seconds} सेकंड में शूट करें",
   "penalty_kick.power": "पावर",
   "penalty_kick.shoot": "शूट",
   "penalty_kick.goal": "गोल!",

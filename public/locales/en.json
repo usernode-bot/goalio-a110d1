@@ -184,6 +184,7 @@
   "bonus.lose_none": "BONUS SQUARE! NO SHOTS TO LOSE",
   "penalty_kick.title": "Penalty Kick",
   "penalty_kick.sub": "Drag on the pitch to aim, stop the power in the gold zone and score for +50 t",
+  "penalty_kick.time_left": "Shoot in {seconds}s",
   "penalty_kick.power": "Power",
   "penalty_kick.shoot": "Shoot",
   "penalty_kick.goal": "GOAL!",

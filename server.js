@@ -21,11 +21,11 @@ const HOUSE_BONUS_TOKENS = 50;
 // Semi-Final) offers one free kick on the first square tapped in the match.
 const PENALTY_KICK_BONUS = 50;
 const PENALTY_KICK_STRONG_MIN = 60;
-// The keeper picks a position across the goal mouth (percent, 0 = left post,
-// 100 = right post) and covers PENALTY_KICK_REACH percent either side of it.
+// The keeper picks a side first (percent across the goal mouth, 0 = left post,
+// 100 = right post). A dive away from the shot's side always lets it in; only
+// a keeper who guesses the shot's side can stop it, and then power decides.
 const PENALTY_KICK_SIDES = ['left', 'centre', 'right'];
 const PENALTY_KICK_KEEPER_X = { left: 36, centre: 50, right: 64 };
-const PENALTY_KICK_REACH = 14;
 function isPenaltyKickStage(stageIdx) {
   return Number.isInteger(stageIdx) && stageIdx >= 0 && stageIdx % 2 === 1;
 }
@@ -768,11 +768,13 @@ app.post('/api/games/:id/penalty-kick', async (req, res) => {
 
     const keeper = PENALTY_KICK_SIDES[crypto.randomInt(PENALTY_KICK_SIDES.length)];
     const keeperX = PENALTY_KICK_KEEPER_X[keeper];
-    const weak = power < PENALTY_KICK_STRONG_MIN;
-    const reached = Math.abs(aim_x - keeperX) < PENALTY_KICK_REACH;
-    const scored = !weak && !reached;
-    const bonus = scored ? PENALTY_KICK_BONUS : 0;
     const aim = aim_x < 100 / 3 ? 'left' : aim_x > 200 / 3 ? 'right' : 'centre';
+    // The keeper commits first and can only stop a shot on his own side. If he
+    // dives the other way the ball goes in whatever the power. When he guesses
+    // right, a shot below the strong-power mark is saved for lack of power.
+    const weak = keeper === aim && power < PENALTY_KICK_STRONG_MIN;
+    const scored = !weak;
+    const bonus = scored ? PENALTY_KICK_BONUS : 0;
 
     const { rowCount } = await client.query(`
       INSERT INTO penalty_kicks (game_id, user_id, aim, aim_x, aim_y, keeper, power, scored, bonus)

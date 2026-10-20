@@ -184,6 +184,7 @@
   "bonus.lose_none": "奖励格！没有可失去的射门",
   "penalty_kick.title": "点球",
   "penalty_kick.sub": "在场地上拖动来瞄准，把力量停在金色区域，进球得 +50 t",
+  "penalty_kick.time_left": "在 {seconds} 秒内射门",
   "penalty_kick.power": "力量",
   "penalty_kick.shoot": "射门",
   "penalty_kick.goal": "进球！",

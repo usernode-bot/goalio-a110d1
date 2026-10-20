@@ -184,6 +184,7 @@
   "bonus.lose_none": "¡CASILLA BONUS! NO HAY TIROS QUE PERDER",
   "penalty_kick.title": "Penalti",
   "penalty_kick.sub": "Arrastra en el campo para apuntar, detén la potencia en la zona dorada y marca para +50 t",
+  "penalty_kick.time_left": "Chuta en {seconds} s",
   "penalty_kick.power": "Potencia",
   "penalty_kick.shoot": "Chutar",
   "penalty_kick.goal": "¡GOL!",

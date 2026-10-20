@@ -184,6 +184,7 @@
   "bonus.lose_none": "CASE BONUS ! AUCUN TIR À PERDRE",
   "penalty_kick.title": "Penalty",
   "penalty_kick.sub": "Glisse sur le terrain pour viser, arrête la puissance dans la zone dorée et marque pour +50 t",
+  "penalty_kick.time_left": "Tire dans {seconds} s",
   "penalty_kick.power": "Puissance",
   "penalty_kick.shoot": "Tirer",
   "penalty_kick.goal": "BUT !",

@@ -184,6 +184,7 @@
   "bonus.lose_none": "CASELLA BONUS! NIENTE TIRI DA PERDERE",
   "penalty_kick.title": "Rigore",
   "penalty_kick.sub": "Trascina sul campo per mirare, ferma la potenza nella zona oro e segna per +50 t",
+  "penalty_kick.time_left": "Tira in {seconds} s",
   "penalty_kick.power": "Potenza",
   "penalty_kick.shoot": "Tira",
   "penalty_kick.goal": "GOL!",

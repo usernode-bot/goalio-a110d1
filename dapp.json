@@ -155,6 +155,11 @@
       "name": "Penalty kick aims by dragging on the pitch",
       "path": "/#demo/penalty-kick",
       "expectSelector": ".pk-pitch .pk-goal"
+    },
+    {
+      "name": "Penalty kick shows a 10 second shot timer",
+      "path": "/#demo/penalty-kick",
+      "expectSelector": ".pk-timer"
     }
   ],
   "visibility": {
