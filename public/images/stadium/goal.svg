@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 140" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="post" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#c9cfdb"/>
+    </linearGradient>
+  </defs>
+  <path d="M10 18 V132 M290 18 V132" stroke="#ffffff" stroke-opacity=".10" stroke-width="8"/>
+  <path d="M10 18 V132 M24 18 V132 M38 18 V132 M52 18 V132 M66 18 V132 M80 18 V132 M94 18 V132 M108 18 V132 M122 18 V132 M136 18 V132 M150 18 V132 M164 18 V132 M178 18 V132 M192 18 V132 M206 18 V132 M220 18 V132 M234 18 V132 M248 18 V132 M262 18 V132 M276 18 V132 M290 18 V132 M10 30 H290 M10 44 H290 M10 58 H290 M10 72 H290 M10 86 H290 M10 100 H290 M10 114 H290 M10 128 H290 " stroke="#ffffff" stroke-opacity=".14" stroke-width="1.2" fill="none"/>
+  <path d="M4 16 H296" stroke="url(#post)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M9 16 V132 M291 16 V132" stroke="url(#post)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M10 20 L34 46 M290 20 L266 46" stroke="#ffffff" stroke-opacity=".25" stroke-width="2"/>
+  <path d="M34 46 H266" stroke="#ffffff" stroke-opacity=".22" stroke-width="2"/>
+</svg>
