@@ -964,14 +964,33 @@
     .pk-zone:hover, .pk-zone:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
     .pk-zone:disabled { cursor: default; }
     .pk-zone.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; }
-    .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 36px; height: 56px; margin-left: -18px; border-radius: 18px 18px 6px 6px; background: #22c55e; pointer-events: none; transition: left 0.5s ease, bottom 0.5s ease, transform 0.5s ease; }
+    .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 40px; height: 54px; margin-left: -20px; pointer-events: none; transform-origin: 50% 70%; transform: rotate(0deg); transition: left 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, bottom 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, transform 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s; }
+    .pk-keeper > span { position: absolute; display: block; }
+    .pk-keeper-head { left: 13px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: #f0f0f5; }
+    .pk-keeper-torso { left: 10px; top: 15px; width: 20px; height: 20px; border-radius: 6px 6px 3px 3px; background: #22c55e; }
+    .pk-keeper-arm { top: 16px; width: 6px; height: 18px; border-radius: 3px; background: #22c55e; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
+    .pk-keeper-arm::after { content: ''; position: absolute; left: -1px; bottom: -6px; width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; }
+    .pk-keeper-arm.left { left: 8px; transform: rotate(55deg); }
+    .pk-keeper-arm.right { right: 8px; transform: rotate(-55deg); }
+    .pk-keeper-leg { top: 34px; width: 7px; height: 19px; border-radius: 3px; background: #14532d; transform-origin: 50% 0; transition: transform 0.3s ease 0.12s; }
+    .pk-keeper-leg.left { left: 11px; transform: rotate(18deg); }
+    .pk-keeper-leg.right { right: 11px; transform: rotate(-18deg); }
+    .pk-keeper.diving { transform: rotate(var(--pk-dive, 0deg)); }
+    .pk-keeper.diving .pk-keeper-arm.left { transform: rotate(165deg); }
+    .pk-keeper.diving .pk-keeper-arm.right { transform: rotate(-165deg); }
+    .pk-keeper.diving .pk-keeper-leg.left { transform: rotate(4deg); }
+    .pk-keeper.diving .pk-keeper-leg.right { transform: rotate(-4deg); }
+    .pk-keeper.landed { transform: rotate(var(--pk-land, 0deg)); transition: transform 0.2s ease-out; }
+    .pk-keeper.landed .pk-keeper-arm, .pk-keeper.landed .pk-keeper-leg { transition: transform 0.2s ease-out; }
+    .pk-keeper.landed .pk-keeper-arm.left { transform: rotate(180deg); }
+    .pk-keeper.landed .pk-keeper-arm.right { transform: rotate(-180deg); }
     .pk-ball { position: absolute; left: 50%; bottom: -34px; width: 24px; height: 24px; margin-left: -12px; pointer-events: none; z-index: 2; transition: left 0.5s ease, bottom 0.5s ease; }
     .pk-ball img { width: 100%; height: 100%; display: block; }
     .pk-pitch { height: 44px; margin-top: -44px; margin-bottom: 44px; background: linear-gradient(#1f6b35, #14532d); border-radius: 0 0 4px 4px; }
     .pk-result { font-family: 'Space Mono', monospace; font-size: 1rem; font-weight: 700; color: #fbbf24; margin: 12px 0 10px; min-height: 0; }
     .pk-result:empty { margin: 0; }
     @media (prefers-reduced-motion: reduce) {
-      .pk-keeper, .pk-ball { transition: none; }
+      .pk-keeper, .pk-keeper *, .pk-ball { transition: none; }
     }
 
     /* Language Selector */
@@ -2641,6 +2660,7 @@
   // ═══════════════════════════════════════════════════════════════
   // Six aim zones: 0-2 the top row (left, middle, right), 3-5 the bottom row.
   const PK_DIVE_ROTATION = [-55, 0, 55, -55, 0, 55];
+  const PK_LAND_ROTATION = [-75, 0, 75, -80, 0, 80];
 
   function openPenaltyKick(squareIdx, bonusOnGoal) {
     if (!state.game) return;
@@ -2655,7 +2675,11 @@
       <div class="pk-sub">${t('penalty.subtitle', { n })}</div>
       <div class="pk-goal">
         ${[0, 1, 2, 3, 4, 5].map(z => `<button class="pk-zone" data-zone="${z}" aria-label="${t('penalty.zone_' + z)}"></button>`).join('')}
-        <div class="pk-keeper"></div>
+        <div class="pk-keeper" aria-hidden="true">
+          <span class="pk-keeper-arm left"></span><span class="pk-keeper-arm right"></span>
+          <span class="pk-keeper-leg left"></span><span class="pk-keeper-leg right"></span>
+          <span class="pk-keeper-torso"></span><span class="pk-keeper-head"></span>
+        </div>
         <div class="pk-ball"><img src="/images/football.svg" alt=""></div>
       </div>
       <div class="pk-pitch"></div>
@@ -2713,11 +2737,14 @@
       // The ball flies to the chosen zone, the keeper dives to his.
       aimAt(ballEl, zones[zoneIdx]);
       const keeperZone = Number.isInteger(d.keeper_zone) ? d.keeper_zone : 0;
+      keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[keeperZone] || 0}deg`);
+      keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[keeperZone] || 0}deg`);
       aimAt(keeperEl, zones[keeperZone] || zones[0]);
-      keeperEl.style.transform = `rotate(${PK_DIVE_ROTATION[keeperZone] || 0}deg)`;
+      keeperEl.classList.add('diving');
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      await new Promise(res => setTimeout(res, reduced ? 0 : 600));
+      await new Promise(res => setTimeout(res, reduced ? 0 : 700));
+      keeperEl.classList.add('landed');
 
       state.bonusCreditsAvailable = d.bonus_credits_available || 0;
       state.bonusSessionId = d.bonus_session_id || null;
