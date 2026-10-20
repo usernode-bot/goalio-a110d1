@@ -195,5 +195,12 @@
   "penalty.zone_4": "Orta alt",
   "penalty.zone_5": "Sağ alt",
   "penalty.found_toast": "Bir penaltı karesi buldun! {n} bedava şut kazandın!",
-  "penalty.failed": "Şut gönderilemedi. Bu haritada hâlâ bekliyor."
+  "penalty.failed": "Şut gönderilemedi. Bu haritada hâlâ bekliyor.",
+  "penalty.keeper_title": "KURTAR!",
+  "penalty.keeper_subtitle": "Bir taraf seç. Kurtarırsan {n} bedava şut kazanırsın.",
+  "penalty.dive_0": "Sol",
+  "penalty.dive_1": "Orta",
+  "penalty.dive_2": "Sağ",
+  "penalty.keeper_saved": "KURTARILDI! +{n} bedava şut",
+  "penalty.conceded": "GOL YEDİN!"
 }

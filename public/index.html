@@ -963,6 +963,12 @@
     .pk-zone { border: 1px dashed rgba(255,255,255,0.18); background: transparent; padding: 0; cursor: pointer; }
     .pk-zone:hover, .pk-zone:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
     .pk-zone:disabled { cursor: default; }
+    .pk-zone:disabled:hover { background: transparent; border-color: rgba(255,255,255,0.18); outline: none; }
+    .pk-dive-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 10px; }
+    .pk-dive { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 0.85rem; padding: 8px 0; border-radius: 10px; border: 1px solid rgba(251,191,36,0.5); background: rgba(251,191,36,0.08); color: #fbbf24; cursor: pointer; }
+    .pk-dive:hover, .pk-dive:focus-visible { background: rgba(251,191,36,0.18); border-color: #fbbf24; outline: 2px solid #fbbf24; outline-offset: -2px; }
+    .pk-dive:disabled { cursor: default; opacity: 0.6; }
+    .pk-dive.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; opacity: 1; }
     .pk-zone.aim { background: rgba(251,191,36,0.3); border-color: #fbbf24; }
     .pk-keeper { position: absolute; left: 50%; bottom: 0; width: 40px; height: 54px; margin-left: -20px; pointer-events: none; transform-origin: 50% 70%; transform: rotate(0deg); transition: left 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, bottom 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s, transform 0.55s cubic-bezier(0.25,0.8,0.35,1) 0.12s; }
     .pk-keeper > span { position: absolute; display: block; }
@@ -1724,6 +1730,7 @@
     }
     else if (hash === '#demo/final-refund') demoFinalRefund();
     else if (hash === '#demo/penalty') demoPenaltyKick();
+    else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1754,14 +1761,15 @@
   // Staging demo deep link: leaves a penalty kick waiting on the staging group
   // board (server returns 404 outside staging) and opens the board with the
   // kick screen up, so the screen is reachable without guessing blind.
-  async function demoPenaltyKick() {
+  async function demoPenaltyKick(role) {
     try {
-      const seed = await api('POST', '/api/staging/demo-penalty');
+      // Each demo link shows one role; the real kick rolls its own.
+      const seed = await api('POST', '/api/staging/demo-penalty', { role: role || 'taker' });
       if (!seed.ok) { navigate('#lobby'); return; }
       const d = await seed.json();
       state.session = { ...state.session, current_game_id: d.game_id };
       navigate('#game/' + d.game_id);
-      setTimeout(() => openPenaltyKick(d.square_index, d.bonus_on_goal), 1000);
+      setTimeout(() => openPenaltyKick(d.square_index, d.bonus_on_goal, d.role), 1000);
     } catch (e) {
       navigate('#lobby');
     }
@@ -2111,7 +2119,7 @@
       const pendingPenalty = d.pending_penalty || null;
       if (pendingPenalty) {
         setTimeout(() => {
-          openPenaltyKick(pendingPenalty.square_index, pendingPenalty.bonus_on_goal);
+          openPenaltyKick(pendingPenalty.square_index, pendingPenalty.bonus_on_goal, pendingPenalty.role);
         }, 3000);
       }
     } catch(e) {
@@ -2414,8 +2422,9 @@
         if (cell) cell.classList.add('open');
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
         const bonusOnGoal = d.penalty ? d.penalty.bonus_on_goal : 0;
+        const penaltyRole = d.penalty ? d.penalty.role : undefined;
         try {
-          openPenaltyKick(idx, bonusOnGoal);
+          openPenaltyKick(idx, bonusOnGoal, penaltyRole);
         } catch (e) {
           console.error('Penalty screen failed', e);
           showToast(t('penalty.found_toast', { n: bonusOnGoal }));
@@ -2662,19 +2671,23 @@
   const PK_DIVE_ROTATION = [-55, 0, 55, -55, 0, 55];
   const PK_LAND_ROTATION = [-75, 0, 75, -80, 0, 80];
 
-  function openPenaltyKick(squareIdx, bonusOnGoal) {
+  function openPenaltyKick(squareIdx, bonusOnGoal, role) {
     if (!state.game) return;
     if (document.querySelector('.penalty-modal')) return;
     const n = bonusOnGoal || 0;
+    const asKeeper = role === 'keeper';
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-bg penalty-modal';
     overlay.innerHTML = `<div class="modal-box penalty-box">
       <button class="pk-close" aria-label="${t('penalty.close')}">×</button>
-      <div class="pk-title">${t('penalty.title')}</div>
-      <div class="pk-sub">${t('penalty.subtitle', { n })}</div>
+      <div class="pk-title">${asKeeper ? t('penalty.keeper_title') : t('penalty.title')}</div>
+      <div class="pk-sub">${asKeeper ? t('penalty.keeper_subtitle', { n }) : t('penalty.subtitle', { n })}</div>
+      ${asKeeper ? `<div class="pk-dive-row">
+        ${[0, 1, 2].map(dv => `<button class="pk-dive" data-dive="${dv}">${t('penalty.dive_' + dv)}</button>`).join('')}
+      </div>` : ''}
       <div class="pk-goal">
-        ${[0, 1, 2, 3, 4, 5].map(z => `<button class="pk-zone" data-zone="${z}" aria-label="${t('penalty.zone_' + z)}"></button>`).join('')}
+        ${[0, 1, 2, 3, 4, 5].map(z => `<button class="pk-zone" data-zone="${z}" aria-label="${t('penalty.zone_' + z)}"${asKeeper ? ' disabled tabindex="-1"' : ''}></button>`).join('')}
         <div class="pk-keeper" aria-hidden="true">
           <span class="pk-keeper-arm left"></span><span class="pk-keeper-arm right"></span>
           <span class="pk-keeper-leg left"></span><span class="pk-keeper-leg right"></span>
@@ -2692,6 +2705,7 @@
     const ballEl = overlay.querySelector('.pk-ball');
     const keeperEl = overlay.querySelector('.pk-keeper');
     const zones = Array.from(overlay.querySelectorAll('.pk-zone'));
+    const dives = Array.from(overlay.querySelectorAll('.pk-dive'));
     const resultEl = overlay.querySelector('.pk-result');
     const actionsEl = overlay.querySelector('.pk-actions');
     overlay.querySelector('.pk-close').addEventListener('click', () => overlay.remove());
@@ -2707,18 +2721,23 @@
     };
 
     let kicking = false;
-    const takeKick = async (zoneIdx) => {
+    // As taker the player aims at a zone; as keeper they pick a side to dive
+    // to and the server rolls where the ball goes.
+    const takeKick = async (zoneIdx, diveIdx) => {
       if (kicking) return;
       kicking = true;
       zones.forEach(z => { z.disabled = true; });
-      zones[zoneIdx].classList.add('aim');
+      dives.forEach(b => { b.disabled = true; });
+      if (asKeeper) dives[diveIdx].classList.add('aim');
+      else zones[zoneIdx].classList.add('aim');
       const closeBtn = overlay.querySelector('.pk-close');
       if (closeBtn) closeBtn.style.display = 'none';
 
       const gameId = state.game.id;
       let d;
       try {
-        const r = await api('POST', `/api/games/${gameId}/penalty-kick`, { square_index: squareIdx, zone: zoneIdx });
+        const body = asKeeper ? { square_index: squareIdx, dive: diveIdx } : { square_index: squareIdx, zone: zoneIdx };
+        const r = await api('POST', `/api/games/${gameId}/penalty-kick`, body);
         if (!r.ok) {
           const e = await r.json().catch(() => ({}));
           overlay.remove();
@@ -2734,8 +2753,8 @@
         return;
       }
 
-      // The ball flies to the chosen zone, the keeper dives to his.
-      aimAt(ballEl, zones[zoneIdx]);
+      // The ball flies to the zone the server gives, the keeper dives to his.
+      aimAt(ballEl, zones[d.zone]);
       const keeperZone = Number.isInteger(d.keeper_zone) ? d.keeper_zone : 0;
       keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[keeperZone] || 0}deg`);
       keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[keeperZone] || 0}deg`);
@@ -2753,8 +2772,9 @@
       }
       updateHud();
 
-      if (d.scored) {
-        resultEl.innerHTML = `<div class="refund-summary">${t('penalty.goal', { n: d.bonus_credits_awarded })}</div>`;
+      const won = asKeeper ? !d.scored : d.scored;
+      if (won) {
+        resultEl.innerHTML = `<div class="refund-summary">${asKeeper ? t('penalty.keeper_saved', { n: d.bonus_credits_awarded }) : t('penalty.goal', { n: d.bonus_credits_awarded })}</div>`;
         Sound.bonusWin();
         playRefundCoins(overlay, { shots_refunded: d.bonus_credits_awarded }, '.shots-val');
         const shotsChip = document.querySelector('.shots-val');
@@ -2763,7 +2783,7 @@
           setTimeout(() => shotsChip.closest('.hud-chip').classList.remove('refund-glow'), 700);
         }
       } else {
-        resultEl.textContent = t('penalty.saved');
+        resultEl.textContent = asKeeper ? t('penalty.conceded') : t('penalty.saved');
         Sound.bonusLose();
       }
 
@@ -2773,13 +2793,17 @@
       btn.textContent = t('penalty.continue');
       btn.addEventListener('click', () => {
         overlay.remove();
-        if (d.pending_penalty) openPenaltyKick(d.pending_penalty.square_index, d.pending_penalty.bonus_on_goal);
+        if (d.pending_penalty) openPenaltyKick(d.pending_penalty.square_index, d.pending_penalty.bonus_on_goal, d.pending_penalty.role);
       });
       actionsEl.appendChild(btn);
       btn.focus();
     };
 
-    zones.forEach(z => z.addEventListener('click', () => takeKick(parseInt(z.dataset.zone, 10))));
+    if (asKeeper) {
+      dives.forEach(b => b.addEventListener('click', () => takeKick(null, parseInt(b.dataset.dive, 10))));
+    } else {
+      zones.forEach(z => z.addEventListener('click', () => takeKick(parseInt(z.dataset.zone, 10))));
+    }
   }
   window.openPenaltyKick = openPenaltyKick;
 
