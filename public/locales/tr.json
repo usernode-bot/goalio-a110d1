@@ -181,5 +181,19 @@
   "events.penalty_save": "PENALTI KURTARILDI! {amount}",
   "bonus.win": "BONUS KARE! +1 ŞUT",
   "bonus.lose": "BONUS KARE! -1 ŞUT",
-  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK"
+  "bonus.lose_none": "BONUS KARE! KAYBEDİLECEK ŞUT YOK",
+  "penalty.title": "PENALTI!",
+  "penalty.subtitle": "Yerini seç. {n} serbest atış kazanmak için gol at.",
+  "penalty.goal": "GOL! +{n} serbest atış",
+  "penalty.saved": "KURTARILDI!",
+  "penalty.continue": "Devam",
+  "penalty.close": "Penaltı ekranını kapat",
+  "penalty.zone_0": "Sol üste nişan al",
+  "penalty.zone_1": "Orta üste nişan al",
+  "penalty.zone_2": "Sağ üste nişan al",
+  "penalty.zone_3": "Sol alta nişan al",
+  "penalty.zone_4": "Orta alta nişan al",
+  "penalty.zone_5": "Sağ alta nişan al",
+  "penalty.found_toast": "Bir penaltı karesi buldun! {n} serbest atış kazandın!",
+  "penalty.failed": "Bir şeyler ters gitti. Penaltın bekliyor ve haritayı bir dahaki yükleyişinde açılacak."
 }

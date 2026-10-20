@@ -152,13 +152,35 @@ function buildEventSquares(footballSquare, gridSize) {
   return map;
 }
 
+// Free attempts a scored penalty kick wins, by board size. Shared by the
+// penalty-kick endpoint and the client-facing penalty payload.
+const PENALTY_BONUS_BY_GRID = { 16: 2, 25: 3, 36: 3, 49: 5 };
+
+// Build the penalty square list for a fresh board: about one penalty square
+// for every ten squares (never fewer than one), none of them on the ball or
+// a match event square. Uncovering one opens the penalty kick screen; a goal
+// wins PENALTY_BONUS_BY_GRID free attempts. Returns an array of ints.
+function buildPenaltySquares(footballSquare, eventSquares, gridSize) {
+  const candidates = [];
+  const used = new Set([String(footballSquare), ...Object.keys(eventSquares || {})]);
+  for (let i = 0; i < gridSize; i++) {
+    if (!used.has(String(i))) candidates.push(i);
+  }
+  for (let i = candidates.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+  const k = Math.max(1, Math.round(gridSize / 10));
+  return candidates.slice(0, k);
+}
+
 // Build the bonus map for a fresh board: on the 49-tile Final only, 7 of the
-// squares that are not the ball, the penalty square or a match event square
+// squares that are not the ball, a penalty square or a match event square
 // each hide a bonus: 75% win a shot, 25% lose one, decided now so the outcome
 // is fixed when the board is created. Shape { "<index>": "win" | "lose" }.
-function buildBonusSquares(footballSquare, penaltySquare, eventSquares, gridSize) {
+function buildBonusSquares(footballSquare, penaltySquares, eventSquares, gridSize) {
   if (gridSize !== 49) return {};
-  const used = new Set([String(footballSquare), String(penaltySquare), ...Object.keys(eventSquares || {})]);
+  const used = new Set([String(footballSquare), ...(penaltySquares || []).map(String), ...Object.keys(eventSquares || {})]);
   const candidates = [];
   for (let i = 0; i < gridSize; i++) {
     if (!used.has(String(i))) candidates.push(i);
@@ -501,23 +523,20 @@ app.post('/api/session/start-map', async (req, res) => {
 
     const gridSize = gridSizeForStage(session.stage_idx);
     const footballSquare = Math.floor(Math.random() * gridSize);
-    let penaltySquare = Math.floor(Math.random() * gridSize);
-    while (penaltySquare === footballSquare) {
-      penaltySquare = Math.floor(Math.random() * gridSize);
-    }
     const revealed = new Array(gridSize).fill(false);
     const eventSquares = buildEventSquares(footballSquare, gridSize);
-    const bonusSquares = buildBonusSquares(footballSquare, penaltySquare, eventSquares, gridSize);
+    const penaltySquares = buildPenaltySquares(footballSquare, eventSquares, gridSize);
+    const bonusSquares = buildBonusSquares(footballSquare, penaltySquares, eventSquares, gridSize);
 
     await client.query('BEGIN');
 
     const { rows: gameRows } = await client.query(`
       INSERT INTO games
-        (theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count,
+        (theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count,
          status, active_player_id, active_player_username, last_active_at, event_squares, bonus_squares)
-      VALUES ($1, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6, 0, 0, 'active', $7, $8, NOW(), $9, $10)
       RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square
-    `, [theme.id, session.stage_idx, footballSquare, penaltySquare, revealed, req.user.id, req.user.username, JSON.stringify(eventSquares), JSON.stringify(bonusSquares)]);
+    `, [theme.id, session.stage_idx, footballSquare, penaltySquares[0], JSON.stringify(penaltySquares), revealed, req.user.id, req.user.username, JSON.stringify(eventSquares), JSON.stringify(bonusSquares)]);
 
     const game = gameRows[0];
 
@@ -671,6 +690,23 @@ app.get('/api/games/:id', async (req, res) => {
       Object.entries(allEvents).filter(([idx]) => (game.revealed || [])[parseInt(idx, 10)])
     );
 
+    // The caller's oldest kick that is still waiting, so a penalty screen
+    // dismissed without shooting re-opens on the next board load.
+    let pendingPenalty = null;
+    if (req.user) {
+      const { rows: pkRows } = await client.query(`
+        SELECT square_index FROM penalty_kicks
+        WHERE game_id = $1 AND user_id = $2 AND kicked_at IS NULL
+        ORDER BY created_at ASC LIMIT 1
+      `, [game.id, req.user.id]);
+      if (pkRows.length) {
+        pendingPenalty = {
+          square_index: pkRows[0].square_index,
+          bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSize] || 2,
+        };
+      }
+    }
+
     res.json({
       game,
       credits: regularSession,
@@ -688,6 +724,7 @@ app.get('/api/games/:id', async (req, res) => {
       pricing,
       penalty_square: game.penalty_square,
       penalty_found: game.penalty_found,
+      pending_penalty: pendingPenalty,
       bonus_credits_available: bonusCreditsAvailable
     });
   } catch (err) {
@@ -947,13 +984,28 @@ app.post('/api/games/:id/guess', async (req, res) => {
       ? game.total_players_count + 1
       : game.total_players_count;
 
-    // Check if this is a penalty square hit
+    // Check if this is a penalty square hit. Each penalty square pays once
+    // per game, to whoever uncovers it: the kick row is claimed here and the
+    // free attempts are only awarded when the kick is later scored, via the
+    // penalty-kick endpoint. Legacy boards keep penalty_square populated with
+    // the first entry, but the array is the source of truth.
     let isPenaltyHit = false;
     let bonusCreditsAwarded = 0;
-    if (!game.penalty_found && square_index === game.penalty_square) {
-      isPenaltyHit = true;
-      const bonusMap = { 16: 2, 25: 3, 36: 3, 49: 5 };
-      bonusCreditsAwarded = bonusMap[gridSize] || 2;
+    if (typeof game.penalty_squares === 'string') {
+      try { game.penalty_squares = JSON.parse(game.penalty_squares); } catch { game.penalty_squares = []; }
+    }
+    const penaltySquares = Array.isArray(game.penalty_squares)
+      ? game.penalty_squares
+      : (game.penalty_square !== null && game.penalty_square !== undefined ? [game.penalty_square] : []);
+    if (penaltySquares.includes(square_index)) {
+      const { rows: kickRows } = await client.query(`
+        INSERT INTO penalty_kicks (game_id, square_index, user_id, username)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (game_id, square_index) DO NOTHING
+        RETURNING id
+      `, [game.id, square_index, req.user.id, req.user.username]);
+      isPenaltyHit = kickRows.length > 0;
+      bonusCreditsAwarded = PENALTY_BONUS_BY_GRID[gridSize] || 2;
     }
 
     // Bonus square on this miss? Bonus squares never sit on the ball, the
@@ -1004,13 +1056,13 @@ app.post('/api/games/:id/guess', async (req, res) => {
       WHERE id = $4
     `, [newRevealed, game.total_guesses + 1, newPlayerCount, game.id]);
 
-    // If penalty square was found, add its free attempts to the game's bonus row
+    // A penalty square was uncovered: mark the legacy flag for old clients.
+    // The free attempts are paid by the penalty kick itself, not the guess.
     if (isPenaltyHit) {
       await client.query(
         'UPDATE games SET penalty_found = true WHERE id = $1',
         [game.id]
       );
-      await addBonusShots(client, game.id, req.user.id, bonusCreditsAwarded);
     }
 
     // Contribute to captain pot
@@ -1264,6 +1316,7 @@ app.post('/api/games/:id/guess', async (req, res) => {
       bonus_pending: bonusWalletError ? true : false,
       is_penalty_hit: isPenaltyHit,
       was_bonus_shot: wasBonusShot,
+      penalty: isPenaltyHit ? { square_index, bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSize] || 2 } : null,
       bonus_credits_awarded: bonusCreditsAwarded,
       bonus_credits_available: updatedBonusCreditsAvailable,
       bonus_session_id: updatedBonusRow ? updatedBonusRow.id : null,
@@ -1273,6 +1326,142 @@ app.post('/api/games/:id/guess', async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Guess error:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
+// POST /api/games/:id/penalty-kick { square_index, zone }
+// Settles a pending penalty kick created by the guess endpoint. The server
+// rolls the keeper's zone; a kick into a different zone scores and pays
+// PENALTY_BONUS_BY_GRID free attempts. Each square can be kicked once.
+app.post('/api/games/:id/penalty-kick', async (req, res) => {
+  const { square_index, zone } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const { rows: gameRows } = await client.query(
+      'SELECT * FROM games WHERE id = $1 FOR UPDATE',
+      [req.params.id]
+    );
+    if (!gameRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Game not found' });
+    }
+    const game = gameRows[0];
+
+    if (!Number.isInteger(zone) || zone < 0 || zone > 5) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Invalid zone' });
+    }
+    if (typeof game.penalty_squares === 'string') {
+      try { game.penalty_squares = JSON.parse(game.penalty_squares); } catch { game.penalty_squares = []; }
+    }
+    const penaltySquares = Array.isArray(game.penalty_squares)
+      ? game.penalty_squares
+      : (game.penalty_square !== null && game.penalty_square !== undefined ? [game.penalty_square] : []);
+    if (!penaltySquares.includes(square_index)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Not a penalty square' });
+    }
+    if (game.status !== 'active') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Game not active' });
+    }
+    if (!(game.revealed || [])[square_index]) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Square not revealed' });
+    }
+    if (game.active_player_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Not your game' });
+    }
+
+    const { rows: kickRows } = await client.query(
+      'SELECT * FROM penalty_kicks WHERE game_id = $1 AND square_index = $2 FOR UPDATE',
+      [game.id, square_index]
+    );
+    if (!kickRows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'No pending kick for this square' });
+    }
+    const kick = kickRows[0];
+    if (kick.user_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Not your kick' });
+    }
+    if (kick.kicked_at) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Already kicked' });
+    }
+
+    const gridSize = gridSizeForStage(game.stage_idx);
+    const award = PENALTY_BONUS_BY_GRID[gridSize] || 2;
+    const keeperZone = Math.floor(Math.random() * 6);
+    const scored = zone !== keeperZone;
+    let bonusSessionId = null;
+    if (scored) {
+      bonusSessionId = await addBonusShots(client, game.id, req.user.id, award);
+    }
+
+    await client.query(`
+      UPDATE penalty_kicks
+      SET zone = $1, keeper_zone = $2, scored = $3, bonus_awarded = $4, kicked_at = NOW()
+      WHERE id = $5
+    `, [zone, keeperZone, scored, scored ? award : 0, kick.id]);
+    await client.query('UPDATE games SET last_active_at = NOW() WHERE id = $1', [game.id]);
+
+    await client.query('COMMIT');
+
+    // Same shape as the end of the guess handler: recount the player's
+    // active sessions so the HUD can be refreshed straight away.
+    const { rows: updatedSessions } = await client.query(`
+      SELECT id, credits_total, credits_used, is_bonus_credit,
+             (credits_total - credits_used) as credits_remaining
+      FROM game_sessions
+      WHERE game_id = $1 AND user_id = $2 AND refunded = false
+        AND credits_used < credits_total
+      ORDER BY created_at DESC
+    `, [game.id, req.user.id]);
+    const bonusCreditsAvailable = updatedSessions
+      .filter(row => row.is_bonus_credit)
+      .reduce((sum, row) => sum + (row.credits_total - row.credits_used), 0);
+    const bonusRow = updatedSessions.find(r => r.is_bonus_credit) || null;
+    const updatedRegularSession = updatedSessions.find(r => !r.is_bonus_credit) || null;
+    const regularCreditsRemaining = updatedRegularSession ? updatedRegularSession.credits_remaining : 0;
+    const walletBalance = await getWalletBalance(client, req.user.id);
+
+    // Any older kick the caller still has waiting, so the client can chain
+    // straight into it.
+    let pendingPenalty = null;
+    const { rows: pkRows } = await pool.query(`
+      SELECT square_index FROM penalty_kicks
+      WHERE game_id = $1 AND user_id = $2 AND kicked_at IS NULL
+      ORDER BY created_at ASC LIMIT 1
+    `, [game.id, req.user.id]);
+    if (pkRows.length) {
+      pendingPenalty = {
+        square_index: pkRows[0].square_index,
+        bonus_on_goal: PENALTY_BONUS_BY_GRID[gridSize] || 2,
+      };
+    }
+
+    res.json({
+      scored,
+      zone,
+      keeper_zone: keeperZone,
+      bonus_credits_awarded: scored ? award : 0,
+      bonus_credits_available: bonusCreditsAvailable,
+      bonus_session_id: bonusRow ? bonusRow.id : null,
+      regular_credits_remaining: regularCreditsRemaining,
+      wallet_balance: walletBalance || 0,
+      pending_penalty: pendingPenalty,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Penalty kick error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -1580,7 +1769,30 @@ async function start() {
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_found BOOLEAN DEFAULT false`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS event_squares JSONB NOT NULL DEFAULT '{}'::jsonb`);
   await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS bonus_squares JSONB NOT NULL DEFAULT '{}'::jsonb`);
+  // Penalty squares are now a list (about one per ten squares). Legacy boards
+  // with a single penalty_square get a one-entry array.
+  await pool.query(`ALTER TABLE games ADD COLUMN IF NOT EXISTS penalty_squares JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await pool.query(`UPDATE games SET penalty_squares = jsonb_build_array(penalty_square) WHERE penalty_square IS NOT NULL AND penalty_squares = '[]'::jsonb`);
   await pool.query(`COMMENT ON TABLE games IS 'staging:private'`);
+
+  // One penalty kick per penalty square per game. A row with kicked_at NULL
+  // is a pending kick: the square was uncovered but the kick has not been
+  // taken, so the penalty screen re-opens on the next board load.
+  await pool.query(`CREATE TABLE IF NOT EXISTS penalty_kicks (
+    id SERIAL PRIMARY KEY,
+    game_id INTEGER NOT NULL REFERENCES games(id),
+    square_index SMALLINT NOT NULL,
+    user_id INTEGER NOT NULL,
+    username VARCHAR(255),
+    zone SMALLINT,
+    keeper_zone SMALLINT,
+    scored BOOLEAN,
+    bonus_awarded SMALLINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    kicked_at TIMESTAMPTZ,
+    UNIQUE (game_id, square_index)
+  )`);
+  await pool.query(`COMMENT ON TABLE penalty_kicks IS 'staging:private'`);
 
   await pool.query(`CREATE TABLE IF NOT EXISTS guesses (
     id SERIAL PRIMARY KEY,
@@ -1696,6 +1908,8 @@ async function start() {
     // tournament_sessions references games (current_game_id / last_won_game_id),
     // so it must be cleared before the games rows can go.
     await pool.query(`DELETE FROM tournament_sessions`);
+    // penalty_kicks references games, so it must go first too.
+    await pool.query(`DELETE FROM penalty_kicks`);
     await pool.query(`DELETE FROM games`);
     await pool.query(`DELETE FROM player_stats`);
     await pool.query(`DELETE FROM player_wallets`);
@@ -1786,34 +2000,39 @@ async function start() {
       return arr;
     };
 
-    // Game 1 — group stage (stage 0, 4×4 = 16 tiles), 6 revealed, penalty NOT found
-    // Event squares: two inside the revealed prefix so graphics render on load.
+    // Game 1 — group stage (stage 0, 4×4 = 16 tiles), 6 revealed, no penalty
+    // kick taken. Event squares: two inside the revealed prefix so graphics
+    // render on load. Penalty squares 7 and 14 avoid the ball (11) and every
+    // event square; both unrevealed so no kick is pending.
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
-      VALUES (1, $1, 0, 11, 9, $2, 6, 2, 'open', $3)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (1, $1, 0, 11, 7, $2, $3, 6, 2, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['brazil'], revealedPrefix(16, 6), JSON.stringify({
+    `, [themeMap['brazil'], JSON.stringify([7, 14]), revealedPrefix(16, 6), JSON.stringify({
       '1': 'free_kick', '4': 'handball', '9': 'red_card', '13': 'penalty_save'
     })]);
 
     // Game 2 — semi-final (stage 5, 6×6 = 36 tiles), 20 revealed, penalty FOUND
-    // Event squares: several types inside the revealed prefix (indices 0-19)
+    // (legacy flag from before the penalty screen; kept as seeded). Event
+    // squares: several types inside the revealed prefix (indices 0-19)
     // so the dapp check route /#game/2 renders .tile-event without guessing.
+    // Penalty squares 21, 25, 30, 33 avoid the ball (32) and every event.
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_found, revealed, total_guesses, total_players_count, status, event_squares)
-      VALUES (2, $1, 5, 32, 14, true, $2, 20, 4, 'open', $3)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, penalty_found, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (2, $1, 5, 32, 21, $2, true, $3, 20, 4, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['france'], revealedPrefix(36, 20), JSON.stringify({
+    `, [themeMap['france'], JSON.stringify([21, 25, 30, 33]), revealedPrefix(36, 20), JSON.stringify({
       '0': 'free_kick', '3': 'handball', '7': 'red_card', '11': 'penalty_save',
       '15': 'injury', '19': 'pitch_invasion', '23': 'free_kick', '28': 'handball', '34': 'red_card'
     })]);
 
-    // Game 3 — knockout (stage 3, 5×5 = 25 tiles), 14 revealed, penalty NOT found
+    // Game 3 — knockout (stage 3, 5×5 = 25 tiles), 14 revealed, no penalty
+    // kick taken. Penalty squares 16, 22, 24 avoid the ball (20) and events.
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares)
-      VALUES (3, $1, 3, 20, 8, $2, 14, 6, 'open', $3)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares)
+      VALUES (3, $1, 3, 20, 16, $2, $3, 14, 6, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], revealedPrefix(25, 14), JSON.stringify({
+    `, [themeMap['argentina'], JSON.stringify([16, 22, 24]), revealedPrefix(25, 14), JSON.stringify({
       '2': 'handball', '5': 'penalty_save', '8': 'red_card', '17': 'free_kick'
     })]);
 
@@ -1822,22 +2041,22 @@ async function start() {
 
     // Completed staging game — final (stage 6, 7×7 = 49 tiles), fully revealed
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, status, winner_username, prize_paid, completed_at, event_squares)
-      VALUES (4, $1, 6, 40, 25, $2, 18, 'completed', 'Staging Kaiser', 96, NOW(), $3)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, status, winner_username, prize_paid, completed_at, event_squares)
+      VALUES (4, $1, 6, 40, 25, $2, $3, 18, 'completed', 'Staging Kaiser', 96, NOW(), $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['germany'], new Array(49).fill(true), JSON.stringify({
+    `, [themeMap['germany'], JSON.stringify([25, 3, 10, 44, 46]), new Array(49).fill(true), JSON.stringify({
       '6': 'free_kick', '18': 'injury', '27': 'penalty_save', '33': 'red_card'
     })]);
 
     // Open final stage game with carry-over credits for refund testing, and 7
 // bonus squares (5 win / 2 lose) so reviewers can try both banner styles.
-// None of them sit on the ball (35), the penalty square (20), an event
-// square (1, 2, 12, 30) or an already revealed tile (0-3).
+// None of them sit on the ball (35), a penalty square (20, 10, 26, 38, 45),
+// an event square (1, 2, 12, 30) or an already revealed tile (0-3).
     await pool.query(`
-      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, revealed, total_guesses, total_players_count, status, event_squares, bonus_squares)
-      VALUES (5, $1, 6, 35, 20, $2, 4, 1, 'open', $3, $4)
+      INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares, bonus_squares)
+      VALUES (5, $1, 6, 35, 20, $2, $3, 4, 1, 'open', $4, $5)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['belgium'], revealedPrefix(49, 4), JSON.stringify({
+    `, [themeMap['belgium'], JSON.stringify([20, 10, 26, 38, 45]), revealedPrefix(49, 4), JSON.stringify({
       '1': 'penalty_save', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
     }), JSON.stringify({
       '5': 'win', '8': 'win', '15': 'lose', '22': 'win', '40': 'win', '44': 'win', '47': 'lose'

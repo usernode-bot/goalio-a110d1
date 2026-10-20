@@ -181,5 +181,19 @@
   "events.penalty_save": "PENALTY SAVE! {amount}",
   "bonus.win": "BONUS SQUARE! +1 SHOT",
   "bonus.lose": "BONUS SQUARE! -1 SHOT",
-  "bonus.lose_none": "BONUS SQUARE! NO SHOTS TO LOSE"
+  "bonus.lose_none": "BONUS SQUARE! NO SHOTS TO LOSE",
+  "penalty.title": "PENALTY!",
+  "penalty.subtitle": "Pick your spot. Score to win {n} free attempts.",
+  "penalty.goal": "GOAL! +{n} free attempts",
+  "penalty.saved": "SAVED!",
+  "penalty.continue": "Continue",
+  "penalty.close": "Close penalty screen",
+  "penalty.zone_0": "Aim top left",
+  "penalty.zone_1": "Aim top middle",
+  "penalty.zone_2": "Aim top right",
+  "penalty.zone_3": "Aim bottom left",
+  "penalty.zone_4": "Aim bottom middle",
+  "penalty.zone_5": "Aim bottom right",
+  "penalty.found_toast": "You found a penalty square! You won {n} free attempts!",
+  "penalty.failed": "Something went wrong. Your kick is still waiting and opens next time you load the map."
 }

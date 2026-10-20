@@ -181,5 +181,19 @@
   "events.penalty_save": "ARRÊT DE PENALTY ! {amount}",
   "bonus.win": "CASE BONUS ! +1 TIR",
   "bonus.lose": "CASE BONUS ! -1 TIR",
-  "bonus.lose_none": "CASE BONUS ! AUCUN TIR À PERDRE"
+  "bonus.lose_none": "CASE BONUS ! AUCUN TIR À PERDRE",
+  "penalty.title": "PENALTY !",
+  "penalty.subtitle": "Choisis ton coin. Marque pour gagner {n} tirs francs.",
+  "penalty.goal": "BUT ! +{n} tirs francs",
+  "penalty.saved": "ARRÊTÉ !",
+  "penalty.continue": "Continuer",
+  "penalty.close": "Fermer l’écran de penalty",
+  "penalty.zone_0": "Viser en haut à gauche",
+  "penalty.zone_1": "Viser en haut au centre",
+  "penalty.zone_2": "Viser en haut à droite",
+  "penalty.zone_3": "Viser en bas à gauche",
+  "penalty.zone_4": "Viser en bas au centre",
+  "penalty.zone_5": "Viser en bas à droite",
+  "penalty.found_toast": "Tu as trouvé une case penalty ! Tu as gagné {n} tirs francs !",
+  "penalty.failed": "Un problème est survenu. Ton penalty t’attend toujours et se rouvrira au prochain chargement de la carte."
 }

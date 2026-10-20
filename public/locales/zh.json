@@ -181,5 +181,19 @@
   "events.penalty_save": "扑出点球!{amount}",
   "bonus.win": "奖励格！+1 次射门",
   "bonus.lose": "奖励格！-1 次射门",
-  "bonus.lose_none": "奖励格！没有可失去的射门"
+  "bonus.lose_none": "奖励格！没有可失去的射门",
+  "penalty.title": "点球！",
+  "penalty.subtitle": "选择你的位置。进球即可赢得 {n} 次免费机会。",
+  "penalty.goal": "进球！+{n} 次免费机会",
+  "penalty.saved": "被扑出！",
+  "penalty.continue": "继续",
+  "penalty.close": "关闭点球界面",
+  "penalty.zone_0": "瞄准左上",
+  "penalty.zone_1": "瞄准上中",
+  "penalty.zone_2": "瞄准右上",
+  "penalty.zone_3": "瞄准左下",
+  "penalty.zone_4": "瞄准下中",
+  "penalty.zone_5": "瞄准右下",
+  "penalty.found_toast": "你找到了点球格子！你赢得了 {n} 次免费机会！",
+  "penalty.failed": "出了点问题。你的点球仍在等待中，下次加载地图时会重新打开。"
 }

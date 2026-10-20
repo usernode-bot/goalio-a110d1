@@ -181,5 +181,19 @@
   "events.penalty_save": "PENALTY GEKEERD! {amount}",
   "bonus.win": "BONUSVAK! +1 SCHOT",
   "bonus.lose": "BONUSVAK! -1 SCHOT",
-  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN"
+  "bonus.lose_none": "BONUSVAK! GEEN SCHOT OM TE VERLIEZEN",
+  "penalty.title": "PENALTY!",
+  "penalty.subtitle": "Kies je plek. Scoor om {n} vrije pogingen te winnen.",
+  "penalty.goal": "GOAL! +{n} vrije pogingen",
+  "penalty.saved": "GERED!",
+  "penalty.continue": "Doorgaan",
+  "penalty.close": "Penaltyscherm sluiten",
+  "penalty.zone_0": "Richten linksboven",
+  "penalty.zone_1": "Richten middenboven",
+  "penalty.zone_2": "Richten rechtsboven",
+  "penalty.zone_3": "Richten linksonder",
+  "penalty.zone_4": "Richten middenonder",
+  "penalty.zone_5": "Richten rechtsonder",
+  "penalty.found_toast": "Je vond een penalty-vakje! Je won {n} vrije pogingen!",
+  "penalty.failed": "Er ging iets mis. Je penalty wacht en opent de volgende keer dat je de kaart laadt."
 }

@@ -127,6 +127,11 @@
       "expectText": "events"
     },
     {
+      "name": "Game API exposes pending penalty",
+      "path": "/api/games/2",
+      "expectText": "pending_penalty"
+    },
+    {
       "name": "Event graphic SVG serves",
       "path": "/images/events/red-card.svg",
       "expectSelector": "svg"

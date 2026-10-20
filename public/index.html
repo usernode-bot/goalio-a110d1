@@ -912,6 +912,28 @@
     .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: flex; align-items: center; justify-content: center; }
     .modal-box { background: #16162a; border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 24px; max-width: 340px; width: 90%; text-align: center; }
 
+    /* Penalty kick screen */
+    .penalty-modal .modal-box { position: relative; }
+    .pk-close { position: absolute; top: 8px; right: 12px; background: none; border: none; color: #aaa; font-size: 1.6rem; line-height: 1; padding: 0 6px; cursor: pointer; }
+    .pk-title { font-family: 'DM Sans', sans-serif; font-weight: 900; font-size: 1.6rem; color: #fbbf24; letter-spacing: 0.04em; }
+    .pk-sub { font-family: 'DM Sans', sans-serif; font-size: 0.85rem; color: #ccc; margin: 6px 0 14px; }
+    .pk-goal { position: relative; height: 150px; border: 4px solid #f0f0f5; border-bottom: none; border-radius: 4px 4px 0 0; background: rgba(255,255,255,0.04); }
+    .pk-zones { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); height: 100%; }
+    .pk-zone { border: none; background: transparent; border-right: 1px dashed rgba(255,255,255,0.18); border-bottom: 1px dashed rgba(255,255,255,0.18); cursor: pointer; padding: 0; }
+    .pk-zone:nth-child(3n) { border-right: none; }
+    .pk-zone:nth-child(n+4) { border-bottom: none; }
+    .pk-zone:hover { background: rgba(251,191,36,0.18); }
+    .pk-zone.aim { background: rgba(251,191,36,0.25); box-shadow: inset 0 0 12px rgba(251,191,36,0.35); }
+    .pk-zone:disabled { cursor: default; }
+    .pk-keeper { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 40px; height: 64px; border-radius: 18px 18px 6px 6px; background: #22c55e; border: 2px solid #166534; transition: left 0.6s ease, bottom 0.6s ease, transform 0.6s ease; pointer-events: none; z-index: 1; }
+    .pk-ball { position: absolute; left: 50%; bottom: -40px; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; background: #fff; border: 2px solid #222; box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: left 0.6s ease, bottom 0.6s ease; pointer-events: none; z-index: 2; }
+    .pk-pitch { height: 64px; background: linear-gradient(#1f6b35, #14532d); border-radius: 0 0 10px 10px; position: relative; }
+    .pk-pitch::before { content: ''; position: absolute; left: 50%; top: 10px; bottom: 10px; width: 2px; margin-left: -1px; background: rgba(255,255,255,0.15); }
+    .pk-result { font-size: 1.1rem; }
+    @media (prefers-reduced-motion: reduce) {
+      .pk-keeper, .pk-ball { transition: none; }
+    }
+
     /* Language Selector */
     .language-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
     .language-btn { padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #ccc; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; min-width: 0; overflow-wrap: anywhere; transition: all 0.15s; }
@@ -2001,6 +2023,17 @@
       renderGameBody();
       setupGamePolls(id);
       startKeepalive(id);
+
+      // A kick left waiting (screen closed without shooting) re-opens after
+      // the board settles — past the tile spawn and portrait fade.
+      if (d.pending_penalty) {
+        const p = d.pending_penalty;
+        setTimeout(() => {
+          if (state.game && state.game.id === d.game.id && state.game.status !== 'completed') {
+            openPenaltyKick(p.square_index, p.bonus_on_goal);
+          }
+        }, 3000);
+      }
     } catch(e) {
       console.error('Game load error', e);
     }
@@ -2291,14 +2324,20 @@
 
       const cell = document.querySelector(`.tile[data-idx="${idx}"]`);
 
-      // Handle penalty square discovery
+      // Handle penalty square discovery — open the penalty kick screen. The
+      // toast is only a fallback if the overlay fails to build.
       if (d.is_penalty_hit) {
         state.bonusCreditsAvailable = d.bonus_credits_available || 0;
         updateHud();
         Sound.playPenalty();
-        showToast(`You found a penalty square! You won ${d.bonus_credits_awarded} free attempts!`);
         if (cell) cell.classList.add('open');
         document.querySelectorAll('.tile:not(.open)').forEach(c => c.style.pointerEvents = '');
+        try {
+          openPenaltyKick(idx, d.penalty ? d.penalty.bonus_on_goal : d.bonus_credits_awarded);
+        } catch (err) {
+          console.error('Penalty screen failed', err);
+          showToast(t('penalty.found_toast', { n: d.bonus_credits_awarded }));
+        }
       } else if (d.hit) {
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
@@ -2465,10 +2504,113 @@
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // PENALTY KICK SCREEN
+  // ═══════════════════════════════════════════════════════════════
+  // Opened when a penalty square is uncovered (or a kick is still waiting on
+  // board load). One kick per square: tap one of six aim zones, the server
+  // rolls the keeper, a goal pays the board's free attempts. Closing with ×
+  // keeps the kick pending on the server.
+  function openPenaltyKick(squareIdx, bonusOnGoal) {
+    if (document.querySelector('.penalty-modal')) return;
+    const n = bonusOnGoal || 2;
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-bg penalty-modal';
+    const zoneLabel = i => t('penalty.zone_' + i);
+    overlay.innerHTML = `<div class="modal-box">
+      <button class="pk-close" aria-label="${t('penalty.close')}">×</button>
+      <div class="pk-title">${t('penalty.title')}</div>
+      <div class="pk-sub">${t('penalty.subtitle', { n })}</div>
+      <div class="pk-goal">
+        <div class="pk-zones">
+          ${[0, 1, 2, 3, 4, 5].map(i => `<button class="pk-zone" data-zone="${i}" aria-label="${zoneLabel(i)}"></button>`).join('')}
+        </div>
+        <div class="pk-keeper"></div>
+        <div class="pk-ball"></div>
+      </div>
+      <div class="pk-pitch"></div>
+      <div class="refund-summary pk-result" style="display:none;"></div>
+      <button class="bundle-btn btn-gold pk-continue" style="display:none;width:100%;">${t('penalty.continue')}</button>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('.pk-close').addEventListener('click', () => overlay.remove());
+    overlay.querySelectorAll('.pk-zone').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const zone = parseInt(btn.dataset.zone, 10);
+        overlay.querySelectorAll('.pk-zone').forEach(b => { b.disabled = true; b.classList.toggle('aim', b === btn); });
+        const closeBtn = overlay.querySelector('.pk-close');
+        if (closeBtn) closeBtn.style.display = 'none';
+        let d;
+        try {
+          const r = await api('POST', `/api/games/${state.game.id}/penalty-kick`, { square_index: squareIdx, zone });
+          if (!r.ok) {
+            const e = await r.json().catch(() => ({}));
+            overlay.remove();
+            if (e.error === 'Already kicked') {
+              loadGame(state.game.id);
+            } else {
+              showToast(t('penalty.failed'));
+            }
+            return;
+          }
+          d = await r.json();
+        } catch (err) {
+          console.error('Penalty kick error', err);
+          overlay.remove();
+          showToast(t('penalty.failed'));
+          return;
+        }
+        // The ball flies to the chosen zone, the keeper dives to theirs
+        const keeper = overlay.querySelector('.pk-keeper');
+        const ball = overlay.querySelector('.pk-ball');
+        const zoneCol = zone % 3;
+        const zoneRow = zone < 3 ? 0 : 1;
+        ball.style.left = `calc(${(zoneCol * 100 / 3 + 100 / 6).toFixed(2)}% - 11px)`;
+        ball.style.bottom = zoneRow === 0 ? '62%' : '14%';
+        const keeperCol = d.keeper_zone % 3;
+        const keeperRow = d.keeper_zone < 3 ? 0 : 1;
+        keeper.style.left = `${(keeperCol * 100 / 3 + 100 / 6).toFixed(2)}%`;
+        keeper.style.bottom = keeperRow === 0 ? '42%' : '4%';
+        keeper.style.transform = `translateX(-50%) rotate(${keeperCol === 0 ? -55 : keeperCol === 2 ? 55 : 0}deg)`;
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          await new Promise(res => setTimeout(res, 650));
+        }
+        // Update HUD from the response
+        state.bonusCreditsAvailable = d.bonus_credits_available || 0;
+        state.bonusSessionId = d.bonus_session_id || null;
+        if (state.credits && d.regular_credits_remaining !== undefined) {
+          state.credits.credits_remaining = d.regular_credits_remaining;
+        }
+        if (d.wallet_balance !== undefined) state.walletBalance = d.wallet_balance;
+        updateHud();
+        const resultEl = overlay.querySelector('.pk-result');
+        const contBtn = overlay.querySelector('.pk-continue');
+        resultEl.style.display = 'block';
+        if (d.scored) {
+          resultEl.textContent = t('penalty.goal', { n: d.bonus_credits_awarded });
+          Sound.bonusWin();
+          playRefundCoins(overlay, { shots_refunded: d.bonus_credits_awarded }, '.shots-val');
+        } else {
+          resultEl.textContent = t('penalty.saved');
+          Sound.bonusLose();
+        }
+        contBtn.style.display = 'block';
+        contBtn.addEventListener('click', () => {
+          overlay.remove();
+          if (d.pending_penalty) {
+            openPenaltyKick(d.pending_penalty.square_index, d.pending_penalty.bonus_on_goal);
+          }
+        });
+      });
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // WIN SEQUENCE
   // ═══════════════════════════════════════════════════════════════
-  // Fly refunded shots from the final win card up to the Wallet chip as coins
-  function playRefundCoins(overlay, result) {
+  // Fly refunded shots from a result card up to a HUD chip as coins. The
+// target chip defaults to Wallet (the Final refund); the penalty screen
+// sends its won free attempts to Shots Left.
+  function playRefundCoins(overlay, result, targetSelector) {
     const summary = overlay.querySelector('.refund-summary');
     if (!summary) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -2480,7 +2622,7 @@
     const originX = originRect.left + originRect.width / 2;
     const originY = originRect.top + originRect.height / 2;
     let tx, ty;
-    const walletEl = document.querySelector('.wallet-val');
+    const walletEl = document.querySelector(targetSelector || '.wallet-val');
     const walletChip = walletEl ? walletEl.closest('.hud-chip') : null;
     if (walletEl) {
       const wr = walletEl.getBoundingClientRect();

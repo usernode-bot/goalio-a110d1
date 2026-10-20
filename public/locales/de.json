@@ -181,5 +181,19 @@
   "events.penalty_save": "ELFMETER GEHALTEN! {amount}",
   "bonus.win": "BONUSFELD! +1 SCHUSS",
   "bonus.lose": "BONUSFELD! -1 SCHUSS",
-  "bonus.lose_none": "BONUSFELD! KEINE SCHÜSSE ZUM VERLIEREN"
+  "bonus.lose_none": "BONUSFELD! KEINE SCHÜSSE ZUM VERLIEREN",
+  "penalty.title": "ELFMETER!",
+  "penalty.subtitle": "Wähle deine Ecke. Triff, um {n} Freischüsse zu gewinnen.",
+  "penalty.goal": "TOR! +{n} Freischüsse",
+  "penalty.saved": "GEHALTEN!",
+  "penalty.continue": "Weiter",
+  "penalty.close": "Elfmeterschießen schließen",
+  "penalty.zone_0": "Oben links zielen",
+  "penalty.zone_1": "Oben mittig zielen",
+  "penalty.zone_2": "Oben rechts zielen",
+  "penalty.zone_3": "Unten links zielen",
+  "penalty.zone_4": "Unten mittig zielen",
+  "penalty.zone_5": "Unten rechts zielen",
+  "penalty.found_toast": "Du hast ein Elfmeterfeld gefunden! Du hast {n} Freischüsse gewonnen!",
+  "penalty.failed": "Etwas ist schiefgelaufen. Dein Elfmeter wartet und öffnet sich beim nächsten Laden der Karte."
 }
