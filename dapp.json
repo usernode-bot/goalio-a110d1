@@ -162,6 +162,16 @@
       "expectSelector": "svg"
     },
     {
+      "name": "Round-up demo opens the between-match round-up",
+      "path": "/#demo/roundup",
+      "expectText": "Round-up"
+    },
+    {
+      "name": "Round-up demo shows clubs going through",
+      "path": "/#demo/roundup-qf",
+      "expectText": "Semi-Final"
+    },
+    {
       "name": "Final refund demo seeds Final board with carried shots",
       "path": "/#demo/final-refund",
       "expectSelector": ".game-grid"

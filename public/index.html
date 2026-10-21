@@ -564,29 +564,50 @@
       .result-card { padding: 20px; width: 95%; max-width: 100%; }
     }
 
-    /* Round-up card — how the rest of the round went, between matches */
-    .roundup-card { max-width: 460px; }
-    .ru-title { font-family: 'DM Sans', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 2px; }
-    .ru-stage { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
-    .ru-head { display: flex; justify-content: space-between; font-family: 'DM Sans', sans-serif; font-size: 0.62rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; text-align: left; }
-    .ru-match { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .ru-box { flex: 1; min-width: 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; text-align: left; }
-    .ru-row { display: flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #aaa; }
-    .ru-row.win { background: var(--ru-win-bg); color: var(--ru-accent); font-weight: 700; }
+    /* Round-up card — how the rest of the round went, between matches.
+       Every element rests in its finished state; the animation only decides
+       how it gets there, so reduced motion simply shows the finished card. */
+    .roundup-card { max-width: 460px; padding: 22px 20px 20px; overflow-x: hidden; animation: ru-card-in 0.35s ease both; }
+    .ru-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; overflow: hidden; border-radius: 16px 16px 0 0; background: rgba(255,255,255,0.05); }
+    .ru-bar::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, var(--ru-accent, #fbbf24), transparent); transform: translateX(-100%); animation: ru-sweep 1.2s ease 0.1s both; }
+    .ru-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; text-align: left; }
+    .ru-title { font-family: 'DM Sans', sans-serif; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
+    .ru-stage { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; font-family: 'DM Sans', sans-serif; font-size: 0.62rem; font-weight: 800; padding: 4px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.1em; }
+    .ru-stage::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: ru-pulse 1.3s ease-in-out infinite; }
+    .ru-head { display: flex; justify-content: space-between; font-family: 'DM Sans', sans-serif; font-size: 0.6rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; text-align: left; }
+    .ru-match { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; animation: ru-match-in 0.5s cubic-bezier(0.2, 0.85, 0.3, 1.15) var(--ru-d, 0ms) both; }
+    .ru-box { flex: 1; min-width: 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; overflow: hidden; text-align: left; background: rgba(255,255,255,0.02); }
+    .ru-match.mine .ru-box { border-color: rgba(251,191,36,0.45); box-shadow: 0 0 18px rgba(251,191,36,0.12); }
+    .ru-row { position: relative; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 5px 9px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; color: #aaa; }
+    .ru-row.win { background: var(--ru-win-bg); color: var(--ru-accent); font-weight: 700; animation: ru-win-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.3) var(--ru-win-d, 0ms) both; }
+    .ru-row.win::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(100deg, transparent 15%, rgba(255,255,255,0.28) 50%, transparent 85%); transform: translateX(-130%); animation: ru-shine 0.8s ease var(--ru-shine-d, 0ms) both; }
     .ru-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ru-score { font-family: 'Space Mono', monospace; font-size: 0.82rem; }
-    .ru-you { font-size: 0.6rem; color: #fbbf24; margin-left: 4px; }
-    .ru-note { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #888; padding: 0 8px 3px; }
-    .ru-line { width: 10px; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.25); }
-    .ru-next { width: 96px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; border: 1px solid currentColor; border-radius: 8px; padding: 5px 6px; font-family: 'DM Sans', sans-serif; font-size: 0.74rem; font-weight: 700; text-align: left; overflow: hidden; }
+    .ru-score { font-family: 'Space Mono', monospace; font-size: 0.9rem; font-variant-numeric: tabular-nums; min-width: 1.1em; text-align: right; }
+    .ru-you { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; background: rgba(251,191,36,0.16); border: 1px solid rgba(251,191,36,0.4); border-radius: 4px; padding: 1px 4px; color: #fbbf24; margin-left: 5px; vertical-align: 1px; }
+    .ru-note { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #999; padding: 0 9px 4px; }
+    .ru-line { width: 12px; height: 1px; flex-shrink: 0; background: currentColor; opacity: 0.38; transform-origin: left center; animation: ru-draw 0.25s ease var(--ru-d, 0ms) both; }
+    .ru-next { width: 106px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; border: 1px solid currentColor; border-radius: 8px; padding: 6px; background: rgba(255,255,255,0.03); font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 700; text-align: left; overflow: hidden; animation: ru-fly 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) var(--ru-d, 0ms) both, ru-glow 1s ease calc(var(--ru-d, 0ms) + 380ms) both; }
     .ru-next-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ru-news { text-align: left; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 6px; padding-top: 10px; }
-    .ru-news-h { font-family: 'DM Sans', sans-serif; font-size: 0.62rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
-    .ru-news ul { margin: 0; padding-left: 16px; }
-    .ru-news li { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #ddd; line-height: 1.35; margin: 0 0 6px 0; }
-    @keyframes ru-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes ru-win { from { background: transparent; color: #aaa; } to { background: var(--ru-win-bg); color: var(--ru-accent); } }
-    @keyframes ru-advance { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+    .ru-news { text-align: left; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 10px; padding-top: 12px; }
+    .ru-news-h { display: flex; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.6rem; color: #888; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .ru-news-h::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
+    .ru-news ul { margin: 0; padding: 0; list-style: none; }
+    .ru-news li { display: flex; align-items: flex-start; gap: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #ddd; line-height: 1.35; margin: 0 0 8px 0; animation: ru-news-in 0.45s cubic-bezier(0.2, 0.85, 0.3, 1.1) var(--ru-d, 0ms) both; }
+    .ru-news li:last-child { margin-bottom: 0; }
+    .ru-tag { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; font-family: 'Space Mono', monospace; font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #bbb; margin-top: 1px; white-space: nowrap; }
+    .ru-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--ru-tag-c, #fbbf24); }
+    .ru-tag.gold { color: #fbbf24; --ru-tag-c: #fbbf24; }
+    .ru-tag.red { color: #fca5a5; --ru-tag-c: #ef4444; }
+    @keyframes ru-card-in { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes ru-sweep { to { transform: translateX(100%); } }
+    @keyframes ru-pulse { 0%, 100% { opacity: 0.35; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
+    @keyframes ru-match-in { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+    @keyframes ru-win-pop { 0% { transform: scale(1); } 45% { transform: scale(1.035); } 100% { transform: scale(1); } }
+    @keyframes ru-shine { to { transform: translateX(130%); } }
+    @keyframes ru-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    @keyframes ru-fly { from { opacity: 0; transform: translateX(-30px) scale(0.7); } 60% { opacity: 1; } to { opacity: 1; transform: none; } }
+    @keyframes ru-glow { 0%, 100% { box-shadow: 0 0 0 0 transparent; } 45% { box-shadow: 0 0 16px -2px currentColor; } }
+    @keyframes ru-news-in { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) {
       .roundup-card, .roundup-card * { animation: none !important; }
     }
@@ -1770,6 +1791,8 @@
       renderLobby();
     }
     else if (hash === '#demo/final-refund') demoFinalRefund();
+    else if (hash === '#demo/roundup') demoRoundup('group');
+    else if (hash === '#demo/roundup-qf') demoRoundup('qf');
     else if (hash === '#demo/penalty') demoPenaltyKick();
     else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
@@ -1816,6 +1839,27 @@
     } catch (e) {
       navigate('#lobby');
     }
+  }
+
+  // Staging demo deep link: opens the between-match round-up on its own, built
+  // from the club list, so the screen is reachable without playing a match.
+  // '#demo/roundup' shows a group round, '#demo/roundup-qf' a Quarter-Final.
+  // Nothing is written: Continue returns to the lobby.
+  function demoRoundup(variant) {
+    const slugs = (state.themes || []).map(t => t.slug);
+    if (slugs.length < 8) { navigate('#lobby'); return; }
+    const qf = variant === 'qf';
+    const session = {
+      my_team_slug: slugs[0],
+      played_slugs: qf ? slugs.slice(1, 6) : slugs.slice(1, 3),
+      stage_idx: qf ? 5 : 2,
+      next_opponent_slug: slugs[qf ? 7 : 4],
+    };
+    let model = null;
+    try { model = buildRoundup(session, state.themes); } catch (e) { model = null; }
+    if (!model) { navigate('#lobby'); return; }
+    document.querySelectorAll('.result-overlay').forEach(e => e.remove());
+    renderRoundup(model, () => navigate('#lobby'));
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -3311,6 +3355,7 @@
     const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
 
     // One headline per other match shown, from the events that match allows.
+    // Each carries a short tag so the round-up reads like a news ticker.
     const hrng = seededRng(seedBase + s + '|news');
     const headlines = shown.map(tie => {
       const draw = !tie.winner;
@@ -3318,16 +3363,16 @@
       const lName = nameOf(tie.winner === tie.a ? tie.b : tie.a);
       const margin = Math.abs(tie.sa - tie.sb);
       const opts = [];
-      if (tie.note.indexOf('Pens') === 0) opts.push(`${wName}'s keeper saved the decisive penalty against ${lName}.`);
-      if (tie.note === 'After extra time') opts.push(`${wName} won it in extra time against ${lName}.`);
-      if (!tie.note && !draw && margin === 1) opts.push(`${wName} snatched a stoppage-time winner against ${lName}.`);
-      if (draw) opts.push(`${nameOf(tie.a)} had a late winner ruled out against ${nameOf(tie.b)}.`);
-      else if (!tie.note && margin === 1) opts.push(`${lName} had a late equaliser ruled out against ${wName}.`);
+      if (tie.note.indexOf('Pens') === 0) opts.push({ tag: 'Penalties', tone: 'gold', text: `${wName}'s keeper saved the decisive penalty against ${lName}.` });
+      if (tie.note === 'After extra time') opts.push({ tag: 'Extra time', tone: 'gold', text: `${wName} won it in extra time against ${lName}.` });
+      if (!tie.note && !draw && margin === 1) opts.push({ tag: 'Stoppage time', tone: 'gold', text: `${wName} snatched a stoppage-time winner against ${lName}.` });
+      if (draw) opts.push({ tag: 'VAR', tone: 'gold', text: `${nameOf(tie.a)} had a late winner ruled out against ${nameOf(tie.b)}.` });
+      else if (!tie.note && margin === 1) opts.push({ tag: 'VAR', tone: 'gold', text: `${lName} had a late equaliser ruled out against ${wName}.` });
       if (draw) {
         const first = hrng() < 0.5 ? tie.a : tie.b;
-        opts.push(`${nameOf(first)} finished with ten men after a red card against ${nameOf(first === tie.a ? tie.b : tie.a)}.`);
+        opts.push({ tag: 'Red card', tone: 'red', text: `${nameOf(first)} finished with ten men after a red card against ${nameOf(first === tie.a ? tie.b : tie.a)}.` });
       } else {
-        opts.push(`${lName} finished with ten men after a red card against ${wName}.`);
+        opts.push({ tag: 'Red card', tone: 'red', text: `${lName} finished with ten men after a red card against ${wName}.` });
       }
       return opts[Math.floor(hrng() * opts.length)];
     });
@@ -3355,49 +3400,86 @@
       const t = themeBySlug[sl];
       return `<span class="flag-mini" role="img" aria-label="${esc(t ? t.country_name : sl)}" style="background:${flagBg(sl, t ? t.accent_colour : '#444')};"></span>`;
     };
-    const rowHtml = (sl, score, isWinner, delay) => {
-      const style = isWinner ? ` style="--ru-win-bg:${winBg};--ru-accent:${accent};animation:ru-win 0.35s ease ${delay}ms both;"` : '';
+    // Beats, in ms: each match lands, its rows fill in, the winner lights up,
+    // then its team flies into the next-round column.
+    const STEP = 420, ROW = 130, WIN = 300, FLY = 500;
+    const rowHtml = (sl, score, isWinner, delay, winDelay) => {
+      const style = isWinner
+        ? ` style="--ru-win-bg:${winBg};--ru-accent:${accent};--ru-win-d:${winDelay}ms;--ru-shine-d:${winDelay + 120}ms;"`
+        : '';
       return `<div class="ru-row${isWinner ? ' win' : ''}"${style}>${flag(sl)}` +
         `<span class="ru-name">${esc(nameOf(sl))}${sl === meSlug ? '<span class="ru-you">You</span>' : ''}</span>` +
-        `<span class="ru-score">${score}</span></div>`;
+        `<span class="ru-score" data-final="${score}" data-d="${delay}">${score}</span></div>`;
     };
     const matchHtml = (tie, i) => {
-      const delay = i * 150;
+      const delay = i * STEP;
+      const rowDelay = delay + ROW;
+      const winDelay = delay + WIN;
       const chip = knockout && tie.winner
-        ? `<span class="ru-line"></span><div class="ru-next" style="color:${accent};animation:ru-advance 0.4s ease ${delay + 500}ms both;">` +
+        ? `<span class="ru-line" style="--ru-d:${delay + FLY - 60}ms;"></span>` +
+          `<div class="ru-next" style="color:${accent};--ru-d:${delay + FLY}ms;">` +
           `${flag(tie.winner)}<span class="ru-next-name">${esc(nameOf(tie.winner))}</span></div>`
         : '';
-      return `<div class="ru-match" style="animation:ru-in 0.35s ease ${delay}ms both;">
+      return `<div class="ru-match${tie === mine ? ' mine' : ''}" style="--ru-d:${delay}ms;">
         <div class="ru-box">
-          ${rowHtml(tie.a, tie.sa, tie.winner === tie.a, delay + 250)}
-          ${rowHtml(tie.b, tie.sb, tie.winner === tie.b, delay + 250)}
-          ${tie.note ? `<div class="ru-note">${esc(tie.note)}</div>` : ''}
+          ${rowHtml(tie.a, tie.sa, tie.winner === tie.a, rowDelay, winDelay)}
+          ${rowHtml(tie.b, tie.sb, tie.winner === tie.b, rowDelay, winDelay)}
+          ${tie.note ? `<div class="ru-note" style="animation:ru-news-in 0.35s ease ${winDelay + 140}ms both;">${esc(tie.note)}</div>` : ''}
         </div>${chip}
       </div>`;
     };
 
     const matches = (mine ? [mine] : []).concat(shown);
-    const newsDelay = Math.max(0, matches.length - 1) * 150 + 300;
+    const newsDelay = matches.length * STEP + 140;
 
     const el = document.createElement('div');
     el.className = 'result-overlay';
     el.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);';
     el.innerHTML = `
-      <div class="result-card roundup-card" role="dialog" aria-modal="true" aria-label="Round-up">
-        <div class="ru-title">Round-up</div>
-        <div class="ru-stage" style="background:${badgeBg};color:${badgeText};">${esc(stageName(s))}</div>
+      <div class="result-card roundup-card" role="dialog" aria-modal="true" aria-label="Round-up" style="--ru-accent:${accent};">
+        <div class="ru-bar"></div>
+        <div class="ru-top">
+          <div class="ru-title">Round-up</div>
+          <div class="ru-stage" style="background:${badgeBg};color:${badgeText};">${esc(stageName(s))}</div>
+        </div>
         <div class="ru-head"><span>Results</span>${knockout ? `<span>${esc(stageName(s + 1))}</span>` : ''}</div>
         ${matches.map((t, i) => matchHtml(t, i)).join('')}
-        ${headlines.length ? `<div class="ru-news" style="animation:ru-in 0.35s ease ${newsDelay}ms both;">
+        ${headlines.length ? `<div class="ru-news">
           <div class="ru-news-h">Headlines</div>
-          <ul>${headlines.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+          <ul>${headlines.map((h, i) =>
+            `<li style="--ru-d:${newsDelay + i * 170}ms;"><span class="ru-tag ${h.tone}">${esc(h.tag)}</span><span>${esc(h.text)}</span></li>`
+          ).join('')}</ul>
         </div>` : ''}
-        <button class="bundle-btn btn-gold ru-continue" style="width:100%;margin-top:12px;">Continue →</button>
+        <button class="bundle-btn btn-gold ru-continue" style="width:100%;margin-top:14px;">Continue →</button>
       </div>`;
     document.body.appendChild(el);
+    const stopScores = playRoundupScores(el);
     const btn = el.querySelector('.ru-continue');
-    btn.addEventListener('click', () => { el.remove(); next(); });
+    btn.addEventListener('click', () => { stopScores(); el.remove(); next(); });
     btn.focus();
+  }
+
+  // Ticks each score up from 0 as its match lands. The final score is already
+  // in the markup, so a device that asks for reduced motion just sees it.
+  function playRoundupScores(el) {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const scores = Array.from(el.querySelectorAll('.ru-score[data-final]'))
+      .map(s => ({ el: s, final: +s.dataset.final, d: +s.dataset.d }));
+    if (reduce || !scores.length) return () => {};
+    scores.forEach(s => { s.el.textContent = '0'; });
+    const t0 = performance.now();
+    let raf = 0;
+    const tick = now => {
+      let running = false;
+      scores.forEach(s => {
+        const p = Math.max(0, Math.min(1, (now - t0 - s.d) / 320));
+        s.el.textContent = String(Math.round(s.final * (1 - Math.pow(1 - p, 3))));
+        if (p < 1) running = true;
+      });
+      if (running && el.isConnected) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { if (raf) cancelAnimationFrame(raf); };
   }
 
   // Fresh session: the client's copy predates the win's played_slugs / next opponent.
