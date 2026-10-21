@@ -1290,6 +1290,9 @@
   const Sound = {
     ctx: null,
     muted: (function(){ try { return localStorage.getItem('goal_muted') === '1'; } catch(_) { return false; } })(),
+    clickNotes: [523, 659, 784, 880, 1047],
+    clickCycle: [0, 1, 2, 3, 4, 2],
+    tapCount: 0,
     async ensure() {
       if (this.muted) return null;
       try {
@@ -1314,6 +1317,22 @@
       const t = ctx.currentTime;
       this.tone(660, t, 0.08, 'square', 0.16);
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
+    },
+    // Square-tap blip at a chosen base note. Same two-tone shape as blip().
+    async note(freq) {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      this.tone(freq, t, 0.08, 'square', 0.16);
+      this.tone(freq * 1.5, t + 0.04, 0.06, 'square', 0.12);
+    },
+    // Every 4 taps climbs one note: 1,2,3,4,5, then back to 3, then 1, repeating.
+    clickNote() {
+      const step = this.clickCycle[Math.floor(this.tapCount / 4) % this.clickCycle.length];
+      this.tapCount++;
+      return this.note(this.clickNotes[step]);
+    },
+    topNote() {
+      return this.note(this.clickNotes[this.clickNotes.length - 1]);
     },
     // Match Event SFX — rising two-tone fanfare for wins, descending
     // whistle-then-buzz for losses. Varies per event so the nine don't
@@ -2108,6 +2127,7 @@
       if (!r.ok) { navigate('#lobby'); return; }
       const d = await r.json();
       state.game = d.game;
+      Sound.tapCount = 0;
       state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
       state.credits = d.credits;
       state.regularSessionId = d.credits ? d.credits.id : null;
@@ -2393,7 +2413,7 @@
       document.body.appendChild(modal);
       return;
     }
-    playBlip();
+    Sound.clickNote();
 
     const body = { square_index: idx };
     if (sessId) body.session_id = sessId;
@@ -2453,6 +2473,7 @@
           showToast(t('penalty.found_toast', { n: bonusOnGoal }));
         }
       } else if (d.hit) {
+        Sound.topNote();
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {
