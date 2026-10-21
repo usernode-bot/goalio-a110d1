@@ -174,7 +174,7 @@ function rollPenaltyRole() {
   return Math.random() < 0.5 ? 'keeper' : 'taker';
 }
 
-// Build the penalty squares for a fresh board: about one per ten squares
+// Build the penalty squares for a fresh board: about one per thirteen squares
 // (rounded to the nearest whole number, never fewer than one), drawn from the
 // squares that are neither the ball nor a match event square. Returns an
 // array of square indices.
@@ -188,7 +188,7 @@ function buildPenaltySquares(footballSquare, eventSquares, gridSize) {
     const j = Math.floor(Math.random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  const k = Math.max(1, Math.round(gridSize / 10));
+  const k = Math.max(1, Math.round(gridSize * 0.75 / 10));
   return candidates.slice(0, k);
 }
 
