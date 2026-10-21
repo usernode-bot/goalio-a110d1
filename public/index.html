@@ -471,6 +471,15 @@
     /* Nation strip — single tight row */
     .nation-strip { font-family: 'DM Sans', sans-serif; font-size: 0.68rem; color: #bbb; display: flex; align-items: center; gap: 5px; padding: 1px 8px; background: rgba(0,0,0,0.38); border-bottom: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; min-height: 22px; }
     .flag-mini { width: 18px; height: 12px; border-radius: 2px; display: inline-block; flex-shrink: 0; object-fit: cover; vertical-align: middle; }
+    /* Club crest on a light plate; the two-colour split shows if the image fails. */
+    .club-crest { display: inline-flex; align-items: center; justify-content: center; background: #f4f4f7; overflow: hidden; box-sizing: border-box; flex-shrink: 0; }
+    .club-crest img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .club-crest.crest-failed { padding: 0; }
+    .crest-hero { width: 80px; height: 54px; border-radius: 6px; padding: 5px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); border: 2px solid rgba(255,255,255,0.15); }
+    .flag-mini.club-crest { padding: 1px; }
+    .nation-card .flag-area .club-crest { position: absolute; inset: 0; padding: 8px 8px 22px; }
+    .nation-card .flag-area .club-crest img { position: static; object-fit: contain; }
+    .crest-win { width: 34px; height: 23px; border-radius: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.5); margin: 0 6px; vertical-align: middle; }
 
     /* Game footer — compact controls + hint */
     .game-footer { flex-shrink: 0; padding: 2px 8px 3px; background: rgba(0,0,0,0.55); border-top: 1px solid rgba(255,255,255,0.08); }
@@ -1286,9 +1295,10 @@
   function clearPolls() { state.polls.forEach(id => clearInterval(id)); state.polls = []; }
 
   // Club colours: [primary, secondary]. The two are shown as a diagonal split,
-  // which is what the small flags and the lobby still use. Club badges exist
-  // only as the match board backdrop (see boardBackdrop); they are trademarks
-  // of their clubs and are stored with the app, never loaded from elsewhere.
+  // which is the fallback when a club's crest image is missing or fails to
+  // load. Badges (crests and the board backdrop, see boardBackdrop) are
+  // trademarks of their clubs and are stored with the app, never loaded from
+  // elsewhere.
   const CLUB_COLOURS = {
     'real-madrid': ['#ffffff', '#febe10'],
     barcelona:     ['#a50044', '#004d98'],
@@ -1310,14 +1320,28 @@
     const c = CLUB_COLOURS[slug];
     return c ? `linear-gradient(135deg, ${c[0]} 50%, ${c[1]} 50%)` : null;
   }
-  function flagImg(slug, alt, cls, extraStyle) {
-    const bg = clubColours(slug);
-    if (!bg) return '';
-    return `<div role="img" aria-label="${alt || slug}" class="${cls || ''}" style="position:absolute;inset:0;background:${bg};${extraStyle || ''}"></div>`;
-  }
   function flagBg(slug, accent) {
     return clubColours(slug) || flagGradient(accent);
   }
+  function escHtml(v) {
+    return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  // Club crest served by the app from /images/crests/<slug>.png. Unknown slugs
+  // return '' so callers keep their accent gradient.
+  function crestHtml(slug, name, cls, accent) {
+    if (!CLUB_COLOURS[slug]) return '';
+    return `<span class="club-crest ${cls || ''}"><img src="/images/crests/${slug}.png" alt="${escHtml(name || slug)}" data-fallback="${escHtml(flagBg(slug, accent))}" onerror="crestFallback(this)"></span>`;
+  }
+  // A failed crest becomes the club's two-colour split, never an empty badge.
+  window.crestFallback = function(img) {
+    const holder = img.parentNode;
+    if (!holder) return;
+    holder.style.background = img.dataset.fallback;
+    holder.setAttribute('role', 'img');
+    holder.setAttribute('aria-label', img.alt);
+    holder.classList.add('crest-failed');
+    img.remove();
+  };
   // Board backdrop: the opponent club's badge over its own colour split, so a
   // missing badge file falls back to today's colours.
   function boardBackdrop(slug, accent) {
@@ -1797,6 +1821,7 @@
     }
     else if (hash === '#demo/final-refund') demoFinalRefund();
     else if (hash === '#demo/roundup') demoRoundup('group');
+    else if (hash === '#demo/fixture') demoFixture();
     else if (hash === '#demo/roundup-qf') demoRoundup('qf');
     else if (hash === '#demo/penalty') demoPenaltyKick();
     else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
@@ -1865,6 +1890,25 @@
     if (!model) { navigate('#lobby'); return; }
     document.querySelectorAll('.result-overlay').forEach(e => e.remove());
     renderRoundup(model, () => navigate('#lobby'));
+  }
+
+  // Staging demo deep link: shows the next-fixture lobby hero from the club
+  // list, so the screen is reachable without a tournament. Nothing is written:
+  // KICK OFF returns to the lobby.
+  function demoFixture() {
+    const themes = state.themes || [];
+    if (themes.length < 2) { navigate('#lobby'); return; }
+    document.getElementById('app').innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
+      ${renderHeader()}
+      <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:12px 16px 20px;width:100%;"></div>
+    </div>`;
+    state.next_opponent_theme = themes[3] || themes[1];
+    renderLobbyBody({ my_team_slug: themes[0].slug, stage_idx: 1, session_complete: false, current_game_id: null });
+    // The first-visit info panel would cover the fixture; drop it without
+    // marking it seen, so the real lobby still shows it.
+    document.getElementById('info-panel')?.remove();
+    const kickOff = document.querySelector('#lobby-body .bundle-btn');
+    if (kickOff) kickOff.onclick = () => navigate('#lobby');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1995,7 +2039,7 @@
           <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
             <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
-              <div role="img" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>
+              ${crestHtml(session.my_team_slug, myTeam ? myTeam.country_name : session.my_team_slug, 'crest-hero', myTeam ? myTeam.accent_colour : '#444') || `<div role="img" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
 
@@ -2005,7 +2049,7 @@
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
-              <div role="img" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>
+              ${crestHtml(state.next_opponent_theme.slug, state.next_opponent_theme.country_name, 'crest-hero', state.next_opponent_theme.accent_colour) || `<div role="img" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
             </div>
             ` : ''}
@@ -2032,7 +2076,7 @@
           <div class="nation-picker" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
             ${state.themes.map(theme => `
               <div class="nation-card" onclick="pickNation('${theme.slug}')">
-                <div class="flag-area">${flagImg(theme.slug, t('countries.' + theme.slug), '', '') || `<div style="position:absolute;inset:0;background:${flagGradient(theme.accent_colour)};"></div>`}</div>
+                <div class="flag-area">${crestHtml(theme.slug, t('countries.' + theme.slug), '', theme.accent_colour) || `<div style="position:absolute;inset:0;background:${flagGradient(theme.accent_colour)};"></div>`}</div>
                 <div class="name-area">${t('countries.' + theme.slug)}</div>
               </div>
             `).join('')}
@@ -2287,8 +2331,8 @@
       <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${shotsDisplay}</span></div>
     </div>`;
 
-    const myFlag = myTeam ? `<div class="flag-mini" role="img" aria-label="${myTeam.country_name}" style="background:${flagBg(myTeam.slug, myTeam.accent_colour)};"></div>` : '';
-    const oppFlag = `<div class="flag-mini" role="img" aria-label="${theme.country_name}" style="background:${flagBg(theme.slug, theme.accent_colour)};"></div>`;
+    const myFlag = myTeam ? crestHtml(myTeam.slug, myTeam.country_name, 'flag-mini', myTeam.accent_colour) || `<div class="flag-mini" role="img" aria-label="${myTeam.country_name}" style="background:${flagBg(myTeam.slug, myTeam.accent_colour)};"></div>` : '';
+    const oppFlag = crestHtml(theme.slug, theme.country_name, 'flag-mini', theme.accent_colour) || `<div class="flag-mini" role="img" aria-label="${theme.country_name}" style="background:${flagBg(theme.slug, theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
       ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myName} <span style="color:#fbbf24;font-weight:600;">(you)</span></span>
       <span style="color:#fbbf24;font-weight:900;font-size:0.8rem;margin:0 4px;text-shadow:0 0 8px rgba(251,191,36,0.6);letter-spacing:0.05em;">v</span>
@@ -3368,7 +3412,7 @@
     const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
     const flag = sl => {
       const t = themeBySlug[sl];
-      return `<span class="flag-mini" role="img" aria-label="${esc(t ? t.country_name : sl)}" style="background:${flagBg(sl, t ? t.accent_colour : '#444')};"></span>`;
+      return crestHtml(sl, t ? t.country_name : sl, 'flag-mini', t ? t.accent_colour : '#444') || `<span class="flag-mini" role="img" aria-label="${esc(t ? t.country_name : sl)}" style="background:${flagBg(sl, t ? t.accent_colour : '#444')};"></span>`;
     };
     // Beats, in ms: each match lands, its rows fill in, the winner lights up,
     // then its team flies into the next-round column.
@@ -3644,7 +3688,7 @@
     const countryName = myTeam ? myTeam.country_name : 'your club';
     const playerName = displayName || username || 'You';
     const flagMini = myTeam
-      ? `<span role="img" aria-label="${countryName}" style="display:inline-block;width:34px;height:23px;border-radius:3px;background:${flagBg(myTeam.slug, myTeam.accent_colour)};vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;"></span>`
+      ? crestHtml(myTeam.slug, countryName, 'crest-win', myTeam.accent_colour) || `<span role="img" aria-label="${countryName}" style="display:inline-block;width:34px;height:23px;border-radius:3px;background:${flagBg(myTeam.slug, myTeam.accent_colour)};vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;"></span>`
       : '';
 
     document.getElementById('app').innerHTML = `
