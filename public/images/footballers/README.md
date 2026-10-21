@@ -1,1 +1,1 @@
-Place footballer portrait images here, named by nation slug (e.g. france.jpg, brazil.jpg). Minimum 400×400px.
+Club portraits are drawn in CSS: the board shows each club's two colours split diagonally. No image files are used here.
