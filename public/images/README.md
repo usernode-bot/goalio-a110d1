@@ -1,4 +1,4 @@
-Static image assets for GOAL! World Cup Edition.
+Static image assets for GOAL! Champions League Edition.
 
 ## Stadium
 
