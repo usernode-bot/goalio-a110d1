@@ -564,6 +564,33 @@
       .result-card { padding: 20px; width: 95%; max-width: 100%; }
     }
 
+    /* Round-up card — how the rest of the round went, between matches */
+    .roundup-card { max-width: 460px; }
+    .ru-title { font-family: 'DM Sans', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 2px; }
+    .ru-stage { display: inline-block; font-family: 'DM Sans', sans-serif; font-size: 0.7rem; font-weight: 800; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+    .ru-head { display: flex; justify-content: space-between; font-family: 'DM Sans', sans-serif; font-size: 0.62rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; text-align: left; }
+    .ru-match { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ru-box { flex: 1; min-width: 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; overflow: hidden; text-align: left; }
+    .ru-row { display: flex; align-items: center; gap: 6px; padding: 3px 8px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #aaa; }
+    .ru-row.win { background: var(--ru-win-bg); color: var(--ru-accent); font-weight: 700; }
+    .ru-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ru-score { font-family: 'Space Mono', monospace; font-size: 0.82rem; }
+    .ru-you { font-size: 0.6rem; color: #fbbf24; margin-left: 4px; }
+    .ru-note { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: #888; padding: 0 8px 3px; }
+    .ru-line { width: 10px; flex-shrink: 0; border-top: 1px solid rgba(255,255,255,0.25); }
+    .ru-next { width: 96px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; border: 1px solid currentColor; border-radius: 8px; padding: 5px 6px; font-family: 'DM Sans', sans-serif; font-size: 0.74rem; font-weight: 700; text-align: left; overflow: hidden; }
+    .ru-next-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ru-news { text-align: left; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 6px; padding-top: 10px; }
+    .ru-news-h { font-family: 'DM Sans', sans-serif; font-size: 0.62rem; color: #888; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+    .ru-news ul { margin: 0; padding-left: 16px; }
+    .ru-news li { font-family: 'DM Sans', sans-serif; font-size: 0.8rem; color: #ddd; line-height: 1.35; margin: 0 0 6px 0; }
+    @keyframes ru-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ru-win { from { background: transparent; color: #aaa; } to { background: var(--ru-win-bg); color: var(--ru-accent); } }
+    @keyframes ru-advance { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: translateX(0); } }
+    @media (prefers-reduced-motion: reduce) {
+      .roundup-card, .roundup-card * { animation: none !important; }
+    }
+
     /* League table */
     .league-table { width: 100%; border-collapse: collapse; }
     .league-table th { font-family: 'DM Sans', sans-serif; font-size: clamp(0.65rem, 2vw, 0.75rem); color: #888; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -3081,6 +3108,249 @@
     return showResult();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // ROUND-UP — how the rest of the round went, between matches
+  // ═══════════════════════════════════════════════════════════════
+  // Seeded RNG (FNV-1a hash into mulberry32) so one tournament always
+  // shows the same round-up.
+  function seededRng(str) {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    let a = h >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // Fictional, repeatable results for the round just played. `s` is that round:
+  // 0-2 group, 3 Round of 16, 4 Quarter-Final, 5 Semi-Final.
+  function buildRoundup(session, themes) {
+    const me = session.my_team_slug;
+    const played = session.played_slugs || [];
+    const s = session.stage_idx - 1;
+    const known = sl => !!sl && themes.some(t => t.slug === sl);
+    const seedBase = me + '|' + (played[0] || '') + '|';
+    const rngFor = r => seededRng(seedBase + r);
+
+    const shuffle = (rng, arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+      }
+      return a;
+    };
+    // Pairs a pool into ties. The odd team out rests (group) or goes through
+    // on a bye (knockout); a `forced` team always plays rather than taking the
+    // bye, and two forced teams are never paired with each other.
+    const pairPool = (rng, pool, forcedList) => {
+      const forced = new Set((forcedList || []).filter(Boolean));
+      let rest = shuffle(rng, pool);
+      let bye = null;
+      if (rest.length % 2 === 1) {
+        const candidates = rest.filter(sl => !forced.has(sl));
+        bye = candidates.length ? candidates[Math.floor(rng() * candidates.length)] : rest[rest.length - 1];
+        rest = rest.filter(sl => sl !== bye);
+      }
+      const pairs = [];
+      for (let i = 0; i + 1 < rest.length; i += 2) pairs.push([rest[i], rest[i + 1]]);
+      for (let i = 0; i < pairs.length; i++) {
+        if (!(forced.has(pairs[i][0]) && forced.has(pairs[i][1]))) continue;
+        for (let j = 0; j < pairs.length; j++) {
+          if (j === i || forced.has(pairs[j][0]) || forced.has(pairs[j][1])) continue;
+          const loser = pairs[i][1];
+          pairs[i] = [pairs[i][0], pairs[j][0]];
+          pairs[j] = [pairs[j][1], loser];
+          break;
+        }
+      }
+      return { pairs, bye };
+    };
+    // A level scoreline, as the extra time / penalties starting point or a group draw.
+    const level = rng => { const v = Math.floor(rng() * 3); return [v, v]; };
+
+    const groupTie = (rng, a, b) => {
+      if (rng() < 0.25) {                       // a draw is allowed in the group
+        const [sa, sb] = level(rng);
+        return { a, b, sa, sb, winner: null, note: '' };
+      }
+      const winner = rng() < 0.5 ? a : b;
+      const w = 1 + Math.floor(rng() * 4);
+      return winner === a
+        ? { a, b, sa: w, sb: Math.floor(rng() * w), winner, note: '' }
+        : { a, b, sa: Math.floor(rng() * w), sb: w, winner, note: '' };
+    };
+
+    const knockoutTie = (rng, a, b, forced) => {
+      const winner = forced.has(a) ? a : forced.has(b) ? b : (rng() < 0.5 ? a : b);
+      const roll = rng();
+      if (roll < 0.15) {                        // decided on penalties
+        const [sa, sb] = level(rng);
+        const w = 3 + Math.floor(rng() * 3);
+        const l = Math.min(w - 1, 2 + Math.floor(rng() * 3));
+        return { a, b, sa, sb, winner, note: `Pens ${w}–${l}` };
+      }
+      if (roll < 0.30) {                        // decided in extra time
+        const [sa, sb] = level(rng);
+        return { a, b, sa: winner === a ? sa + 1 : sa, sb: winner === b ? sb + 1 : sb, winner, note: 'After extra time' };
+      }
+      const w = 1 + Math.floor(rng() * 4);
+      return winner === a
+        ? { a, b, sa: w, sb: Math.floor(rng() * w), winner, note: '' }
+        : { a, b, sa: Math.floor(rng() * w), sb: w, winner, note: '' };
+    };
+
+    let roundTies = [];
+    if (s <= 2) {
+      const rng = rngFor(s);
+      const pool = themes.map(t => t.slug).filter(sl => sl !== me && sl !== played[s]);
+      const { pairs } = pairPool(rng, pool, []);
+      roundTies = pairs.map(([a, b]) => groupTie(rng, a, b));
+    } else {
+      // Replay the knockouts from the Round of 16. Each round's winner that
+      // the player later meets, and the team they face next, are forced
+      // through, so an eliminated team never comes back and the next
+      // opponent always appears in the round shown.
+      let alive = themes.map(t => t.slug);
+      for (let r = 3; r <= s; r++) {
+        const rng = rngFor(r);
+        const forced = new Set();
+        if (r === s) {
+          if (known(session.next_opponent_slug)) forced.add(session.next_opponent_slug);
+        } else if (known(played[r + 1])) {
+          forced.add(played[r + 1]);
+        }
+        if (r < s && known(session.next_opponent_slug)) forced.add(session.next_opponent_slug);
+        const pool = alive.filter(sl => sl !== me && sl !== played[r]);
+        const { pairs, bye } = pairPool(rng, pool, [...forced]);
+        const ties = pairs.map(([a, b]) => knockoutTie(rng, a, b, forced));
+        alive = [me, ...ties.map(t => t.winner)].concat(bye ? [bye] : []);
+        if (r === s) roundTies = ties;
+      }
+    }
+
+    const nextOpp = session.next_opponent_slug;
+    const forcedTie = s >= 3 && known(nextOpp)
+      ? roundTies.find(t => t.a === nextOpp || t.b === nextOpp) : null;
+    const shown = (forcedTie ? [forcedTie, ...roundTies.filter(t => t !== forcedTie)] : roundTies).slice(0, 3);
+
+    const themeBySlug = {};
+    themes.forEach(t => { themeBySlug[t.slug] = t; });
+    const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
+
+    // One headline per other match shown, from the events that match allows.
+    const hrng = seededRng(seedBase + s + '|news');
+    const headlines = shown.map(tie => {
+      const draw = !tie.winner;
+      const wName = nameOf(tie.winner);
+      const lName = nameOf(tie.winner === tie.a ? tie.b : tie.a);
+      const margin = Math.abs(tie.sa - tie.sb);
+      const opts = [];
+      if (tie.note.indexOf('Pens') === 0) opts.push(`${wName}'s keeper saved the decisive penalty against ${lName}.`);
+      if (tie.note === 'After extra time') opts.push(`${wName} won it in extra time against ${lName}.`);
+      if (!tie.note && !draw && margin === 1) opts.push(`${wName} snatched a stoppage-time winner against ${lName}.`);
+      if (draw) opts.push(`${nameOf(tie.a)} had a late winner ruled out against ${nameOf(tie.b)}.`);
+      else if (!tie.note && margin === 1) opts.push(`${lName} had a late equaliser ruled out against ${wName}.`);
+      if (draw) {
+        const first = hrng() < 0.5 ? tie.a : tie.b;
+        opts.push(`${nameOf(first)} finished with ten men after a red card against ${nameOf(first === tie.a ? tie.b : tie.a)}.`);
+      } else {
+        opts.push(`${lName} finished with ten men after a red card against ${wName}.`);
+      }
+      return opts[Math.floor(hrng() * opts.length)];
+    });
+
+    return {
+      s,
+      mine: known(played[s]) ? { a: me, b: played[s], sa: 1, sb: 0, winner: me, note: '' } : null,
+      shown, headlines, themeBySlug,
+    };
+  }
+
+  function renderRoundup(model, next) {
+    const { s, mine, shown, headlines, themeBySlug } = model;
+    const knockout = s >= 3;
+    const palette = knockout ? KNOCKOUT_PALETTES[s] : null;
+    const accent = palette ? palette.accent : '#fbbf24';
+    const badgeBg = palette ? palette.accent : '#fbbf24';
+    const badgeText = palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f';
+    const winBg = hexToRgba(accent, 0.18);
+    const meSlug = mine ? mine.a : null;
+
+    const esc = v => String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
+    const flag = sl => {
+      const t = themeBySlug[sl];
+      return FLAG_SVGS[sl]
+        ? `<img class="flag-mini" src="${FLAG_SVGS[sl]}" alt="${esc(t ? t.country_name : sl)}">`
+        : `<span class="flag-mini" style="background:${flagGradient(t ? t.accent_colour : '#444')};"></span>`;
+    };
+    const rowHtml = (sl, score, isWinner, delay) => {
+      const style = isWinner ? ` style="--ru-win-bg:${winBg};--ru-accent:${accent};animation:ru-win 0.35s ease ${delay}ms both;"` : '';
+      return `<div class="ru-row${isWinner ? ' win' : ''}"${style}>${flag(sl)}` +
+        `<span class="ru-name">${esc(nameOf(sl))}${sl === meSlug ? '<span class="ru-you">You</span>' : ''}</span>` +
+        `<span class="ru-score">${score}</span></div>`;
+    };
+    const matchHtml = (tie, i) => {
+      const delay = i * 150;
+      const chip = knockout && tie.winner
+        ? `<span class="ru-line"></span><div class="ru-next" style="color:${accent};animation:ru-advance 0.4s ease ${delay + 500}ms both;">` +
+          `${flag(tie.winner)}<span class="ru-next-name">${esc(nameOf(tie.winner))}</span></div>`
+        : '';
+      return `<div class="ru-match" style="animation:ru-in 0.35s ease ${delay}ms both;">
+        <div class="ru-box">
+          ${rowHtml(tie.a, tie.sa, tie.winner === tie.a, delay + 250)}
+          ${rowHtml(tie.b, tie.sb, tie.winner === tie.b, delay + 250)}
+          ${tie.note ? `<div class="ru-note">${esc(tie.note)}</div>` : ''}
+        </div>${chip}
+      </div>`;
+    };
+
+    const matches = (mine ? [mine] : []).concat(shown);
+    const newsDelay = Math.max(0, matches.length - 1) * 150 + 300;
+
+    const el = document.createElement('div');
+    el.className = 'result-overlay';
+    el.style.cssText = 'position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);';
+    el.innerHTML = `
+      <div class="result-card roundup-card" role="dialog" aria-modal="true" aria-label="Round-up">
+        <div class="ru-title">Round-up</div>
+        <div class="ru-stage" style="background:${badgeBg};color:${badgeText};">${esc(stageName(s))}</div>
+        <div class="ru-head"><span>Results</span>${knockout ? `<span>${esc(stageName(s + 1))}</span>` : ''}</div>
+        ${matches.map((t, i) => matchHtml(t, i)).join('')}
+        ${headlines.length ? `<div class="ru-news" style="animation:ru-in 0.35s ease ${newsDelay}ms both;">
+          <div class="ru-news-h">Headlines</div>
+          <ul>${headlines.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        </div>` : ''}
+        <button class="bundle-btn btn-gold ru-continue" style="width:100%;margin-top:12px;">Continue →</button>
+      </div>`;
+    document.body.appendChild(el);
+    const btn = el.querySelector('.ru-continue');
+    btn.addEventListener('click', () => { el.remove(); next(); });
+    btn.focus();
+  }
+
+  // Fresh session: the client's copy predates the win's played_slugs / next opponent.
+  async function showRoundup(next) {
+    let session = null;
+    try {
+      const r = await api('GET', '/api/session');
+      if (r.ok) session = (await r.json()).session;
+    } catch (e) { session = null; }
+    if (!session || !session.my_team_slug || !Array.isArray(state.themes) || !state.themes.length ||
+        !(session.stage_idx >= 1) || session.stage_idx >= 7) {
+      return next();
+    }
+    let model = null;
+    try { model = buildRoundup(session, state.themes); } catch (e) { model = null; }
+    if (!model) return next();
+    renderRoundup(model, next);
+  }
+  window.showRoundup = showRoundup;
+
   window.handleInterstitial = function() {
     const result = state.pendingResult || {};
     const type = result.interstitial || '';
@@ -3097,9 +3367,12 @@
       el.innerHTML = `<div class="result-card"><div style="font-size:2rem;">🎉</div>
         <div style="font-family:'DM Sans',sans-serif;font-size:1.3rem;font-weight:700;margin:8px 0;">You're through to the knockouts, congratulations!</div>
         <div style="color:#aaa;font-size:0.85rem;margin-bottom:16px;">All group matches won</div>
-        <button class="bundle-btn btn-gold" style="width:100%;" onclick="document.querySelectorAll('.result-overlay').forEach(e=>e.remove());navigate('#lobby');">Continue →</button>
+        <button class="bundle-btn btn-gold" style="width:100%;" onclick="document.querySelectorAll('.result-overlay').forEach(e=>e.remove());showRoundup(()=>navigate('#lobby'));">Continue →</button>
       </div>`;
       document.body.appendChild(el);
+    } else if (type === 'group_win' || type === 'knockout_win') {
+      // How the rest of the round went, then the lobby.
+      showRoundup(() => navigate('#lobby'));
     } else {
       navigate('#lobby');
     }
