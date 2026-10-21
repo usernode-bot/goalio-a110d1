@@ -1,1 +1,1 @@
-Place country background images here, named by nation slug (e.g. france.jpg, brazil.jpg).
+Club backgrounds are drawn in CSS as a diagonal split of each club's two colours. No image files are used here.
