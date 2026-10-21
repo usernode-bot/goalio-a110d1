@@ -1,7 +1,7 @@
 Club backgrounds outside the match board are drawn in CSS as a diagonal split
 of each club's two colours. The PNG files here are the club badges, taken from
 each club's English Wikipedia article and used only as the backdrop of the
-match board (behind the squares, and full screen during the goal celebration).
+match board (behind the squares, where it stays during the goal celebration).
 
 | File | Wikipedia article | File page |
 | --- | --- | --- |

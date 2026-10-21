@@ -90,7 +90,7 @@
     /* Full-screen flag background (game board only — set via JS) */
     .bg {
       position: fixed; inset: 0; z-index: -2;
-      background-size: contain, cover; background-position: center; background-repeat: no-repeat;
+      background-size: cover; background-position: center; background-repeat: no-repeat;
       --overlay-opacity: 1;
     }
     .bg::after {
@@ -2236,10 +2236,11 @@
     const game = state.game;
     const theme = state.gameTheme;
 
-    // Set full-window flag background (opponent theme image) + CSS accent vars
+    // Full-window colour split (seen when the stadium fades away after a goal)
+    // + CSS accent vars. The badge stays on the board, so it never moves.
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
-      flagBgEl.style.backgroundImage = boardBackdrop(theme.slug, theme.accent_colour);
+      flagBgEl.style.backgroundImage = flagBg(theme.slug, theme.accent_colour);
     }
     document.documentElement.style.setProperty('--accent', theme.accent_colour);
     document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
@@ -2986,11 +2987,9 @@
     const palette = stageIdx >= 3 ? KNOCKOUT_PALETTES[stageIdx] : null;
     const accentColor = palette ? palette.accent : '#fbbf24';
 
-    // Hide portrait and dim overlay at start so flag background is fully visible during celebration
-    const portraitEl = document.querySelector('.portrait');
-    if (portraitEl) {
-      portraitEl.style.opacity = '0';
-    }
+    // The board's badge stays exactly where it is for the whole celebration:
+    // the portrait is left untouched, and the stadium fades away to the club
+    // colours, so no second, larger badge appears behind the board.
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
       flagBgEl.style.setProperty('--overlay-opacity', '0');
@@ -3008,18 +3007,8 @@
       setTimeout(() => { tile.classList.add('open'); }, 800);
     });
 
-    // Skip flag to allow touch/click to skip to result card
-    let skipWinSequence = false;
     let resultShown = false;
     const boardZone = document.getElementById('board-zone');
-
-    const skipHandler = () => {
-      skipWinSequence = true;
-      // Don't remove listeners here; let the showResult function do cleanup
-    };
-
-    boardZone && boardZone.addEventListener('click', skipHandler);
-    boardZone && boardZone.addEventListener('touchstart', skipHandler);
 
     // Helper to show result card and clean up
     const showResult = async () => {
@@ -3027,19 +3016,9 @@
       if (resultShown) return;
       resultShown = true;
 
-      // Remove event listeners to prevent multiple taps
-      boardZone && boardZone.removeEventListener('click', skipHandler);
-      boardZone && boardZone.removeEventListener('touchstart', skipHandler);
       stopConfetti();
       document.getElementById('goal-ball')?.remove();
       document.querySelectorAll('.tile').forEach(c => { c.classList.add('open'); });
-
-      // Ensure portrait is visible before displaying result card
-      const portraitEl = document.querySelector('.portrait');
-      if (portraitEl) {
-        portraitEl.style.opacity = '1';
-        portraitEl.style.transition = 'none';
-      }
 
       // Ensure nameTag (factbox) is visible before displaying result card
       const nameTagEl = document.getElementById('nametag-box');
@@ -3136,7 +3115,6 @@
     const confettiStopTimer = setTimeout(() => { stopConfetti(); }, 3000);
 
     await sleep(800);
-    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Step 2: float football/trophy to centre — total 2s from start
     const icon = isFinal ? '🏆' : '⚽';
@@ -3189,27 +3167,16 @@
 
     await sleep(Math.max(spinDuration, 1150) + 200); // 800 + 50 + spin duration = ~2500-3000ms total
 
-    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
-
     // Fade out icon
     objEl.style.transition = 'opacity 0.45s';
     objEl.style.opacity = '0';
     // Flag overlay is already at 0 opacity (set at start of celebration)
     setTimeout(() => { objEl.remove(); }, 500);
 
-    // Step 3: Fade in portrait at 2-3 seconds from start of sequence
-    // This happens while flag is visible, creating the effect of portrait briefly disappearing
-    const portrait = document.querySelector('.portrait');
-    if (portrait) {
-      portrait.style.transition = 'opacity 0.6s ease';
-      portrait.style.opacity = '1';
-    }
-    // Tiles are already animating from start of celebration (0s)
+    // Tiles are already animating from start of celebration (0s), uncovering
+    // the badge where it sits behind the board.
     // Wait ~2-3 seconds before appending name tag at 4-5 second mark
-    // The portrait now fades in during this wait, overlaying the flag background
     await sleep(1000);
-
-    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Confetti already stopped at 3s mark, now show the name tag with trivia
     // Keep nameTag visible for 4 seconds (fade in 0.5s, visible 4s, then fade out)
@@ -3218,8 +3185,6 @@
 
     // Wait while name tag is visible and fading (~7-8 seconds total from goal scored)
     await sleep(6000);
-
-    if (skipWinSequence) { clearTimeout(confettiStopTimer); return showResult(); }
 
     // Show result card directly without fade-to-black transition
     clearTimeout(confettiStopTimer);
