@@ -90,7 +90,7 @@
     /* Full-screen flag background (game board only — set via JS) */
     .bg {
       position: fixed; inset: 0; z-index: -2;
-      background-size: cover; background-position: center; background-repeat: no-repeat;
+      background-size: contain, cover; background-position: center; background-repeat: no-repeat;
       --overlay-opacity: 1;
     }
     .bg::after {
@@ -1285,8 +1285,10 @@
   function stageName(idx) { return STAGES[idx] || 'Final'; }
   function clearPolls() { state.polls.forEach(id => clearInterval(id)); state.polls = []; }
 
-  // Club colours: [primary, secondary]. The two are shown as a diagonal split.
-  // No crest images are used (crests are trademarks and are not loaded here).
+  // Club colours: [primary, secondary]. The two are shown as a diagonal split,
+  // which is what the small flags and the lobby still use. Club badges exist
+  // only as the match board backdrop (see boardBackdrop); they are trademarks
+  // of their clubs and are stored with the app, never loaded from elsewhere.
   const CLUB_COLOURS = {
     'real-madrid': ['#ffffff', '#febe10'],
     barcelona:     ['#a50044', '#004d98'],
@@ -1316,8 +1318,11 @@
   function flagBg(slug, accent) {
     return clubColours(slug) || flagGradient(accent);
   }
-  // Board backdrop: the opponent club's colours behind the stadium.
-  function boardBackdrop(slug, accent) { return flagBg(slug, accent); }
+  // Board backdrop: the opponent club's badge over its own colour split, so a
+  // missing badge file falls back to today's colours.
+  function boardBackdrop(slug, accent) {
+    return `url('/images/themes/${slug}.png'), ${flagBg(slug, accent)}`;
+  }
 
   // One-sentence "Did you know?" Champions League facts per club legend.
   const FOOTBALLER_FACTS = {
@@ -2234,7 +2239,7 @@
     // Set full-window flag background (opponent theme image) + CSS accent vars
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
-      flagBgEl.style.backgroundImage = flagBg(theme.slug, theme.accent_colour);
+      flagBgEl.style.backgroundImage = boardBackdrop(theme.slug, theme.accent_colour);
     }
     document.documentElement.style.setProperty('--accent', theme.accent_colour);
     document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
@@ -2266,8 +2271,8 @@
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
 
     // Portrait behind tiles — always show footballer image; trophy shown in result card for final
-    const portraitBg = flagBg(theme.slug, theme.accent_colour);
-    const portraitSize = CLUB_COLOURS[theme.slug] ? 'cover' : 'contain';
+    const portraitBg = boardBackdrop(theme.slug, theme.accent_colour);
+    const portraitSize = 'contain, cover';
 
     const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     const bonusShots = state.bonusCreditsAvailable || 0;
