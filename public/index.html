@@ -67,7 +67,7 @@
   })();
   </script>
 
-  <title>GOAL! World Cup Edition</title>
+  <title>GOAL! Champions League Edition</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1019,6 +1019,8 @@
     .pk-keeper.landed .pk-keeper-arm, .pk-keeper.landed .pk-keeper-leg { transition: transform 0.2s ease-out; }
     .pk-keeper.landed .pk-keeper-arm.left { transform: rotate(180deg); }
     .pk-keeper.landed .pk-keeper-arm.right { transform: rotate(-180deg); }
+    .pk-keeper.low.diving .pk-keeper-arm.left, .pk-keeper.low.landed .pk-keeper-arm.left { transform: rotate(55deg); }
+    .pk-keeper.low.diving .pk-keeper-arm.right, .pk-keeper.low.landed .pk-keeper-arm.right { transform: rotate(-55deg); }
     .pk-ball { position: absolute; left: 50%; bottom: -34px; width: 24px; height: 24px; margin-left: -12px; pointer-events: none; z-index: 2; transition: left 0.5s ease, bottom 0.5s ease; }
     .pk-ball img { width: 100%; height: 100%; display: block; }
     .pk-pitch { height: 44px; margin-top: -44px; margin-bottom: 44px; background: linear-gradient(#1f6b35, #14532d); border-radius: 0 0 4px 4px; }
@@ -1113,7 +1115,7 @@
   };
 
   const STAGES = ['Group Match 1','Group Match 2','Group Match 3','Round of 16','Quarter-Final','Semi-Final','Final'];
-  const QUIPS = ['Keeper saves it!','Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
+  const QUIPS = ['Over the bar!','Wide of the post!','Just a warm-up!','The crowd groans!','Close, but no cigar!','Offside — play on!','The woodwork rattles!','Into the wall!','Try again!'];
 
   // Match Event squares — server owns amounts and weights; this maps a type
   // to its i18n keys, banner tint and file name under /images/events/.
@@ -1262,54 +1264,59 @@
   function stageName(idx) { return STAGES[idx] || 'Final'; }
   function clearPolls() { state.polls.forEach(id => clearInterval(id)); state.polls = []; }
 
-  // Wikipedia SVG flag URLs for each country.
-  const FLAG_SVGS = {
-    france:      'https://upload.wikimedia.org/wikipedia/en/c/c3/Flag_of_France.svg',
-    brazil:      'https://upload.wikimedia.org/wikipedia/en/0/05/Flag_of_Brazil.svg',
-    england:     'https://upload.wikimedia.org/wikipedia/en/b/be/Flag_of_England.svg',
-    spain:       'https://upload.wikimedia.org/wikipedia/en/9/9a/Flag_of_Spain.svg',
-    argentina:   'https://upload.wikimedia.org/wikipedia/commons/1/1a/Flag_of_Argentina.svg',
-    morocco:     'https://upload.wikimedia.org/wikipedia/commons/2/2c/Flag_of_Morocco.svg',
-    usa:         'https://upload.wikimedia.org/wikipedia/en/a/a4/Flag_of_the_United_States.svg',
-    turkey:      'https://upload.wikimedia.org/wikipedia/commons/b/b4/Flag_of_Turkey.svg',
-    belgium:     'https://upload.wikimedia.org/wikipedia/commons/6/65/Flag_of_Belgium.svg',
-    egypt:       'https://upload.wikimedia.org/wikipedia/commons/f/fe/Flag_of_Egypt.svg',
-    portugal:    'https://upload.wikimedia.org/wikipedia/commons/5/5c/Flag_of_Portugal.svg',
-    netherlands: 'https://upload.wikimedia.org/wikipedia/commons/2/20/Flag_of_the_Netherlands.svg',
-    norway:      'https://upload.wikimedia.org/wikipedia/commons/d/d9/Flag_of_Norway.svg',
-    germany:     'https://upload.wikimedia.org/wikipedia/en/b/ba/Flag_of_Germany.svg',
-    mexico:      'https://upload.wikimedia.org/wikipedia/commons/f/fc/Flag_of_Mexico.svg',
+  // Club colours: [primary, secondary]. The two are shown as a diagonal split.
+  // No crest images are used (crests are trademarks and are not loaded here).
+  const CLUB_COLOURS = {
+    'real-madrid': ['#ffffff', '#febe10'],
+    barcelona:     ['#a50044', '#004d98'],
+    bayern:        ['#dc052d', '#ffffff'],
+    liverpool:     ['#c8102e', '#ffffff'],
+    'man-city':    ['#6cabdd', '#1c2c5b'],
+    'man-united':  ['#da291c', '#fbe122'],
+    chelsea:       ['#034694', '#ffffff'],
+    arsenal:       ['#ef0107', '#ffffff'],
+    milan:         ['#fb090b', '#000000'],
+    inter:         ['#0068a8', '#000000'],
+    juventus:      ['#e5e5e5', '#000000'],
+    psg:           ['#004170', '#da291c'],
+    ajax:          ['#d2122e', '#ffffff'],
+    porto:         ['#003893', '#ffffff'],
+    benfica:       ['#e30613', '#ffffff'],
   };
+  function clubColours(slug) {
+    const c = CLUB_COLOURS[slug];
+    return c ? `linear-gradient(135deg, ${c[0]} 50%, ${c[1]} 50%)` : null;
+  }
   function flagImg(slug, alt, cls, extraStyle) {
-    const src = FLAG_SVGS[slug];
-    if (!src) return '';
-    return `<img src="${src}" alt="${alt || slug}" class="${cls || ''}" ${extraStyle ? `style="${extraStyle}"` : ''}>`;
+    const bg = clubColours(slug);
+    if (!bg) return '';
+    return `<div role="img" aria-label="${alt || slug}" class="${cls || ''}" style="position:absolute;inset:0;background:${bg};${extraStyle || ''}"></div>`;
   }
   function flagBg(slug, accent) {
-    const svg = FLAG_SVGS[slug];
-    return svg ? `url('${svg}')` : flagGradient(accent);
+    return clubColours(slug) || flagGradient(accent);
   }
-  // Board backdrop: real theme photo if present, else the CSS flag.
-  function boardBackdrop(slug, accent) { return `url('/images/themes/${slug}.png'), ${flagBg(slug, accent)}`; }
+  // Board backdrop: the opponent club's colours behind the stadium.
+  function boardBackdrop(slug, accent) { return flagBg(slug, accent); }
 
-  // One-sentence "Did you know?" facts per footballer (placeholder text).
+  // One-sentence "Did you know?" Champions League facts per club legend.
   const FOOTBALLER_FACTS = {
-    france:      'Did you know? Zidane scored two headers in the 1998 World Cup Final to win France\'s first World Cup.',
-    brazil:      'Did you know? Neymar is Brazil\'s most capped player with over 120 international appearances and has been a key figure in multiple World Cup campaigns.',
-    england:     'Did you know? Beckham is the only England player to score in three separate World Cup tournaments.',
-    spain:       'Did you know? Carles Puyol captained Spain to World Cup glory in 2010 and Euro 2012, becoming one of the greatest defenders and leaders in football history.',
-    argentina:   'Did you know? Maradona single-handedly led Argentina to World Cup glory in 1986, scoring the famous "Hand of God" goal and dribbling past the entire English team.',
-    morocco:     'Did you know? Ziyech helped Morocco become the first African nation to reach a World Cup semi-final, in 2022.',
-    usa:         'Did you know? Landon Donovan is the all-time leading scorer for the United States men\'s national team.',
-    turkey:      'Did you know? Hakan Şükür scored after just 11 seconds against South Korea in 2002 — the fastest goal in World Cup history.',
-    belgium:     'Did you know? Romelu Lukaku scored 68 goals in 102 appearances for Belgium, making him the national team\'s all-time leading goalscorer.',
-    egypt:       'Did you know? Salah\'s penalty in a World Cup qualifier against Congo sent Egypt to Russia 2018, their first appearance in 28 years.',
-    portugal:    'Did you know? Cristiano Ronaldo holds the record for most international goals ever scored, surpassing 130 for Portugal.',
-    netherlands: 'Did you know? Johan Cruyff won the Ballon d\'Or three times and popularised "Total Football" — the tactical revolution of the 1970s.',
-    norway:      'Did you know? Haaland became the fastest player ever to score 50 Premier League goals, reaching the milestone in just 48 appearances.',
-    germany:     'Did you know? Beckenbauer is one of only two people to win the World Cup as both a player (1974) and a manager (1990).',
-    mexico:      'Did you know? Hugo Sánchez scored 234 goals for Real Madrid and was voted one of the 100 greatest footballers of the 20th century.',
+    'real-madrid': 'Did you know? Cristiano Ronaldo is the all-time top scorer in Champions League history, with 140 goals.',
+    barcelona:     'Did you know? Lionel Messi won the Champions League four times with Barcelona, in 2006, 2009, 2011 and 2015.',
+    bayern:        'Did you know? Thomas Müller won the Champions League twice with Bayern Munich, in 2013 and 2020.',
+    liverpool:     'Did you know? Mohamed Salah scored in the 2019 Champions League Final as Liverpool won their sixth European Cup.',
+    'man-city':    'Did you know? Erling Haaland helped Manchester City win their first Champions League in 2023.',
+    'man-united':  "Did you know? Wayne Rooney is Manchester United's all-time top scorer, with 253 goals.",
+    chelsea:       'Did you know? Didier Drogba scored the late equaliser and the winning penalty in the 2012 Champions League Final.',
+    arsenal:       "Did you know? Thierry Henry is Arsenal's all-time top scorer, with 228 goals.",
+    milan:         'Did you know? Kaká was the top scorer of the 2006/07 Champions League as AC Milan won the trophy.',
+    inter:         'Did you know? Javier Zanetti captained Inter to the 2010 Champions League as part of a historic treble.',
+    juventus:      'Did you know? Gianluigi Buffon played 19 seasons for Juventus and reached three Champions League Finals with the club.',
+    psg:           "Did you know? Kylian Mbappé is Paris Saint-Germain's all-time top scorer, with 256 goals.",
+    ajax:          'Did you know? Johan Cruyff led Ajax to three European Cups in a row, from 1971 to 1973.',
+    porto:         "Did you know? Pepe played in the Champions League for Porto at 41, the oldest outfield player in the competition's history.",
+    benfica:       'Did you know? Eusébio scored twice in the 1962 European Cup Final as Benfica beat Real Madrid 5-3.',
   };
+
 
   // ═══════════════════════════════════════════════════════════════
   // SOUND — NES/8-bit synth via Web Audio API (no audio files)
@@ -1637,7 +1644,7 @@
     return `<header>
       <a href="#lobby" class="header-logo-block" onclick="navigate('#lobby')">
         <span class="header-logo-title">GOAL!</span>
-        <span class="header-logo-sub">World Cup Edition</span>
+        <span class="header-logo-sub">${t('app.subtitle')}</span>
       </a>
       <div class="header-btns font-dm">
         <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
@@ -1775,17 +1782,16 @@
   }
   window.addEventListener('hashchange', route);
 
-  // Staging demo deep link: seeds a Final-stage tournament with carried shots
-  // (server returns 404 outside staging) and opens the new Final map.
+  // Staging demo deep link: seeds a Final board with carried shots (server
+  // returns 404 outside staging) and opens it. It does not touch the viewer's
+  // tournament, so the lobby still offers the club picker afterwards.
   async function demoFinalRefund() {
     const appEl = document.getElementById('app');
     try {
       const seed = await api('POST', '/api/staging/demo-final-refund');
       if (!seed.ok) { navigate('#lobby'); return; }
-      const map = await api('POST', '/api/session/start-map');
-      if (!map.ok) { navigate('#lobby'); return; }
-      const d = await map.json();
-      state.session = { ...state.session, ...d.session, current_game_id: d.game.id };
+      const d = await seed.json();
+      state.session = { ...state.session, ...(d.session || {}), current_game_id: d.game.id };
       navigate('#game/' + d.game.id);
     } catch (e) {
       if (appEl) appEl.innerHTML = `<div style="text-align:center;padding:40px;color:#888;font-family:'DM Sans',sans-serif;">Demo unavailable — open the lobby instead.</div>`;
@@ -1940,7 +1946,7 @@
           <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
             <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
-              ${FLAG_SVGS[session.my_team_slug] ? `<img src="${FLAG_SVGS[session.my_team_slug]}" alt="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div role="img" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
 
@@ -1950,7 +1956,7 @@
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
-              ${FLAG_SVGS[state.next_opponent_theme.slug] ? `<img src="${FLAG_SVGS[state.next_opponent_theme.slug]}" alt="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;object-fit:cover;box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);">` : `<div style="width:80px;height:54px;border-radius:6px;background:${flagGradient(state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              <div role="img" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
             </div>
             ` : ''}
@@ -1969,7 +1975,7 @@
           </div>
         </div>`;
     } else {
-      // No tournament (or just completed) — flag-forward nation picker
+      // No tournament (or just completed) — club colour picker
       mainSection = `
         <div style="margin-top:32px;">
           <h2 class="section-title">${t('lobby.title')}</h2>
@@ -2067,7 +2073,7 @@
   }
 
   window.startNewMap = async function() {
-    if (!state.session) { showToast('Pick a nation first'); return; }
+    if (!state.session) { showToast('Pick a club first'); return; }
     const r = await api('GET', '/api/session');
     if (!r.ok) {
       showToast('Error loading session. Please try again.');
@@ -2076,7 +2082,7 @@
     const d = await r.json();
     state.session = d.session;
     state.next_opponent_theme = d.next_opponent_theme;
-    if (!state.session) { showToast('Pick a nation first'); return; }
+    if (!state.session) { showToast('Pick a club first'); return; }
     doStartNewMap();
   };
 
@@ -2099,7 +2105,7 @@
   };
 
   window.joinMap = async function(id) {
-    if (!state.session) { showToast('Pick a nation first to join a map'); return; }
+    if (!state.session) { showToast('Pick a club first to join a map'); return; }
     const r = await api('POST', `/api/games/${id}/join`);
     if (!r.ok) {
       const e = await r.json().catch(()=>({}));
@@ -2184,7 +2190,7 @@
     // Set full-window flag background (opponent theme image) + CSS accent vars
     const flagBgEl = document.getElementById('flag-bg');
     if (flagBgEl) {
-      flagBgEl.style.backgroundImage = `url('/images/themes/${theme.slug}.png'), ${flagGradient(theme.accent_colour)}`;
+      flagBgEl.style.backgroundImage = flagBg(theme.slug, theme.accent_colour);
     }
     document.documentElement.style.setProperty('--accent', theme.accent_colour);
     document.documentElement.style.setProperty('--accent-soft', hexToRgba(theme.accent_colour, 0.33));
@@ -2216,10 +2222,8 @@
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
 
     // Portrait behind tiles — always show footballer image; trophy shown in result card for final
-    const portraitUrl = `/images/footballers/${theme.slug}.png`;
-    // Preload the portrait image to cache it before CSS background-image loads
-    const preloadImg = new Image();
-    preloadImg.src = portraitUrl;
+    const portraitBg = flagBg(theme.slug, theme.accent_colour);
+    const portraitSize = CLUB_COLOURS[theme.slug] ? 'cover' : 'contain';
 
     const regularShots = state.credits ? parseInt(state.credits.credits_remaining) : 0;
     const bonusShots = state.bonusCreditsAvailable || 0;
@@ -2233,8 +2237,8 @@
       <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${shotsDisplay}</span></div>
     </div>`;
 
-    const myFlag = mySlug ? (FLAG_SVGS[mySlug] ? `<img class="flag-mini" src="${FLAG_SVGS[mySlug]}" alt="${myName}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};"></div>`) : '';
-    const oppFlag = FLAG_SVGS[theme.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[theme.slug]}" alt="${theme.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(theme.accent_colour)};"></div>`;
+    const myFlag = myTeam ? `<div class="flag-mini" role="img" aria-label="${myTeam.country_name}" style="background:${flagBg(myTeam.slug, myTeam.accent_colour)};"></div>` : '';
+    const oppFlag = `<div class="flag-mini" role="img" aria-label="${theme.country_name}" style="background:${flagBg(theme.slug, theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
       ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myName} <span style="color:#fbbf24;font-weight:600;">(you)</span></span>
       <span style="color:#fbbf24;font-weight:900;font-size:0.8rem;margin:0 4px;text-shadow:0 0 8px rgba(251,191,36,0.6);letter-spacing:0.05em;">v</span>
@@ -2266,7 +2270,7 @@
       <div id="retro-quip-overlay"></div>
       <div class="board-zone" id="board-zone">
         <div class="board-wrap">
-          <div class="portrait" style="background-image:url('${portraitUrl}')"></div>
+          <div class="portrait" style="background-image:${portraitBg};background-size:${portraitSize};"></div>
           <div class="board game-grid" id="game-grid" style="grid-template-columns:repeat(${gridCols},1fr);">
             ${tiles}
           </div>
@@ -2740,7 +2744,7 @@
   // ═══════════════════════════════════════════════════════════════
   // Six aim zones: 0-2 the top row (left, middle, right), 3-5 the bottom row.
   const PK_DIVE_ROTATION = [-55, 0, 55, -55, 0, 55];
-  const PK_LAND_ROTATION = [-75, 0, 75, -80, 0, 80];
+  const PK_LAND_ROTATION = [-90, 0, 90, -90, 0, 90];
 
   function openPenaltyKick(squareIdx, bonusOnGoal, role) {
     if (!state.game) return;
@@ -2791,6 +2795,46 @@
       el.style.bottom = `${gr.bottom - (zr.top + zr.height / 2)}px`;
     };
 
+    // Land the keeper with his gloves on a zone. aimAt puts the box's
+    // unrotated bottom edge on the zone centre, and the landing rotation then
+    // swings the gloves right off it; instead anchor the glove midpoint on the
+    // centre, then clamp so no part of the keeper leaves the goal.
+    // The box is 56x76 with transform-origin 50% 70%, so the pivot is
+    // (28, 53.2). The glove midpoint sits 58.7px above the pivot, or the
+    // torso centre (y 35) when the keeper takes a low ball.
+    const landKeeperAt = (zoneEl, deg, low) => {
+      if (!zoneEl) return;
+      const gr = goalEl.getBoundingClientRect();
+      const W = goalEl.clientWidth;
+      const H = goalEl.clientHeight;
+      const zr = zoneEl.getBoundingClientRect();
+      const Z = {
+        x: zr.left + zr.width / 2 - (gr.left + goalEl.clientLeft),
+        y: zr.top + zr.height / 2 - (gr.top + goalEl.clientTop),
+      };
+      const Ay = (low ? 35 : -5.5) - 53.2;
+      const rad = deg * Math.PI / 180;
+      const cos = Math.cos(rad), sin = Math.sin(rad);
+      // Pivot P such that the anchor point (0, Ay) lands on the zone centre.
+      const P = { x: Z.x + Ay * sin, y: Z.y - Ay * cos };
+      // Rotated corners of the box, allowing 11px above the top edge for the
+      // raised gloves; shift P by the least amount that keeps them inside.
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      [[0, -11], [56, -11], [0, 76], [56, 76]].forEach(([cx, cy]) => {
+        const dx = cx - 28, dy = cy - 53.2;
+        const x = P.x + dx * cos - dy * sin;
+        const y = P.y + dx * sin + dy * cos;
+        minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+        minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+      });
+      if (minX < 0) P.x -= minX; else if (maxX > W) P.x -= maxX - W;
+      if (minY < 0) P.y -= minY; else if (maxY > H) P.y -= maxY - H;
+      // margin-left: -28 keeps the box centred on the pivot.
+      keeperEl.style.left = `calc(50% + ${P.x - W / 2}px)`;
+      // The pivot is 22.8px above the box's bottom edge.
+      keeperEl.style.bottom = `${H - P.y - 22.8}px`;
+    };
+
     let kicking = false;
     // As taker the player aims at a zone; as keeper they pick a side to dive
     // to and the server rolls where the ball goes.
@@ -2827,9 +2871,14 @@
       // The ball flies to the zone the server gives, the keeper dives to his.
       aimAt(ballEl, zones[d.zone]);
       const keeperZone = Number.isInteger(d.keeper_zone) ? d.keeper_zone : 0;
-      keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[keeperZone] || 0}deg`);
-      keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[keeperZone] || 0}deg`);
-      aimAt(keeperEl, zones[keeperZone] || zones[0]);
+      // As keeper a save covers the whole column, so land where the ball went.
+      const landZone = asKeeper && !d.scored && Number.isInteger(d.zone) ? d.zone : keeperZone;
+      const landDeg = PK_LAND_ROTATION[landZone] || 0;
+      const low = landZone === 4;
+      keeperEl.classList.toggle('low', low);
+      keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[landZone] || 0}deg`);
+      keeperEl.style.setProperty('--pk-land', `${landDeg}deg`);
+      landKeeperAt(zones[landZone] || zones[0], landDeg, low);
       keeperEl.classList.add('diving');
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2971,7 +3020,6 @@
       resultCard.className = 'result-overlay';
       resultCard.style.cssText = `position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);`;
       const icon = isFinal ? '🏆' : '⚽';
-      const portraitUrl = isFinal ? `/images/trophy.svg` : `/images/footballers/${theme.slug}.png`;
       const iconHtml = isFinal ? '' : `<div style="font-size:2rem;margin-bottom:8px;">${icon}</div>`;
       resultCard.innerHTML = `
         <div class="result-card">
@@ -3001,7 +3049,7 @@
     // Create banner immediately so it appears with ball animation
     let banner = 'GOAL!';
     if (result.jackpot_paid > 0) banner = 'HOLE IN ONE!';
-    else if (isFinal) banner = 'WORLD CHAMPIONS!';
+    else if (isFinal) banner = 'EUROPEAN CHAMPIONS!';
     else if (stageIdx >= 3) banner = 'You won!';
 
     const bannerEl = document.createElement('div');
@@ -3025,7 +3073,7 @@
     const nameTag = document.createElement('div');
     nameTag.id = 'nametag-box';
     nameTag.style.cssText = `position:absolute;bottom:12px;left:0;right:0;text-align:center;z-index:60;padding:0 8px;`;
-    const footballerText = `${theme.footballer_name} — ${theme.country_name}`;
+    const footballerText = `${theme.footballer_name}, ${theme.country_name}`;
     const fact = !isFinal ? (FOOTBALLER_FACTS[theme.slug] || '') : '';
     const factHtml = fact ? `<div style="font-family:'DM Sans',sans-serif;font-size:clamp(0.6rem, 1.5vw, 0.68rem);font-style:italic;color:#fbbf24;margin-top:4px;line-height:1.35;max-width:90vw;word-wrap:break-word;overflow-wrap:break-word;">${fact}</div>` : '';
     nameTag.innerHTML = `<div style="display:inline-block;max-width:90vw;background:rgba(0,0,0,0.84);padding:7px 14px 8px;border-radius:16px;text-align:center;">
@@ -3305,9 +3353,7 @@
     const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
     const flag = sl => {
       const t = themeBySlug[sl];
-      return FLAG_SVGS[sl]
-        ? `<img class="flag-mini" src="${FLAG_SVGS[sl]}" alt="${esc(t ? t.country_name : sl)}">`
-        : `<span class="flag-mini" style="background:${flagGradient(t ? t.accent_colour : '#444')};"></span>`;
+      return `<span class="flag-mini" role="img" aria-label="${esc(t ? t.country_name : sl)}" style="background:${flagBg(sl, t ? t.accent_colour : '#444')};"></span>`;
     };
     const rowHtml = (sl, score, isWinner, delay) => {
       const style = isWinner ? ` style="--ru-win-bg:${winBg};--ru-accent:${accent};animation:ru-win 0.35s ease ${delay}ms both;"` : '';
@@ -3543,10 +3589,10 @@
     }
 
     const myTeam = state.session ? state.themes.find(t => t.slug === state.session.my_team_slug) : null;
-    const countryName = myTeam ? myTeam.country_name : 'your nation';
+    const countryName = myTeam ? myTeam.country_name : 'your club';
     const playerName = displayName || username || 'You';
-    const flagMini = myTeam && FLAG_SVGS[myTeam.slug]
-      ? `<img src="${FLAG_SVGS[myTeam.slug]}" alt="${countryName}" style="width:34px;height:23px;border-radius:3px;object-fit:cover;vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;">`
+    const flagMini = myTeam
+      ? `<span role="img" aria-label="${countryName}" style="display:inline-block;width:34px;height:23px;border-radius:3px;background:${flagBg(myTeam.slug, myTeam.accent_colour)};vertical-align:middle;box-shadow:0 2px 8px rgba(0,0,0,0.5);margin:0 6px;"></span>`
       : '';
 
     document.getElementById('app').innerHTML = `
@@ -3554,7 +3600,7 @@
         <div class="result-card" style="max-width:400px;width:100%;">
           <div class="font-8bit" style="font-size:0.7rem;color:#fbbf24;margin-bottom:12px;">TOURNAMENT COMPLETE</div>
           <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:clamp(1.1rem,5vw,1.5rem);line-height:1.2;color:#fbbf24;text-shadow:0 2px 16px rgba(251,191,36,0.45);text-align:center;margin-bottom:14px;word-break:break-word;">
-            ${playerName} have won the World Cup with ${countryName}! 🏆
+            ${playerName} have won the Champions League with ${countryName}! 🏆
           </div>
           <div style="font-family:'Space Mono',monospace;font-size:clamp(1rem,4vw,1.2rem);color:#10b981;margin-bottom:3px;">+${Math.round(totalWon)} tokens total</div>
           ${result.jackpot_paid > 0 ? `<div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:#fbbf24;margin-bottom:3px;">⚡ Captain's Jackpot: +${Math.round(result.jackpot_paid)} t</div>` : ''}

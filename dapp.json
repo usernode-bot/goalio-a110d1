@@ -1,5 +1,5 @@
 {
-  "name": "GOAL! World Cup Edition",
+  "name": "GOAL! Champions League Edition",
   "icon": {
     "image": "brand/icon.png"
   },
@@ -17,9 +17,19 @@
       "expectText": "Captain's Pot"
     },
     {
-      "name": "Lobby shows Choose your nation",
+      "name": "Lobby shows Choose your club",
       "path": "/",
-      "expectText": "Choose your nation"
+      "expectText": "Choose your club"
+    },
+    {
+      "name": "Lobby lists a club",
+      "path": "/",
+      "expectText": "Real Madrid"
+    },
+    {
+      "name": "Header shows Champions League branding",
+      "path": "/",
+      "expectText": "Champions League Edition"
     },
     {
       "name": "Home info panel auto-shows",
@@ -87,9 +97,9 @@
       "expectSelector": ".language-grid"
     },
     {
-      "name": "Themes API returns all nations",
+      "name": "Themes API returns all clubs",
       "path": "/api/themes",
-      "expectText": "brazil"
+      "expectText": "real-madrid"
     },
     {
       "name": "Session API responds",
