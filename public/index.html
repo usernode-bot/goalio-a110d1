@@ -3369,26 +3369,47 @@
     const nameOf = sl => (themeBySlug[sl] ? themeBySlug[sl].country_name : sl);
 
     // One headline per other match shown, from the events that match allows.
-    // Each carries a short tag so the round-up reads like a news ticker.
+    // Each carries a short tag so the round-up reads like a news ticker, and
+    // no tag is reused within a round-up, so every match gets its own story.
     const hrng = seededRng(seedBase + s + '|news');
+    const usedTags = new Set();
     const headlines = shown.map(tie => {
       const draw = !tie.winner;
       const wName = nameOf(tie.winner);
       const lName = nameOf(tie.winner === tie.a ? tie.b : tie.a);
       const margin = Math.abs(tie.sa - tie.sb);
+      const level = tie.sa === tie.sb;
+      const pens = tie.note.indexOf('Pens') === 0;
+      const first = draw ? (hrng() < 0.5 ? tie.a : tie.b) : null;
+      const other = draw ? (first === tie.a ? tie.b : tie.a) : null;
       const opts = [];
-      if (tie.note.indexOf('Pens') === 0) opts.push({ tag: 'Penalties', tone: 'gold', text: `${wName}'s keeper saved the decisive penalty against ${lName}.` });
+      if (pens) opts.push({ tag: 'Penalties', tone: 'gold', text: `${wName}'s keeper saved the decisive penalty against ${lName}.` });
       if (tie.note === 'After extra time') opts.push({ tag: 'Extra time', tone: 'gold', text: `${wName} won it in extra time against ${lName}.` });
       if (!tie.note && !draw && margin === 1) opts.push({ tag: 'Stoppage time', tone: 'gold', text: `${wName} snatched a stoppage-time winner against ${lName}.` });
       if (draw) opts.push({ tag: 'VAR', tone: 'gold', text: `${nameOf(tie.a)} had a late winner ruled out against ${nameOf(tie.b)}.` });
       else if (!tie.note && margin === 1) opts.push({ tag: 'VAR', tone: 'gold', text: `${lName} had a late equaliser ruled out against ${wName}.` });
       if (draw) {
-        const first = hrng() < 0.5 ? tie.a : tie.b;
-        opts.push({ tag: 'Red card', tone: 'red', text: `${nameOf(first)} finished with ten men after a red card against ${nameOf(first === tie.a ? tie.b : tie.a)}.` });
+        opts.push({ tag: 'Red card', tone: 'red', text: `${nameOf(first)} finished with ten men after a red card against ${nameOf(other)}.` });
       } else {
         opts.push({ tag: 'Red card', tone: 'red', text: `${lName} finished with ten men after a red card against ${wName}.` });
       }
-      return opts[Math.floor(hrng() * opts.length)];
+      if (!draw && !level) opts.push({ tag: 'Own goal', tone: 'red', text: `An own goal from ${lName} handed ${wName} the win.` });
+      const kx = draw ? nameOf(first) : lName;
+      const ky = draw ? nameOf(other) : wName;
+      const kyScore = draw ? tie.sa : (tie.winner === tie.a ? tie.sa : tie.sb);
+      opts.push({ tag: 'Keeper error', tone: 'red', text: kyScore >= 1
+        ? `${kx}'s keeper let a soft shot slip through against ${ky}.`
+        : `${kx}'s keeper dropped a cross but ${ky} could not punish it.` });
+      if (level && tie.sa >= 1) opts.push(pens
+        ? { tag: 'Late equaliser', tone: 'gold', text: `${lName} forced penalties with a late equaliser against ${wName}.` }
+        : { tag: 'Late equaliser', tone: 'gold', text: `${nameOf(first)} grabbed a late equaliser to draw with ${nameOf(other)}.` });
+      if (!draw && margin >= 3) opts.push({ tag: 'Heavy defeat', tone: 'red', text: `${lName} were beaten heavily by ${wName}.` });
+      if (s >= 4 && !draw) opts.push({ tag: 'Unbeaten run', tone: 'gold', text: `${wName} kept their unbeaten knockout run going against ${lName}.` });
+      const fresh = opts.filter(o => !usedTags.has(o.tag));
+      const pool = fresh.length ? fresh : opts;
+      const pick = pool[Math.floor(hrng() * pool.length)];
+      usedTags.add(pick.tag);
+      return pick;
     });
 
     return {
