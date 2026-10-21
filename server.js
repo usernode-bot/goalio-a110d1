@@ -1156,11 +1156,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
         console.error('Prize payout wallet transaction failed:', err.message);
       }
 
-      // On final match win, refund remaining bundle credits to wallet
-      const { rows: tourCheckRows } = await client.query(
-        'SELECT stage_idx FROM tournament_sessions WHERE user_id = $1', [req.user.id]
-      );
-      const isFinalMatchWin = tourCheckRows.length && tourCheckRows[0].stage_idx >= 6;
+      // On final match win, refund remaining bundle credits to wallet. The
+      // board's own stage decides: a Final board is a Final match, whether or
+      // not the viewer is on a tournament run (the staging demo is not).
+      const isFinalMatchWin = game.stage_idx >= 6;
       if (isFinalMatchWin) {
         const { rows: remainingCredits } = await client.query(`
           SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
@@ -1687,32 +1686,61 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Staging-only demo state for the Final refund coin flight: gives the signed-in
-// viewer a Final-stage tournament with 8 carried shots (4 t each) so the
-// coin animation on the win card is reachable without playing six rounds.
-// The client route #demo/final-refund calls this, then start-map consolidates
-// the carried shots into a fresh Final board via carryOverShots.
+// viewer a fresh Final board with 8 carried shots (4 t each) so the coin
+// animation on the win card is reachable without playing six rounds.
+// The client route #demo/final-refund calls this and opens the board it returns.
+// The board is created here rather than through a seeded tournament session, so
+// opening the demo never leaves the viewer mid tournament: the lobby still
+// shows the club picker afterwards. The win refund keys off the Final board's
+// own stage, so it still fires for this board.
 app.post('/api/staging/demo-final-refund', async (req, res) => {
   if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
   const client = await pool.connect();
   try {
+    const { rows: themeRows } = await client.query(
+      "SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE slug = 'milan'"
+    );
+    if (!themeRows.length) return res.status(404).json({ error: 'Not found' });
+    const theme = themeRows[0];
+
     await ensureWallet(client, req.user.id, req.user.username);
     await client.query('UPDATE player_wallets SET balance = 5000 WHERE user_id = $1', [req.user.id]);
-    await client.query(`
-      INSERT INTO tournament_sessions
-        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
-      VALUES ($1, 'barcelona', 6, '{}', 0, false, NULL, 'milan')
-      ON CONFLICT (user_id) DO UPDATE SET
-        my_team_slug = 'barcelona', stage_idx = 6, played_slugs = '{}',
-        total_tokens_won = 0, session_complete = false,
-        current_game_id = NULL, next_opponent_slug = 'milan', updated_at = NOW()
-    `, [req.user.id]);
+
+    const gridSize = gridSizeForStage(6);
+    const footballSquare = Math.floor(Math.random() * gridSize);
+    const revealed = new Array(gridSize).fill(false);
+    const eventSquares = buildEventSquares(footballSquare, gridSize);
+    const penaltySquares = buildPenaltySquares(footballSquare, eventSquares, gridSize);
+    const bonusSquares = buildBonusSquares(footballSquare, penaltySquares, eventSquares, gridSize);
+
+    await client.query('BEGIN');
+    const { rows: gameRows } = await client.query(`
+      INSERT INTO games
+        (theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count,
+         status, active_player_id, active_player_username, last_active_at, event_squares, bonus_squares)
+      VALUES ($1, 6, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8, $9)
+      RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square, penalty_squares
+    `, [theme.id, footballSquare, penaltySquares[0], JSON.stringify(penaltySquares), revealed,
+        req.user.id, req.user.username, JSON.stringify(eventSquares), JSON.stringify(bonusSquares)]);
+    const game = gameRows[0];
+    // The carried shots the demo pays back when the Final is won. Earlier
+    // shots on this viewer's other boards are dropped, as the demo always did,
+    // so opening it twice never stacks extra shots.
     await client.query('DELETE FROM game_sessions WHERE user_id = $1', [req.user.id]);
     await client.query(`
       INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, refunded)
-      VALUES (1, $1, 8, 0, 4, false)
-    `, [req.user.id]);
-    res.json({ ok: true });
+      VALUES ($1, $2, 8, 0, 4, false)
+    `, [game.id, req.user.id]);
+    await client.query('COMMIT');
+
+    res.json({
+      ok: true,
+      game,
+      theme,
+      session: { my_team_slug: 'barcelona', stage_idx: 6, session_complete: false }
+    });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
   } finally {
     client.release();

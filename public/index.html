@@ -1753,17 +1753,16 @@
   }
   window.addEventListener('hashchange', route);
 
-  // Staging demo deep link: seeds a Final-stage tournament with carried shots
-  // (server returns 404 outside staging) and opens the new Final map.
+  // Staging demo deep link: seeds a Final board with carried shots (server
+  // returns 404 outside staging) and opens it. It does not touch the viewer's
+  // tournament, so the lobby still offers the club picker afterwards.
   async function demoFinalRefund() {
     const appEl = document.getElementById('app');
     try {
       const seed = await api('POST', '/api/staging/demo-final-refund');
       if (!seed.ok) { navigate('#lobby'); return; }
-      const map = await api('POST', '/api/session/start-map');
-      if (!map.ok) { navigate('#lobby'); return; }
-      const d = await map.json();
-      state.session = { ...state.session, ...d.session, current_game_id: d.game.id };
+      const d = await seed.json();
+      state.session = { ...state.session, ...(d.session || {}), current_game_id: d.game.id };
       navigate('#game/' + d.game.id);
     } catch (e) {
       if (appEl) appEl.innerHTML = `<div style="text-align:center;padding:40px;color:#888;font-family:'DM Sans',sans-serif;">Demo unavailable — open the lobby instead.</div>`;
