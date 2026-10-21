@@ -172,6 +172,26 @@
       "expectText": "Semi-Final"
     },
     {
+      "name": "Lobby club picker shows crests",
+      "path": "/",
+      "expectSelector": ".nation-card .club-crest"
+    },
+    {
+      "name": "Next fixture demo shows club crests",
+      "path": "/#demo/fixture",
+      "expectSelector": ".crest-hero"
+    },
+    {
+      "name": "Next fixture demo shows Opponent",
+      "path": "/#demo/fixture",
+      "expectText": "Opponent"
+    },
+    {
+      "name": "Game strip shows club crest",
+      "path": "/#game/2",
+      "expectSelector": ".nation-strip .club-crest"
+    },
+    {
       "name": "Final refund demo seeds Final board with carried shots",
       "path": "/#demo/final-refund",
       "expectSelector": ".game-grid"
