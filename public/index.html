@@ -2191,7 +2191,28 @@
     // A re-rendered board shows the stadium again (it is hidden during the goal celebration)
     document.querySelector('.stadium')?.classList.remove('is-hidden');
 
-    const myTeam = state.themes.find(t => t.slug === (state.session ? state.session.my_team_slug : ''));
+    // The header always names the player's own nation, whatever order the
+    // session and the themes arrived in: the slug is enough for the flag, and
+    // the country name falls back to the translations.
+    const mySlug = state.session ? state.session.my_team_slug : '';
+    // A direct link to a match can paint before the session has arrived, which
+    // left the player's own nation showing as a bare "You". Fetch it once and
+    // redraw the header with the flag and country name.
+    if (!mySlug && !state.teamHeaderRetried) {
+      state.teamHeaderRetried = true;
+      api('GET', '/api/session').then(r => r.ok ? r.json() : null).then(d => {
+        if (d && d.session && d.session.my_team_slug) {
+          state.session = d.session;
+          if (state.game) renderGameBody();
+        }
+      }).catch(() => {});
+    }
+    const myTeam = state.themes.find(th => th.slug === mySlug) || null;
+    const myTranslatedName = mySlug ? t('countries.' + mySlug) : '';
+    const myName = myTeam ? myTeam.country_name
+      : (myTranslatedName && myTranslatedName !== 'countries.' + mySlug)
+        ? myTranslatedName
+        : (mySlug ? mySlug.charAt(0).toUpperCase() + mySlug.slice(1) : 'You');
     const stageIdx = state.session ? state.session.stage_idx : game.stage_idx;
 
     // Portrait behind tiles — always show footballer image; trophy shown in result card for final
@@ -2212,10 +2233,10 @@
       <div class="hud-chip"><span style="display:block;">${t('hud.shots_left')}</span><span class="val shots-val">${shotsDisplay}</span></div>
     </div>`;
 
-    const myFlag = myTeam ? (FLAG_SVGS[myTeam.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[myTeam.slug]}" alt="${myTeam.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam.accent_colour)};"></div>`) : '';
+    const myFlag = mySlug ? (FLAG_SVGS[mySlug] ? `<img class="flag-mini" src="${FLAG_SVGS[mySlug]}" alt="${myName}">` : `<div class="flag-mini" style="background:${flagGradient(myTeam ? myTeam.accent_colour : '#444')};"></div>`) : '';
     const oppFlag = FLAG_SVGS[theme.slug] ? `<img class="flag-mini" src="${FLAG_SVGS[theme.slug]}" alt="${theme.country_name}">` : `<div class="flag-mini" style="background:${flagGradient(theme.accent_colour)};"></div>`;
     const nationStrip = `<div class="nation-strip">
-      ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myTeam ? myTeam.country_name : 'You'} <span style="color:#fbbf24;font-weight:600;">(you)</span></span>
+      ${myFlag}<span style="font-weight:700;color:#f0f0f5;">${myName} <span style="color:#fbbf24;font-weight:600;">(you)</span></span>
       <span style="color:#fbbf24;font-weight:900;font-size:0.8rem;margin:0 4px;text-shadow:0 0 8px rgba(251,191,36,0.6);letter-spacing:0.05em;">v</span>
       ${oppFlag}<span style="font-weight:700;color:#f0f0f5;">${theme.country_name}</span>
       <span style="margin-left:auto;background:rgba(0,0,0,0.55);border:1px solid rgba(251,191,36,0.5);border-radius:5px;padding:1px 7px;color:#fbbf24;font-size:0.6rem;font-family:'Space Mono',monospace;white-space:nowrap;text-transform:uppercase;letter-spacing:0.06em;box-shadow:0 0 6px rgba(251,191,36,0.2);">${stageName(stageIdx)}</span>
