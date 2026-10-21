@@ -992,6 +992,8 @@
     .pk-keeper.landed .pk-keeper-arm, .pk-keeper.landed .pk-keeper-leg { transition: transform 0.2s ease-out; }
     .pk-keeper.landed .pk-keeper-arm.left { transform: rotate(180deg); }
     .pk-keeper.landed .pk-keeper-arm.right { transform: rotate(-180deg); }
+    .pk-keeper.low .pk-keeper-arm.left, .pk-keeper.low.diving .pk-keeper-arm.left, .pk-keeper.low.landed .pk-keeper-arm.left { transform: rotate(55deg); }
+    .pk-keeper.low .pk-keeper-arm.right, .pk-keeper.low.diving .pk-keeper-arm.right, .pk-keeper.low.landed .pk-keeper-arm.right { transform: rotate(-55deg); }
     .pk-ball { position: absolute; left: 50%; bottom: -34px; width: 24px; height: 24px; margin-left: -12px; pointer-events: none; z-index: 2; transition: left 0.5s ease, bottom 0.5s ease; }
     .pk-ball img { width: 100%; height: 100%; display: block; }
     .pk-pitch { height: 44px; margin-top: -44px; margin-bottom: 44px; background: linear-gradient(#1f6b35, #14532d); border-radius: 0 0 4px 4px; }
@@ -2692,7 +2694,7 @@
   // ═══════════════════════════════════════════════════════════════
   // Six aim zones: 0-2 the top row (left, middle, right), 3-5 the bottom row.
   const PK_DIVE_ROTATION = [-55, 0, 55, -55, 0, 55];
-  const PK_LAND_ROTATION = [-75, 0, 75, -80, 0, 80];
+  const PK_LAND_ROTATION = [-90, 0, 90, -90, 0, 90];
 
   function openPenaltyKick(squareIdx, bonusOnGoal, role) {
     if (!state.game) return;
@@ -2743,6 +2745,43 @@
       el.style.bottom = `${gr.bottom - (zr.top + zr.height / 2)}px`;
     };
 
+    // Land the keeper with his gloves (58.7px above the pivot) on the centre
+    // of the zone after the landing rotation, then nudge him back inside the
+    // goal so no part of him ends up outside the posts or below the grass.
+    // For a low ball the anchor is the torso centre, so the ball hits his body.
+    const landKeeperAt = (zoneEl, deg, low) => {
+      const gr = goalEl.getBoundingClientRect();
+      const zr = (zoneEl || zones[0]).getBoundingClientRect();
+      const W = goalEl.clientWidth;
+      const H = goalEl.clientHeight;
+      const zx = zr.left + zr.width / 2 - (gr.left + goalEl.clientLeft);
+      const zy = zr.top + zr.height / 2 - (gr.top + goalEl.clientTop);
+      const theta = deg * Math.PI / 180;
+      const ay = low ? -18.2 : -58.7;
+      const px0 = zx + ay * Math.sin(theta);
+      const py0 = zy - ay * Math.cos(theta);
+      // Rotated corners of the 56x76 box, including the raised gloves above it.
+      const top = low ? -53.2 : -64.2;
+      const corners = [[-28, top], [28, top], [-28, 22.8], [28, 22.8]].map(([cx, cy]) => [
+        px0 + cx * Math.cos(theta) - cy * Math.sin(theta),
+        py0 + cx * Math.sin(theta) + cy * Math.cos(theta)
+      ]);
+      const minX = Math.min(...corners.map(c => c[0]));
+      const maxX = Math.max(...corners.map(c => c[0]));
+      const minY = Math.min(...corners.map(c => c[1]));
+      const maxY = Math.max(...corners.map(c => c[1]));
+      let dx = 0;
+      let dy = 0;
+      if (minX + dx < 0) dx = -minX;
+      if (maxX + dx > W) dx = W - maxX;
+      if (minY + dy < 0) dy = -minY;
+      if (maxY + dy > H) dy = H - maxY;
+      const px = px0 + dx;
+      const py = py0 + dy;
+      keeperEl.style.left = `calc(50% + ${px - W / 2}px)`;
+      keeperEl.style.bottom = `${H - py - 22.8}px`;
+    };
+
     let kicking = false;
     // As taker the player aims at a zone; as keeper they pick a side to dive
     // to and the server rolls where the ball goes.
@@ -2779,9 +2818,14 @@
       // The ball flies to the zone the server gives, the keeper dives to his.
       aimAt(ballEl, zones[d.zone]);
       const keeperZone = Number.isInteger(d.keeper_zone) ? d.keeper_zone : 0;
-      keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[keeperZone] || 0}deg`);
-      keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[keeperZone] || 0}deg`);
-      aimAt(keeperEl, zones[keeperZone] || zones[0]);
+      // As keeper a save covers the whole column, so land in the ball's square
+      // (top or bottom). On a goal he lands in the square he guessed.
+      const landZone = (asKeeper && !d.scored && Number.isInteger(d.zone)) ? d.zone : keeperZone;
+      const low = landZone === 4;
+      keeperEl.classList.toggle('low', low);
+      keeperEl.style.setProperty('--pk-dive', `${PK_DIVE_ROTATION[landZone] || 0}deg`);
+      keeperEl.style.setProperty('--pk-land', `${PK_LAND_ROTATION[landZone] || 0}deg`);
+      landKeeperAt(zones[landZone] || zones[0], PK_LAND_ROTATION[landZone] || 0, low);
       keeperEl.classList.add('diving');
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
