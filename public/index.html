@@ -503,6 +503,7 @@
       .result-card { max-width: 100% !important; margin: 0 auto; }
       #display-name-input { font-size: 0.82rem !important; padding: 6px 10px !important; }
       .bundle-btn { font-size: 0.78rem !important; padding: 8px 12px !important; }
+      #lobby-body .lobby-kickoff { font-size: 1.05rem !important; padding: 16px !important; }
       #victory-bg > .result-card > div:nth-child(2) { font-size: clamp(0.95rem, 4vw, 1.3rem) !important; word-break: break-word; overflow-wrap: break-word; }
       /* League table on mobile */
       .league-table td { padding: clamp(6px, 1.5vw, 10px) clamp(8px, 2vw, 12px); }
@@ -621,29 +622,45 @@
       .roundup-card, .roundup-card * { animation: none !important; }
     }
 
-    /* Lobby fixture motion — the next-fixture lobby springs up piece by piece,
-       then VS breathes, the crests float and KICK OFF catches the light. */
-    .lobby-in { animation: lobby-rise 0.55s cubic-bezier(0.2, 0.85, 0.3, 1.25) var(--lobby-d, 0ms) both; }
-    .lobby-in.pot-heartbeat { animation: lobby-rise 0.55s cubic-bezier(0.2, 0.85, 0.3, 1.25) var(--lobby-d, 0ms) both, pot-heartbeat 3s ease-in-out infinite; }
-    @keyframes lobby-rise { from { opacity: 0; transform: translateY(34px) scale(0.86); } to { opacity: 1; transform: none; } }
-    @keyframes lobby-vs-pulse {
-      0%, 100% { transform: scale(1) rotate(0deg); text-shadow: 0 0 8px currentColor; }
-      50% { transform: scale(1.26) rotate(-5deg); text-shadow: 0 0 12px currentColor, 0 0 26px currentColor; }
-    }
-    .lobby-vs { display: inline-block; animation: lobby-vs-pulse 1.6s ease-in-out infinite; }
-    @keyframes lobby-crest-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.05); } }
-    .lobby-crest-float { animation: lobby-crest-bob 2.6s ease-in-out infinite; }
-    .lobby-crest-float.alt { animation-delay: -1.3s; }
-    .lobby-kickoff { position: relative; overflow: hidden; }
-    .lobby-kickoff::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-      background: linear-gradient(100deg, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%);
-      transform: translateX(-130%); animation: lobby-sheen 2.2s ease-in-out 0.8s infinite; }
-    @keyframes lobby-sheen { 0% { transform: translateX(-130%); } 22%, 100% { transform: translateX(130%); } }
+    /* Next fixture — a still screen. The stage sits on a ribbon over a framed
+       matchup panel, the crests are larger and the numbers become stat tiles. */
+    .lobby-stage-ribbon { margin: 4px 16px 0; padding: 8px 14px; border-radius: 10px 10px 0 0;
+      background: var(--lobby-badge); color: var(--lobby-badge-text);
+      display: flex; align-items: baseline; justify-content: center; gap: 10px;
+      font-family: 'DM Sans', sans-serif; text-transform: uppercase; }
+    .lobby-stage-ribbon .n { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.14em; opacity: 0.75; }
+    .lobby-stage-ribbon .s { font-size: 1rem; font-weight: 800; letter-spacing: 0.12em; }
+    .lobby-match-panel { margin: 0 16px; padding: 22px 12px 18px;
+      border: 1px solid rgba(255,255,255,0.14); border-color: color-mix(in srgb, var(--lobby-accent) 45%, transparent);
+      border-top: none; border-radius: 0 0 14px 14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 8px 24px rgba(0,0,0,0.45);
+      display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .lobby-match-side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .lobby-match-side .nm { font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 0.95rem;
+      text-align: center; line-height: 1.2; overflow-wrap: anywhere; color: #f0f0f5; }
+    .crest-hero.lobby-crest-lg { width: 112px; height: 76px; padding: 7px; border-radius: 10px; }
+    .lobby-vs-badge { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+      border: 2px solid var(--lobby-accent); color: var(--lobby-accent); background: #0a0a0f;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.04em; }
+    .lobby-stat-tiles { margin: 14px 16px 0; display: grid; grid-template-columns: repeat(3, 1fr);
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.04); }
+    .lobby-stat-tile { padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+    .lobby-stat-tile + .lobby-stat-tile { border-left: 1px solid rgba(255,255,255,0.12); }
+    .lobby-tile-label { font-family: 'DM Sans', sans-serif; font-size: 0.62rem; color: #888;
+      text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; line-height: 1.25;
+      min-height: 2.5em; display: flex; align-items: center; justify-content: center; }
+    .lobby-tile-val { font-family: 'Space Mono', monospace; font-size: 1.15rem; font-weight: 700;
+      display: flex; align-items: baseline; justify-content: center; gap: 3px; }
+    .lobby-kickoff { position: relative; display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 18px; font-size: 1.15rem; letter-spacing: 0.08em; border-radius: 14px;
+      border-bottom: 4px solid rgba(0,0,0,0.28); }
+    .lobby-kickoff img { width: 30px; height: 30px; }
+    .lobby-kickoff:hover { transform: none; }
     .lobby-kickoff:active { transform: translateY(3px) scale(0.94); }
-    @media (prefers-reduced-motion: reduce) {
-      .lobby-in, .lobby-vs, .lobby-crest-float, .lobby-kickoff::after { animation: none !important; }
-      .lobby-in.pot-heartbeat { animation: pot-heartbeat 3s ease-in-out infinite !important; }
-      .lobby-kickoff::after { display: none; }
+    @media (max-width: 360px) {
+      .crest-hero.lobby-crest-lg { width: 96px; height: 66px; }
     }
 
     /* League table */
@@ -1655,6 +1672,12 @@
 
     document.querySelectorAll('.pot-chip-value').forEach(el => {
       const chip = el.closest('.pot-chip');
+      // The next-fixture lobby sits still: the value just updates there.
+      if (chip && chip.closest('#lobby-body')) {
+        el.textContent = Math.round(newBalance).toLocaleString() + ' t';
+        chip.classList.remove('pot-heartbeat');
+        return;
+      }
       if (jackpotHit) {
         animatePotValue(el, prev, 0, 1000);
         setTimeout(() => { animatePotValue(el, 0, newBalance, 500); }, 1000);
@@ -2027,17 +2050,14 @@
 
     const statsRow = `
       <div class="lobby-stats-row" style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
-        <div class="lobby-stat-box hud-chip lobby-in" style="--lobby-d:0ms;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
           <span style="font-size:0.7rem;color:#888;">${t('hud.wallet')}</span>
           <span class="val lobby-wallet-val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${state.walletBalance !== undefined ? Math.round(state.walletBalance).toLocaleString() + ' t' : 'XXXXX'}</span>
         </div>
-        ${(() => {
-          const heartbeat = state.potBalance > 500 ? ' pot-heartbeat' : '';
-          return `<div class="lobby-stat-box hud-chip pot-chip lobby-in${heartbeat}" style="--lobby-d:70ms;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
-            <span style="color:#888;font-size:0.7rem;">Captain's Pot</span>
-            <span class="val pot-chip-value" style="font-family:'Space Mono',monospace;font-size:1rem;color:#fbbf24;font-weight:700;display:block;">${Math.round(state.potBalance).toLocaleString()} t</span>
-          </div>`;
-        })()}
+        <div class="lobby-stat-box hud-chip pot-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          <span style="color:#888;font-size:0.7rem;">Captain's Pot</span>
+          <span class="val pot-chip-value" style="font-family:'Space Mono',monospace;font-size:1rem;color:#fbbf24;font-weight:700;display:block;">${Math.round(state.potBalance).toLocaleString()} t</span>
+        </div>
       </div>`;
 
     const inProgress = session && !session.session_complete;
@@ -2054,42 +2074,40 @@
       const badgeTextColor = palette ? (palette === KNOCKOUT_PALETTES[6] ? '#1a1423' : '#0a0a0f') : '#0a0a0f';
 
       mainSection = `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin:0 -16px;">
-          <!-- Stage badge at top -->
-          <div style="width:100%;padding:12px 16px;text-align:center;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);">
-            <div class="lobby-in" style="--lobby-d:140ms;display:inline-block;background:${badgeBg};color:${badgeTextColor};font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;">Stage ${session.stage_idx + 1}/7 — ${stageName(session.stage_idx)}</div>
+        <div style="display:flex;flex-direction:column;margin:0 -16px;--lobby-accent:${accentColor};--lobby-badge:${badgeBg};--lobby-badge-text:${badgeTextColor};">
+          <!-- Stage ribbon, the top edge of the matchup panel -->
+          <div class="lobby-stage-ribbon">
+            <span class="n">Stage ${session.stage_idx + 1}/7</span><span class="s">${stageName(session.stage_idx)}</span>
           </div>
 
-          <!-- Large flags as hero, centered -->
-          <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
-            <div class="lobby-in" style="--lobby-d:220ms;display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+          <!-- Framed matchup panel: larger crests, still -->
+          <div class="lobby-match-panel">
+            <div class="lobby-match-side">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
-              ${crestHtml(session.my_team_slug, myTeam ? myTeam.country_name : session.my_team_slug, 'crest-hero lobby-crest-float', myTeam ? myTeam.accent_colour : '#444') || `<div role="img" class="lobby-crest-float" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
-              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
+              ${crestHtml(session.my_team_slug, myTeam ? myTeam.country_name : session.my_team_slug, 'crest-hero lobby-crest-lg', myTeam ? myTeam.accent_colour : '#444') || `<div role="img" class="club-crest crest-hero lobby-crest-lg" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};"></div>`}
+              <div class="nm">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
 
             ${hasOpponent ? `
-            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;">
-              <div class="lobby-vs" style="font-family:'DM Sans',sans-serif;font-weight:700;color:${accentColor};font-size:1rem;text-shadow:0 0 8px ${accentColor}44;">VS</div>
-            </div>
-            <div class="lobby-in" style="--lobby-d:300ms;display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+            <div class="lobby-vs-badge">VS</div>
+            <div class="lobby-match-side">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
-              ${crestHtml(state.next_opponent_theme.slug, state.next_opponent_theme.country_name, 'crest-hero lobby-crest-float alt', state.next_opponent_theme.accent_colour) || `<div role="img" class="lobby-crest-float alt" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
-              <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
+              ${crestHtml(state.next_opponent_theme.slug, state.next_opponent_theme.country_name, 'crest-hero lobby-crest-lg', state.next_opponent_theme.accent_colour) || `<div role="img" class="club-crest crest-hero lobby-crest-lg" aria-label="${state.next_opponent_theme.country_name}" style="background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};"></div>`}
+              <div class="nm">${state.next_opponent_theme.country_name}</div>
             </div>
             ` : ''}
           </div>
 
-          <!-- Match info bar -->
-          <div style="width:100%;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-around;text-align:center;font-family:'DM Sans',sans-serif;font-size:0.75rem;">
-            <div><span style="color:#888;">Number of Tiles</span><br><span style="color:${accentColor};font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
-            <div><span style="color:#888;">Prize Range</span><br><span style="color:#10b981;font-weight:700;font-size:0.9rem;">${prizeDecay(0, gridSizeForStage(session.stage_idx))}–${prizeDecay(gridSizeForStage(session.stage_idx) - 1, gridSizeForStage(session.stage_idx))}</span></div>
-            <div><span style="color:#888;">Captain's Pot Odds</span><br><span style="color:#fbbf24;font-weight:700;font-size:0.9rem;">${gridSizeForStage(session.stage_idx)}-1</span></div>
+          <!-- Labelled stat tiles -->
+          <div class="lobby-stat-tiles">
+            <div class="lobby-stat-tile"><span class="lobby-tile-label">Number of Tiles</span><span class="lobby-tile-val" style="color:${accentColor};">${gridSizeForStage(session.stage_idx)}<span style="font-size:0.65rem;"> tiles</span></span></div>
+            <div class="lobby-stat-tile"><span class="lobby-tile-label">Prize Range</span><span class="lobby-tile-val" style="color:#10b981;">${prizeDecay(0, gridSizeForStage(session.stage_idx))}–${prizeDecay(gridSizeForStage(session.stage_idx) - 1, gridSizeForStage(session.stage_idx))}</span></div>
+            <div class="lobby-stat-tile"><span class="lobby-tile-label">Captain's Pot Odds</span><span class="lobby-tile-val" style="color:#fbbf24;">${gridSizeForStage(session.stage_idx)}-1</span></div>
           </div>
 
           <!-- CTA Button -->
-          <div style="width:100%;padding:16px;">
-            <button onclick="startNewMap()" class="bundle-btn lobby-kickoff" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;font-size:1rem;padding:14px;border-radius:12px;letter-spacing:0.02em;">⚽ KICK OFF ▶</button>
+          <div style="padding:18px 16px 16px;">
+            <button onclick="startNewMap()" class="bundle-btn lobby-kickoff" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;"><img src="/images/football.svg" alt="">KICK OFF ▶</button>
           </div>
         </div>`;
     } else {
