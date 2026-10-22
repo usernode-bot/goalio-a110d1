@@ -4,16 +4,21 @@
 `dapp.json` as `"icon": { "image": "brand/icon.png" }`. The platform reads it at deploy time; the app never serves
 it, which is why it lives outside `public/`.
 
-It follows the Homeroom brand's 3D icon style (v3), the look of the icon set
-in the Homeroom brand guidelines, so it sits with the other apps' icons:
+The icon is a flat vector football tile:
 
-- Object: Lucide `trophy` drawn as a solid object in yellow (`#F8B92E`, lit
-  from the top left), with a #D98E12 side face extruded toward the lower
-  right and a thin ink (`#1D1B16`) outline.
-- Tile: brand cream (`#FFFEEA`). No text.
-- 512 × 512 PNG, full bleed, no transparency. The platform rounds and crops
-  the tile itself.
+- Tile: deep blue (`#005CA7`) filling the whole square.
+- Ball: a football centred on the tile, lit from the top left, with white star-shaped panels and white rim bands.
+- Wordmark: "GOAL" in heavy white capitals across the middle of the ball, drawn as `<path>` outlines (not
+  `<text>`) so it looks the same everywhere, whatever fonts a device has. Only the tiny 32px favicon cannot fit
+  the letters legibly; it uses the same design scaled down.
+- 512 × 512 PNG, full bleed, no transparency. The platform rounds the tile itself.
 
-To change the icon, replace `icon.png` with a new render in the same style
-and update this note. The change applies once the proposal is voted in and
-deployed.
+`public/images/app-icon.svg` is the source. The four PNGs are rendered from it with the `sharp` devDependency:
+
+- `brand/icon.png` 512 × 512, RGB (no alpha)
+- `public/icon.png` 512 × 512
+- `public/apple-touch-icon.png` 180 × 180
+- `public/favicon-32.png` 32 × 32
+
+To change the icon, edit the SVG, re-render the PNGs, and update this note. The change applies once the proposal
+is voted in and deployed.

@@ -1,37 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
-      <stop offset="0" stop-color="#1e5b3f"/>
-      <stop offset="1" stop-color="#062417"/>
-    </radialGradient>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#a86f0c"/>
-      <stop offset="0.35" stop-color="#ffe27a"/>
-      <stop offset="0.6" stop-color="#f5b82e"/>
-      <stop offset="1" stop-color="#9a6308"/>
+    <linearGradient id="ball" gradientUnits="userSpaceOnUse" x1="140" y1="120" x2="345" y2="420">
+      <stop offset="0" stop-color="#2A96D8"/>
+      <stop offset="0.38" stop-color="#1280C8"/>
+      <stop offset="0.72" stop-color="#0C6FB8"/>
+      <stop offset="1" stop-color="#0A5C99"/>
     </linearGradient>
-    <radialGradient id="globe" cx="38%" cy="32%" r="70%">
-      <stop offset="0" stop-color="#fff3b0"/>
-      <stop offset="0.45" stop-color="#f7c33c"/>
-      <stop offset="1" stop-color="#a86f0c"/>
-    </radialGradient>
+    <linearGradient id="shade" gradientUnits="userSpaceOnUse" x1="0" y1="290" x2="0" y2="404">
+      <stop offset="0" stop-color="#02182E" stop-opacity="0"/>
+      <stop offset="1" stop-color="#02182E" stop-opacity="0.22"/>
+    </linearGradient>
+    <clipPath id="ball-clip">
+      <circle cx="256" cy="244" r="156"/>
+    </clipPath>
+    <mask id="g-mask">
+      <path fill="#fff" fill-rule="evenodd"
+            d="M88 276.5 A42.5 51.5 0 1 1 173 276.5 A42.5 51.5 0 1 1 88 276.5 Z
+               M114 276.5 A16.5 25.5 0 1 0 147 276.5 A16.5 25.5 0 1 0 114 276.5 Z"/>
+      <polygon points="152,218 184,218 184,262 152,268" fill="#000"/>
+      <rect x="126" y="272" width="47" height="24" fill="#fff"/>
+    </mask>
   </defs>
-  <rect width="512" height="512" fill="url(#bg)"/>
-  <!-- globe -->
-  <circle cx="256" cy="150" r="88" fill="url(#globe)" stroke="#7a4d05" stroke-width="6"/>
-  <g fill="none" stroke="#9a6308" stroke-width="7" stroke-linecap="round" opacity="0.8">
-    <ellipse cx="256" cy="150" rx="38" ry="86"/>
-    <path d="M172 128 Q256 110 340 128"/>
-    <path d="M172 172 Q256 190 340 172"/>
+
+  <!-- tile -->
+  <rect width="512" height="512" fill="#005CA7"/>
+
+  <!-- football -->
+  <circle cx="256" cy="244" r="156" fill="url(#ball)"/>
+  <g clip-path="url(#ball-clip)">
+    <!-- rim bands -->
+    <g fill="none" stroke="#FFFFFF" stroke-width="18">
+      <path d="M121 195 A144 144 0 0 1 207 109"/>
+      <path d="M305 109 A144 144 0 0 1 398 219"/>
+      <path d="M395 281 A144 144 0 0 1 293 383"/>
+      <path d="M219 383 A144 144 0 0 1 117 281"/>
+    </g>
+
+    <!-- top star panel -->
+    <path fill="#FFFFFF" d="M281 92 L303.9 128.4 L345.7 139 L318.1 172.1 L321 215 L281 199
+                                L241 215 L243.9 172.1 L216.3 139 L258.1 128.4 Z"/>
+    <!-- bottom star panel, in shadow -->
+    <path fill="#FFFFFF" d="M272 474 L245 429.2 L194 417.3 L228.3 377.8 L223.8 325.7 L272 346
+                                L320.2 325.7 L315.7 377.8 L350 417.3 L299 429.2 Z"/>
+
+    <!-- lower shading -->
+    <rect x="100" y="290" width="312" height="120" fill="url(#shade)"/>
   </g>
-  <!-- swirling body rising to hold the globe -->
-  <path d="M168 196 C176 262 222 300 226 350 L222 392 L290 392 L286 350 C290 300 336 262 344 196
-           C322 236 292 250 256 250 C220 250 190 236 168 196 Z"
-        fill="url(#gold)" stroke="#7a4d05" stroke-width="6" stroke-linejoin="round"/>
-  <path d="M206 250 C222 290 250 312 262 350" fill="none" stroke="#7a4d05" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
-  <path d="M306 250 C296 280 282 300 278 330" fill="none" stroke="#7a4d05" stroke-width="6" stroke-linecap="round" opacity="0.55"/>
-  <!-- base -->
-  <path d="M196 392 L316 392 L328 420 L184 420 Z" fill="url(#gold)" stroke="#7a4d05" stroke-width="6" stroke-linejoin="round"/>
-  <rect x="180" y="420" width="152" height="18" fill="#0f6b3c" stroke="#7a4d05" stroke-width="6"/>
-  <rect x="172" y="438" width="168" height="30" rx="6" fill="url(#gold)" stroke="#7a4d05" stroke-width="6"/>
+
+  <!-- wordmark, drawn as outlines so it needs no fonts -->
+  <g fill="#FFFFFF" transform="translate(256 276) scale(1.04) translate(-256 -276)">
+    <path mask="url(#g-mask)" d="M88 225 H174 V328 H88 Z"/>
+    <path fill-rule="evenodd"
+          d="M177 276.5 A50 50 0 1 1 277 276.5 A50 50 0 1 1 177 276.5 Z
+             M200 276.5 A23 23 0 1 0 246 276.5 A23 23 0 1 0 200 276.5 Z"/>
+    <path fill-rule="evenodd"
+          d="M285 328 L325 225 L365 328 Z
+             M325 250 L311 304 L339 304 Z"/>
+    <path d="M369 225 H399 V298 H424 V328 H369 Z"/>
+  </g>
 </svg>
