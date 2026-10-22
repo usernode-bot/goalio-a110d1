@@ -1,5 +1,5 @@
 {
-  "name": "GOAL! World Cup Edition",
+  "name": "GOAL! Champions League Edition",
   "icon": {
     "image": "brand/icon.png"
   },
@@ -17,9 +17,19 @@
       "expectText": "Captain's Pot"
     },
     {
-      "name": "Lobby shows Choose your nation",
+      "name": "Lobby shows Choose your club",
       "path": "/#demo/reset",
-      "expectText": "Choose your nation"
+      "expectText": "Choose your club"
+    },
+    {
+      "name": "Lobby lists a club",
+      "path": "/#demo/reset",
+      "expectText": "Real Madrid"
+    },
+    {
+      "name": "Header shows Champions League branding",
+      "path": "/",
+      "expectText": "Champions League Edition"
     },
     {
       "name": "Home info panel auto-shows",
@@ -87,9 +97,9 @@
       "expectSelector": ".language-grid"
     },
     {
-      "name": "Themes API returns all nations",
+      "name": "Themes API returns all clubs",
       "path": "/api/themes",
-      "expectText": "brazil"
+      "expectText": "real-madrid"
     },
     {
       "name": "Session API responds",
@@ -150,6 +160,36 @@
       "name": "Event graphic SVG serves",
       "path": "/images/events/red-card.svg",
       "expectSelector": "svg"
+    },
+    {
+      "name": "Round-up demo opens the between-match round-up",
+      "path": "/#demo/roundup",
+      "expectText": "Round-up"
+    },
+    {
+      "name": "Round-up demo shows clubs going through",
+      "path": "/#demo/roundup-qf",
+      "expectText": "Semi-Final"
+    },
+    {
+      "name": "Lobby club picker shows crests",
+      "path": "/",
+      "expectSelector": ".nation-card .club-crest"
+    },
+    {
+      "name": "Next fixture demo shows club crests",
+      "path": "/#demo/fixture",
+      "expectSelector": ".crest-hero"
+    },
+    {
+      "name": "Next fixture demo shows Opponent",
+      "path": "/#demo/fixture",
+      "expectText": "Opponent"
+    },
+    {
+      "name": "Game strip shows club crest",
+      "path": "/#game/2",
+      "expectSelector": ".nation-strip .club-crest"
     },
     {
       "name": "Final refund demo seeds Final board with carried shots",

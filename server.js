@@ -1156,11 +1156,10 @@ app.post('/api/games/:id/guess', async (req, res) => {
         console.error('Prize payout wallet transaction failed:', err.message);
       }
 
-      // On final match win, refund remaining bundle credits to wallet
-      const { rows: tourCheckRows } = await client.query(
-        'SELECT stage_idx FROM tournament_sessions WHERE user_id = $1', [req.user.id]
-      );
-      const isFinalMatchWin = tourCheckRows.length && tourCheckRows[0].stage_idx >= 6;
+      // On final match win, refund remaining bundle credits to wallet. The
+      // board's own stage decides: a Final board is a Final match, whether or
+      // not the viewer is on a tournament run (the staging demo is not).
+      const isFinalMatchWin = game.stage_idx >= 6;
       if (isFinalMatchWin) {
         const { rows: remainingCredits } = await client.query(`
           SELECT id, (credits_total - credits_used) AS remaining, tokens_per_credit
@@ -1687,32 +1686,61 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Staging-only demo state for the Final refund coin flight: gives the signed-in
-// viewer a Final-stage tournament with 8 carried shots (4 t each) so the
-// coin animation on the win card is reachable without playing six rounds.
-// The client route #demo/final-refund calls this, then start-map consolidates
-// the carried shots into a fresh Final board via carryOverShots.
+// viewer a fresh Final board with 8 carried shots (4 t each) so the coin
+// animation on the win card is reachable without playing six rounds.
+// The client route #demo/final-refund calls this and opens the board it returns.
+// The board is created here rather than through a seeded tournament session, so
+// opening the demo never leaves the viewer mid tournament: the lobby still
+// shows the club picker afterwards. The win refund keys off the Final board's
+// own stage, so it still fires for this board.
 app.post('/api/staging/demo-final-refund', async (req, res) => {
   if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
   const client = await pool.connect();
   try {
+    const { rows: themeRows } = await client.query(
+      "SELECT id, slug, country_name, accent_colour, footballer_name FROM themes WHERE slug = 'milan'"
+    );
+    if (!themeRows.length) return res.status(404).json({ error: 'Not found' });
+    const theme = themeRows[0];
+
     await ensureWallet(client, req.user.id, req.user.username);
     await client.query('UPDATE player_wallets SET balance = 5000 WHERE user_id = $1', [req.user.id]);
-    await client.query(`
-      INSERT INTO tournament_sessions
-        (user_id, my_team_slug, stage_idx, played_slugs, total_tokens_won, session_complete, current_game_id, next_opponent_slug)
-      VALUES ($1, 'brazil', 6, '{}', 0, false, NULL, 'belgium')
-      ON CONFLICT (user_id) DO UPDATE SET
-        my_team_slug = 'brazil', stage_idx = 6, played_slugs = '{}',
-        total_tokens_won = 0, session_complete = false,
-        current_game_id = NULL, next_opponent_slug = 'belgium', updated_at = NOW()
-    `, [req.user.id]);
+
+    const gridSize = gridSizeForStage(6);
+    const footballSquare = Math.floor(Math.random() * gridSize);
+    const revealed = new Array(gridSize).fill(false);
+    const eventSquares = buildEventSquares(footballSquare, gridSize);
+    const penaltySquares = buildPenaltySquares(footballSquare, eventSquares, gridSize);
+    const bonusSquares = buildBonusSquares(footballSquare, penaltySquares, eventSquares, gridSize);
+
+    await client.query('BEGIN');
+    const { rows: gameRows } = await client.query(`
+      INSERT INTO games
+        (theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count,
+         status, active_player_id, active_player_username, last_active_at, event_squares, bonus_squares)
+      VALUES ($1, 6, $2, $3, $4, $5, 0, 0, 'active', $6, $7, NOW(), $8, $9)
+      RETURNING id, theme_id, stage_idx, revealed, total_guesses, total_players_count, status, penalty_square, penalty_squares
+    `, [theme.id, footballSquare, penaltySquares[0], JSON.stringify(penaltySquares), revealed,
+        req.user.id, req.user.username, JSON.stringify(eventSquares), JSON.stringify(bonusSquares)]);
+    const game = gameRows[0];
+    // The carried shots the demo pays back when the Final is won. Earlier
+    // shots on this viewer's other boards are dropped, as the demo always did,
+    // so opening it twice never stacks extra shots.
     await client.query('DELETE FROM game_sessions WHERE user_id = $1', [req.user.id]);
     await client.query(`
       INSERT INTO game_sessions (game_id, user_id, credits_total, credits_used, tokens_per_credit, refunded)
-      VALUES (1, $1, 8, 0, 4, false)
-    `, [req.user.id]);
-    res.json({ ok: true });
+      VALUES ($1, $2, 8, 0, 4, false)
+    `, [game.id, req.user.id]);
+    await client.query('COMMIT');
+
+    res.json({
+      ok: true,
+      game,
+      theme,
+      session: { my_team_slug: 'barcelona', stage_idx: 6, session_complete: false }
+    });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
@@ -1802,22 +1830,42 @@ app.get('*', (_req, res) => {
 });
 
 const THEMES_SEED = [
-  { slug: 'france',      country_name: 'France',      accent_colour: '#3b6dff', footballer_name: 'Zinedine Zidane' },
-  { slug: 'brazil',      country_name: 'Brazil',      accent_colour: '#22c55e', footballer_name: 'Neymar' },
-  { slug: 'england',     country_name: 'England',     accent_colour: '#e23b4e', footballer_name: 'David Beckham' },
-  { slug: 'spain',       country_name: 'Spain',       accent_colour: '#f1bf00', footballer_name: 'Carles Puyol' },
-  { slug: 'argentina',   country_name: 'Argentina',   accent_colour: '#74ACDF', footballer_name: 'Diego Maradona' },
-  { slug: 'morocco',     country_name: 'Morocco',     accent_colour: '#1db954', footballer_name: 'Hakim Ziyech' },
-  { slug: 'usa',         country_name: 'USA',         accent_colour: '#4f7bff', footballer_name: 'Landon Donovan' },
-  { slug: 'turkey',      country_name: 'Turkey',      accent_colour: '#ff3b4e', footballer_name: 'Hakan Şükür' },
-  { slug: 'belgium',     country_name: 'Belgium',     accent_colour: '#ffd23f', footballer_name: 'Romelu Lukaku' },
-  { slug: 'egypt',       country_name: 'Egypt',       accent_colour: '#d4af37', footballer_name: 'Mohamed Salah' },
-  { slug: 'portugal',    country_name: 'Portugal',    accent_colour: '#e23b3b', footballer_name: 'Cristiano Ronaldo' },
-  { slug: 'netherlands', country_name: 'Netherlands', accent_colour: '#ff7a18', footballer_name: 'Johan Cruyff' },
-  { slug: 'norway',      country_name: 'Norway',      accent_colour: '#4f7bff', footballer_name: 'Erling Haaland' },
-  { slug: 'germany',     country_name: 'Germany',     accent_colour: '#ffce00', footballer_name: 'Miroslav Klose' },
-  { slug: 'mexico',      country_name: 'Mexico',      accent_colour: '#006847', footballer_name: 'Hugo Sánchez' },
+  { slug: 'real-madrid', country_name: 'Real Madrid',         accent_colour: '#febe10', footballer_name: 'Cristiano Ronaldo' },
+  { slug: 'barcelona',   country_name: 'Barcelona',           accent_colour: '#a50044', footballer_name: 'Lionel Messi' },
+  { slug: 'bayern',      country_name: 'Bayern Munich',       accent_colour: '#dc052d', footballer_name: 'Thomas Müller' },
+  { slug: 'liverpool',   country_name: 'Liverpool',           accent_colour: '#c8102e', footballer_name: 'Mohamed Salah' },
+  { slug: 'man-city',    country_name: 'Manchester City',     accent_colour: '#6cabdd', footballer_name: 'Erling Haaland' },
+  { slug: 'man-united',  country_name: 'Manchester United',   accent_colour: '#da291c', footballer_name: 'Wayne Rooney' },
+  { slug: 'chelsea',     country_name: 'Chelsea',             accent_colour: '#034694', footballer_name: 'Didier Drogba' },
+  { slug: 'arsenal',     country_name: 'Arsenal',             accent_colour: '#ef0107', footballer_name: 'Thierry Henry' },
+  { slug: 'milan',       country_name: 'AC Milan',            accent_colour: '#fb090b', footballer_name: 'Kaká' },
+  { slug: 'inter',       country_name: 'Inter Milan',         accent_colour: '#0068a8', footballer_name: 'Javier Zanetti' },
+  { slug: 'juventus',    country_name: 'Juventus',            accent_colour: '#e5e5e5', footballer_name: 'Gianluigi Buffon' },
+  { slug: 'psg',         country_name: 'Paris Saint-Germain', accent_colour: '#004170', footballer_name: 'Kylian Mbappé' },
+  { slug: 'ajax',        country_name: 'Ajax',                accent_colour: '#d2122e', footballer_name: 'Johan Cruyff' },
+  { slug: 'porto',       country_name: 'Porto',               accent_colour: '#003893', footballer_name: 'Pepe' },
+  { slug: 'benfica',     country_name: 'Benfica',             accent_colour: '#e30613', footballer_name: 'Eusébio' },
 ];
+
+// Old national teams map to their club replacement one to one, in seed order.
+// Used at boot to migrate references before the nation rows are removed.
+const NATION_TO_CLUB = {
+  france: 'real-madrid',
+  brazil: 'barcelona',
+  england: 'bayern',
+  spain: 'liverpool',
+  argentina: 'man-city',
+  morocco: 'man-united',
+  usa: 'chelsea',
+  turkey: 'arsenal',
+  belgium: 'milan',
+  egypt: 'inter',
+  portugal: 'juventus',
+  netherlands: 'psg',
+  norway: 'ajax',
+  germany: 'porto',
+  mexico: 'benfica',
+};
 
 async function start() {
   console.log('[init] Starting database migrations...');
@@ -1993,6 +2041,43 @@ async function start() {
     `, [t.slug, t.country_name, t.accent_colour, t.footballer_name]);
   }
 
+  // ── Nation -> club migration (idempotent) ────────────────────────────────
+  // Move every reference from an old national team onto its club before the
+  // nation rows are deleted, because the foreign keys do not cascade.
+  for (const [oldSlug, newSlug] of Object.entries(NATION_TO_CLUB)) {
+    const oldRow = await pool.query('SELECT id FROM themes WHERE slug = $1', [oldSlug]);
+    const newRow = await pool.query('SELECT id FROM themes WHERE slug = $1', [newSlug]);
+    if (!oldRow.rows.length || !newRow.rows.length) continue;
+    const oldId = oldRow.rows[0].id;
+    const newId = newRow.rows[0].id;
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE games SET theme_id = $1 WHERE theme_id = $2', [newId, oldId]);
+      await client.query('UPDATE tournament_sessions SET my_team_slug = $1 WHERE my_team_slug = $2', [newSlug, oldSlug]);
+      await client.query('UPDATE tournament_sessions SET next_opponent_slug = $1 WHERE next_opponent_slug = $2', [newSlug, oldSlug]);
+      await client.query(
+        'UPDATE tournament_sessions SET played_slugs = array_replace(played_slugs, $1, $2) WHERE $1 = ANY(played_slugs)',
+        [oldSlug, newSlug]
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Remove any theme row outside the current seed that nothing still points at.
+  const themeCleanup = await pool.query(`
+    DELETE FROM themes t
+    WHERE t.slug <> ALL($1)
+      AND NOT EXISTS (SELECT 1 FROM games g WHERE g.theme_id = t.id)
+      AND NOT EXISTS (SELECT 1 FROM tournament_sessions s WHERE s.my_team_slug = t.slug OR s.next_opponent_slug = t.slug)
+  `, [THEMES_SEED.map(t => t.slug)]);
+  if (themeCleanup.rowCount > 0) console.log(`[init] Removed ${themeCleanup.rowCount} retired theme rows`);
+
   await pool.query(`
     INSERT INTO captain_pot (id, balance) VALUES (1, 100)
     ON CONFLICT (id) DO NOTHING
@@ -2111,7 +2196,7 @@ async function start() {
       INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares)
       VALUES (1, $1, 0, 11, 7, $2, $3, 6, 2, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['brazil'], JSON.stringify([7, 14]), revealedPrefix(16, 6), JSON.stringify({
+    `, [themeMap['barcelona'], JSON.stringify([7, 14]), revealedPrefix(16, 6), JSON.stringify({
       '1': 'free_kick', '4': 'handball', '9': 'red_card', '13': 'extra_time'
     })]);
 
@@ -2124,7 +2209,7 @@ async function start() {
       INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, penalty_found, revealed, total_guesses, total_players_count, status, event_squares)
       VALUES (2, $1, 5, 32, 21, $2, true, $3, 20, 4, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['france'], JSON.stringify([21, 25, 30, 33]), revealedPrefix(36, 20), JSON.stringify({
+    `, [themeMap['real-madrid'], JSON.stringify([21, 25, 30, 33]), revealedPrefix(36, 20), JSON.stringify({
       '0': 'free_kick', '3': 'handball', '7': 'red_card', '11': 'disallowed_goal',
       '15': 'injury', '19': 'pitch_invasion', '23': 'free_kick', '28': 'handball', '34': 'red_card'
     })]);
@@ -2136,7 +2221,7 @@ async function start() {
       INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares)
       VALUES (3, $1, 3, 20, 16, $2, $3, 14, 6, 'open', $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['argentina'], JSON.stringify([16, 22, 24]), revealedPrefix(25, 14), JSON.stringify({
+    `, [themeMap['man-city'], JSON.stringify([16, 22, 24]), revealedPrefix(25, 14), JSON.stringify({
       '2': 'handball', '5': 'offside', '8': 'red_card', '17': 'free_kick'
     })]);
 
@@ -2150,7 +2235,7 @@ async function start() {
       INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, status, winner_username, prize_paid, completed_at, event_squares)
       VALUES (4, $1, 6, 40, 25, $2, $3, 18, 'completed', 'Staging Kaiser', 96, NOW(), $4)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['germany'], JSON.stringify([25, 3, 10, 44, 46]), new Array(49).fill(true), JSON.stringify({
+    `, [themeMap['porto'], JSON.stringify([25, 3, 10, 44, 46]), new Array(49).fill(true), JSON.stringify({
       '6': 'free_kick', '18': 'injury', '27': 'throw_in', '33': 'red_card'
     })]);
 
@@ -2162,7 +2247,7 @@ async function start() {
       INSERT INTO games (id, theme_id, stage_idx, football_square, penalty_square, penalty_squares, revealed, total_guesses, total_players_count, status, event_squares, bonus_squares)
       VALUES (5, $1, 6, 35, 20, $2, $3, 4, 1, 'open', $4, $5)
       ON CONFLICT (id) DO NOTHING
-    `, [themeMap['belgium'], JSON.stringify([20, 10, 26, 38, 45]), revealedPrefix(49, 4), JSON.stringify({
+    `, [themeMap['milan'], JSON.stringify([20, 10, 26, 38, 45]), revealedPrefix(49, 4), JSON.stringify({
       '1': 'extra_time', '2': 'red_card', '12': 'pitch_invasion', '30': 'free_kick'
     }), JSON.stringify({
       '5': 'win', '8': 'win', '15': 'lose', '22': 'win', '40': 'win', '44': 'win', '47': 'lose'
