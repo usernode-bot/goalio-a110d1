@@ -3624,7 +3624,7 @@
   function autoScrollRoundup(el, card, startDelay) {
     const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduce || !card) return () => {};
-    const SPEED = 20; // px per second
+    const SPEED = 50; // px per second
     let stopped = false, timer = 0, raf = 0;
     const stop = () => {
       if (stopped) return;
