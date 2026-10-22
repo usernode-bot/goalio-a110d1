@@ -147,6 +147,11 @@
       "expectText": "Pick your spot"
     },
     {
+      "name": "Penalty screen draws the goal net and ball shadow",
+      "path": "/#demo/penalty",
+      "expectSelector": ".pk-goal .pk-ball-shadow"
+    },
+    {
       "name": "Penalty keeper demo opens the save screen",
       "path": "/#demo/penalty-keeper",
       "expectText": "Pick a side. Save it to win"
