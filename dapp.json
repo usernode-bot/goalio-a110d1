@@ -8,22 +8,22 @@
   "tests": [
     {
       "name": "Lobby renders nation picker",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectSelector": ".nation-picker"
     },
     {
       "name": "Lobby shows Captain's Pot",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "Captain's Pot"
     },
     {
       "name": "Lobby shows Choose your nation",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "Choose your nation"
     },
     {
       "name": "Home info panel auto-shows",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "How GOAL! works"
     },
     {

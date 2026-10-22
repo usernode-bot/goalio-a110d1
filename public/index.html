@@ -1757,6 +1757,7 @@
     else if (hash === '#demo/final-refund') demoFinalRefund();
     else if (hash === '#demo/penalty') demoPenaltyKick();
     else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
+    else if (hash === '#demo/reset') demoReset();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1802,6 +1803,18 @@
     } catch (e) {
       navigate('#lobby');
     }
+  }
+
+  // Staging demo deep link used by the automated checks: the demo links above
+  // leave the viewer mid-tournament, so a later lobby visit resumes that demo
+  // board instead of showing the nation picker. This clears the viewer's
+  // tournament and board sessions (server returns 404 outside staging) and
+  // then opens the lobby from a clean player state.
+  async function demoReset() {
+    try {
+      await api('POST', '/api/staging/reset-player');
+    } catch (e) {}
+    navigate('#lobby');
   }
 
   // ═══════════════════════════════════════════════════════════════
