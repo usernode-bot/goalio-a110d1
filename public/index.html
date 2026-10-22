@@ -1441,6 +1441,25 @@
       this.tone(660, t, 0.08, 'square', 0.16);
       this.tone(990, t + 0.04, 0.06, 'square', 0.12);
     },
+    // Square-tap blip that climbs a note every 4 taps to build tension:
+    // C, E, G, A, high C, then back down to G and C, repeating.
+    clickNotes: [523, 659, 784, 880, 1047],
+    clickCycle: [0, 1, 2, 3, 4, 2],
+    tapCount: 0,
+    async note(freq) {
+      const ctx = await this.ensure(); if (!ctx) return;
+      const t = ctx.currentTime;
+      this.tone(freq, t, 0.08, 'square', 0.16);
+      this.tone(freq * 1.5, t + 0.04, 0.06, 'square', 0.12);
+    },
+    clickNote() {
+      const step = this.clickCycle[Math.floor(this.tapCount / 4) % this.clickCycle.length];
+      this.tapCount++;
+      return this.note(this.clickNotes[step]);
+    },
+    topNote() {
+      return this.note(this.clickNotes[this.clickNotes.length - 1]);
+    },
     // Match Event SFX — rising two-tone fanfare for wins, descending
     // whistle-then-buzz for losses. Varies per event so the nine don't
     // sound identical. Synth only: mute-aware, offline-safe, no files.
@@ -1876,6 +1895,7 @@
     else if (hash === '#demo/roundup-qf') demoRoundup('qf');
     else if (hash === '#demo/penalty') demoPenaltyKick();
     else if (hash === '#demo/penalty-keeper') demoPenaltyKick('keeper');
+    else if (hash === '#demo/reset') demoReset();
     else if (hash.startsWith('#game/')) renderGame(hash.replace('#game/', ''));
     else if (hash === '#league') {
       Sound.playLeaderboard();
@@ -1920,6 +1940,18 @@
     } catch (e) {
       navigate('#lobby');
     }
+  }
+
+  // Staging demo deep link used by the automated checks: the demo links above
+  // leave the viewer mid-tournament, so a later lobby visit resumes that demo
+  // board instead of showing the nation picker. This clears the viewer's
+  // tournament and board sessions (server returns 404 outside staging) and
+  // then opens the lobby from a clean player state.
+  async function demoReset() {
+    try {
+      await api('POST', '/api/staging/reset-player');
+    } catch (e) {}
+    navigate('#lobby');
   }
 
   // Staging demo deep link: opens the between-match round-up on its own, built
@@ -2291,6 +2323,7 @@
       if (!r.ok) { navigate('#lobby'); return; }
       const d = await r.json();
       state.game = d.game;
+      Sound.tapCount = 0;
       state.gameTheme = { slug: d.game.slug, country_name: d.game.country_name, accent_colour: d.game.accent_colour, footballer_name: d.game.footballer_name };
       state.credits = d.credits;
       state.regularSessionId = d.credits ? d.credits.id : null;
@@ -2596,7 +2629,7 @@
       document.body.appendChild(modal);
       return;
     }
-    playBlip();
+    Sound.clickNote();
 
     const body = { square_index: idx };
     if (sessId) body.session_id = sessId;
@@ -2656,6 +2689,7 @@
           showToast(t('penalty.found_toast', { n: bonusOnGoal }));
         }
       } else if (d.hit) {
+        Sound.topNote();
         Sound.playFindball();
         await runWinSequence(cell, idx, d);
       } else {

@@ -8,22 +8,22 @@
   "tests": [
     {
       "name": "Lobby renders nation picker",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectSelector": ".nation-picker"
     },
     {
       "name": "Lobby shows Captain's Pot",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "Captain's Pot"
     },
     {
       "name": "Lobby shows Choose your club",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "Choose your club"
     },
     {
       "name": "Lobby lists a club",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "Real Madrid"
     },
     {
@@ -33,7 +33,7 @@
     },
     {
       "name": "Home info panel auto-shows",
-      "path": "/",
+      "path": "/#demo/reset",
       "expectText": "How GOAL! works"
     },
     {

@@ -1806,6 +1806,21 @@ app.post('/api/staging/demo-penalty', async (req, res) => {
   }
 });
 
+// Staging-only reset for the automated checks: the demo deep links leave the
+// signed-in viewer mid-tournament, so a later visit to the lobby resumes that
+// demo board instead of showing the nation picker. This clears the viewer's
+// tournament and board sessions so the lobby starts from a clean player state.
+app.post('/api/staging/reset-player', async (req, res) => {
+  if (!IS_STAGING) return res.status(404).json({ error: 'Not found' });
+  try {
+    await pool.query('DELETE FROM tournament_sessions WHERE user_id = $1', [req.user.id]);
+    await pool.query('DELETE FROM game_sessions WHERE user_id = $1', [req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/env', (req, res) => {
   res.json({ staging: IS_STAGING });
 });
