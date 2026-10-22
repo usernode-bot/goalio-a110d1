@@ -621,6 +621,31 @@
       .roundup-card, .roundup-card * { animation: none !important; }
     }
 
+    /* Lobby fixture motion — the next-fixture lobby springs up piece by piece,
+       then VS breathes, the crests float and KICK OFF catches the light. */
+    .lobby-in { animation: lobby-rise 0.55s cubic-bezier(0.2, 0.85, 0.3, 1.25) var(--lobby-d, 0ms) both; }
+    .lobby-in.pot-heartbeat { animation: lobby-rise 0.55s cubic-bezier(0.2, 0.85, 0.3, 1.25) var(--lobby-d, 0ms) both, pot-heartbeat 3s ease-in-out infinite; }
+    @keyframes lobby-rise { from { opacity: 0; transform: translateY(34px) scale(0.86); } to { opacity: 1; transform: none; } }
+    @keyframes lobby-vs-pulse {
+      0%, 100% { transform: scale(1) rotate(0deg); text-shadow: 0 0 8px currentColor; }
+      50% { transform: scale(1.26) rotate(-5deg); text-shadow: 0 0 12px currentColor, 0 0 26px currentColor; }
+    }
+    .lobby-vs { display: inline-block; animation: lobby-vs-pulse 1.6s ease-in-out infinite; }
+    @keyframes lobby-crest-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-12px) scale(1.05); } }
+    .lobby-crest-float { animation: lobby-crest-bob 2.6s ease-in-out infinite; }
+    .lobby-crest-float.alt { animation-delay: -1.3s; }
+    .lobby-kickoff { position: relative; overflow: hidden; }
+    .lobby-kickoff::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(100deg, transparent 10%, rgba(255,255,255,0.55) 50%, transparent 90%);
+      transform: translateX(-130%); animation: lobby-sheen 2.2s ease-in-out 0.8s infinite; }
+    @keyframes lobby-sheen { 0% { transform: translateX(-130%); } 22%, 100% { transform: translateX(130%); } }
+    .lobby-kickoff:active { transform: translateY(3px) scale(0.94); }
+    @media (prefers-reduced-motion: reduce) {
+      .lobby-in, .lobby-vs, .lobby-crest-float, .lobby-kickoff::after { animation: none !important; }
+      .lobby-in.pot-heartbeat { animation: pot-heartbeat 3s ease-in-out infinite !important; }
+      .lobby-kickoff::after { display: none; }
+    }
+
     /* League table */
     .league-table { width: 100%; border-collapse: collapse; }
     .league-table th { font-family: 'DM Sans', sans-serif; font-size: clamp(0.65rem, 2vw, 0.75rem); color: #888; text-transform: uppercase; letter-spacing: 0.05em; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -2002,13 +2027,13 @@
 
     const statsRow = `
       <div class="lobby-stats-row" style="display:flex;align-items:stretch;gap:10px;margin-bottom:14px;">
-        <div class="lobby-stat-box hud-chip" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div class="lobby-stat-box hud-chip lobby-in" style="--lobby-d:0ms;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
           <span style="font-size:0.7rem;color:#888;">${t('hud.wallet')}</span>
           <span class="val lobby-wallet-val" style="font-family:'Space Mono',monospace;font-size:1rem;color:#f0f0f5;font-weight:700;display:block;">${state.walletBalance !== undefined ? Math.round(state.walletBalance).toLocaleString() + ' t' : 'XXXXX'}</span>
         </div>
         ${(() => {
           const heartbeat = state.potBalance > 500 ? ' pot-heartbeat' : '';
-          return `<div class="lobby-stat-box hud-chip pot-chip${heartbeat}" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+          return `<div class="lobby-stat-box hud-chip pot-chip lobby-in${heartbeat}" style="--lobby-d:70ms;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;">
             <span style="color:#888;font-size:0.7rem;">Captain's Pot</span>
             <span class="val pot-chip-value" style="font-family:'Space Mono',monospace;font-size:1rem;color:#fbbf24;font-weight:700;display:block;">${Math.round(state.potBalance).toLocaleString()} t</span>
           </div>`;
@@ -2032,24 +2057,24 @@
         <div style="display:flex;flex-direction:column;align-items:center;gap:0;margin:0 -16px;">
           <!-- Stage badge at top -->
           <div style="width:100%;padding:12px 16px;text-align:center;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.08);">
-            <div style="display:inline-block;background:${badgeBg};color:${badgeTextColor};font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;">Stage ${session.stage_idx + 1}/7 — ${stageName(session.stage_idx)}</div>
+            <div class="lobby-in" style="--lobby-d:140ms;display:inline-block;background:${badgeBg};color:${badgeTextColor};font-family:'DM Sans',sans-serif;font-size:0.7rem;font-weight:800;padding:5px 12px;border-radius:6px;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px;display:block;">Stage ${session.stage_idx + 1}/7 — ${stageName(session.stage_idx)}</div>
           </div>
 
           <!-- Large flags as hero, centered -->
           <div style="width:100%;padding:24px 16px;display:flex;align-items:center;justify-content:center;gap:12px;background:linear-gradient(180deg,rgba(255,255,255,0.05) 0%,rgba(0,0,0,0.1) 100%);">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+            <div class="lobby-in" style="--lobby-d:220ms;display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">You</div>
-              ${crestHtml(session.my_team_slug, myTeam ? myTeam.country_name : session.my_team_slug, 'crest-hero', myTeam ? myTeam.accent_colour : '#444') || `<div role="img" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              ${crestHtml(session.my_team_slug, myTeam ? myTeam.country_name : session.my_team_slug, 'crest-hero lobby-crest-float', myTeam ? myTeam.accent_colour : '#444') || `<div role="img" class="lobby-crest-float" aria-label="${myTeam ? myTeam.country_name : session.my_team_slug}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(session.my_team_slug, myTeam ? myTeam.accent_colour : '#444')};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${myTeam ? myTeam.country_name : session.my_team_slug}</div>
             </div>
 
             ${hasOpponent ? `
             <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;">
-              <div style="font-family:'DM Sans',sans-serif;font-weight:700;color:${accentColor};font-size:1rem;text-shadow:0 0 8px ${accentColor}44;">VS</div>
+              <div class="lobby-vs" style="font-family:'DM Sans',sans-serif;font-weight:700;color:${accentColor};font-size:1rem;text-shadow:0 0 8px ${accentColor}44;">VS</div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
+            <div class="lobby-in" style="--lobby-d:300ms;display:flex;flex-direction:column;align-items:center;gap:8px;flex:0 1 auto;">
               <div style="font-family:'DM Sans',sans-serif;font-size:0.65rem;color:#888;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;">Opponent</div>
-              ${crestHtml(state.next_opponent_theme.slug, state.next_opponent_theme.country_name, 'crest-hero', state.next_opponent_theme.accent_colour) || `<div role="img" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
+              ${crestHtml(state.next_opponent_theme.slug, state.next_opponent_theme.country_name, 'crest-hero lobby-crest-float alt', state.next_opponent_theme.accent_colour) || `<div role="img" class="lobby-crest-float alt" aria-label="${state.next_opponent_theme.country_name}" style="width:80px;height:54px;border-radius:6px;background:${flagBg(state.next_opponent_theme.slug, state.next_opponent_theme.accent_colour)};box-shadow:0 4px 16px rgba(0,0,0,0.6);border:2px solid rgba(255,255,255,0.15);"></div>`}
               <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.85rem;text-align:center;color:#f0f0f5;">${state.next_opponent_theme.country_name}</div>
             </div>
             ` : ''}
@@ -2064,7 +2089,7 @@
 
           <!-- CTA Button -->
           <div style="width:100%;padding:16px;">
-            <button onclick="startNewMap()" class="bundle-btn" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;font-size:1rem;padding:14px;border-radius:12px;letter-spacing:0.02em;">⚽ KICK OFF ▶</button>
+            <button onclick="startNewMap()" class="bundle-btn lobby-kickoff" style="width:100%;background:${buttonGradient};color:#0a0a0f;box-shadow:0 4px 16px ${palette ? palette.accent + '44' : 'rgba(251,191,36,0.3)'};font-weight:800;font-size:1rem;padding:14px;border-radius:12px;letter-spacing:0.02em;">⚽ KICK OFF ▶</button>
           </div>
         </div>`;
     } else {
