@@ -1739,10 +1739,13 @@
   // HEADER
   // ═══════════════════════════════════════════════════════════════
   function renderHeader() {
+    // The loading shell draws the header before i18n loads, so fall back to
+    // the real words instead of the raw key.
+    const subtitle = t('app.subtitle');
     return `<header>
       <a href="#lobby" class="header-logo-block" onclick="navigate('#lobby')">
         <span class="header-logo-title">GOAL!</span>
-        <span class="header-logo-sub">${t('app.subtitle')}</span>
+        <span class="header-logo-sub">${subtitle === 'app.subtitle' ? 'Champions League Edition' : subtitle}</span>
       </a>
       <div class="header-btns font-dm">
         <button class="header-btn" onclick="navigate('#league')" title="League">🏆</button>
@@ -1944,8 +1947,19 @@
   // list, so the screen is reachable without a tournament. Nothing is written:
   // KICK OFF returns to the lobby.
   function demoFixture() {
-    const themes = state.themes || [];
-    if (themes.length < 2) { navigate('#lobby'); return; }
+    let themes = state.themes || [];
+    if (themes.length >= 2) return renderDemoFixture(themes);
+    // Opened before the club list arrived (a hash change during boot): fetch
+    // it, so the fixture screen opens rather than the club picker.
+    api('GET', '/api/themes').then(r => (r.ok ? r.json() : null)).then(d => {
+      if (d && d.themes) state.themes = d.themes;
+      themes = state.themes || [];
+      if (themes.length < 2) { navigate('#lobby'); return; }
+      renderDemoFixture(themes);
+    }).catch(() => navigate('#lobby'));
+  }
+
+  function renderDemoFixture(themes) {
     document.getElementById('app').innerHTML = `<div style="min-height:100vh;display:flex;flex-direction:column;">
       ${renderHeader()}
       <div id="lobby-body" style="flex:1;max-width:480px;margin:0 auto;padding:12px 16px 20px;width:100%;"></div>
@@ -2144,15 +2158,15 @@
     return `<div class="modal-box" style="text-align:left;max-width:360px;max-height:85vh;display:flex;flex-direction:column;padding:18px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex:0 0 auto;">
         <div style="font-family:'DM Sans',sans-serif;font-weight:800;font-size:0.9rem;color:#fbbf24;">How GOAL! works</div>
-        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;">×</button>
+        <button onclick="dismissInfoPanel(this.closest('.modal-bg'))" aria-label="Close" style="background:none;border:none;color:#aaa;font-size:1.6rem;cursor:pointer;line-height:1;padding:0 6px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;">×</button>
       </div>
       <ul style="padding-left:18px;margin:0 0 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;color:#cfcfe0;line-height:1.5;flex:1 1 auto;overflow-y:auto;min-height:0;">
         <li style="margin-bottom:8px;"><strong>The board grows each stage</strong> — small in the group games, bigger in the knockouts, biggest in the final.</li>
         <li style="margin-bottom:8px;"><strong>Shot price changes by stage</strong> so a typical board costs about the same throughout.</li>
         <li><strong>The Captain's Pot</strong> jackpot grows as you advance — win it by finding the ball on your very first shot.</li>
       </ul>
-      <button class="bundle-btn btn-gold" style="width:100%;flex:0 0 auto;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
-      <div style="text-align:center;margin-top:8px;flex:0 0 auto;"><a href="#faq" onclick="dismissInfoPanel(document.getElementById('info-panel'))" style="font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-decoration:underline;">Full details in the FAQ</a></div>
+      <button class="bundle-btn btn-gold" style="width:100%;flex:0 0 auto;min-height:44px;" onclick="dismissInfoPanel(this.closest('.modal-bg'))">Got it</button>
+      <div style="text-align:center;margin-top:8px;flex:0 0 auto;"><a href="#faq" onclick="dismissInfoPanel(document.getElementById('info-panel'))" style="display:inline-block;box-sizing:border-box;min-height:44px;padding:14px 8px;margin:-14px -8px;font-family:'DM Sans',sans-serif;font-size:0.75rem;color:#9ca3af;text-decoration:underline;">Full details in the FAQ</a></div>
     </div>`;
   }
   function showInfoPanel() {
