@@ -3580,9 +3580,18 @@
       </div>`;
     document.body.appendChild(el);
     const stopScores = playRoundupScores(el);
+    const card = el.querySelector('.roundup-card');
+    // When the last result and headline has landed, the card starts drifting
+    // down by itself so the headlines and Continue come into view.
+    const doneAt = headlines.length
+      ? newsDelay + (headlines.length - 1) * 170 + 450
+      : Math.max(0, matches.length - 1) * STEP + (knockout ? FLY + 380 + 1000 : WIN + 500);
+    const stopScroll = autoScrollRoundup(el, card, doneAt + 500);
     const btn = el.querySelector('.ru-continue');
-    btn.addEventListener('click', () => { stopScores(); el.remove(); next(); });
-    btn.focus();
+    btn.addEventListener('click', () => { stopScores(); stopScroll(); el.remove(); next(); });
+    // Open on the results, not the Continue button at the foot of the card.
+    btn.focus({ preventScroll: true });
+    card.scrollTop = 0;
   }
 
   // Ticks each score up from 0 as its match lands. The final score is already
@@ -3606,6 +3615,50 @@
     };
     raf = requestAnimationFrame(tick);
     return () => { if (raf) cancelAnimationFrame(raf); };
+  }
+
+  // Drifts the round-up card down slowly once its animation has finished, so
+  // the results are read first and the headlines and Continue follow. Any
+  // touch, scroll, key press or mouse move on the card, or its removal, stops
+  // it for good. Reduced motion leaves the card still and hand-scrolled.
+  function autoScrollRoundup(el, card, startDelay) {
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduce || !card) return () => {};
+    const SPEED = 50; // px per second
+    let stopped = false, timer = 0, raf = 0;
+    const stop = () => {
+      if (stopped) return;
+      stopped = true;
+      clearTimeout(timer);
+      if (raf) cancelAnimationFrame(raf);
+      listeners.forEach(([type, fn]) => card.removeEventListener(type, fn));
+    };
+    const listeners = [
+      ['wheel', stop], ['touchstart', stop], ['pointerdown', stop], ['keydown', stop],
+      // A resting mouse does not stop it: scrolling content under a still
+      // pointer can fire pointermove with no movement of its own.
+      ['pointermove', e => { if (e.pointerType === 'mouse' && (e.movementX || e.movementY)) stop(); }],
+    ];
+    listeners.forEach(([type, fn]) => card.addEventListener(type, fn, { passive: true }));
+    timer = setTimeout(() => {
+      if (stopped || !el.isConnected) return;
+      if (card.scrollHeight - card.clientHeight <= 1) { stop(); return; }
+      card.addEventListener('focusin', stop, { passive: true });
+      listeners.push(['focusin', stop]);
+      let pos = card.scrollTop, last = performance.now();
+      const tick = now => {
+        if (stopped || !el.isConnected) return;
+        const dt = Math.min(100, now - last);
+        last = now;
+        const end = card.scrollHeight - card.clientHeight;
+        pos = Math.min(end, pos + SPEED * dt / 1000);
+        card.scrollTop = Math.round(pos);
+        if (pos >= end) { stop(); return; }
+        raf = requestAnimationFrame(tick);
+      };
+      raf = requestAnimationFrame(tick);
+    }, startDelay);
+    return stop;
   }
 
   // Fresh session: the client's copy predates the win's played_slugs / next opponent.
